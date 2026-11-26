@@ -105,9 +105,24 @@ class Writer:
         if self.subtitle:
             self.w(f"<work><work-title>{esc(self.subtitle)}</work-title></work>")
         self.w(f"<movement-title>{esc(title)}</movement-title>")
-        if lines:
-            self.w('<identification><creator type="composer">' + "&#10;".join(esc(x) for x in lines)
-                   + "</creator></identification>")
+        # linksboven: componist, album/jaar, toonsoort, bron, status (alleen wat is ingevuld)
+        left = []
+        if s.get("composer"):
+            left.append(f"Muziek: {s['composer']}")
+        alb = " · ".join(str(x) for x in (s.get("album"), s.get("year")) if x)
+        if alb:
+            left.append(alb)
+        if s.get("key"):
+            left.append(f"Toonsoort: {s['key']}")
+        if s.get("source"):
+            left.append(f"Bron: {s['source']}")
+        if s.get("status"):
+            left.append(f"Status: {s['status']}")
+        if lines or left:
+            self.w("<identification>"
+                   + ('<creator type="composer">' + "&#10;".join(esc(x) for x in lines) + "</creator>" if lines else "")
+                   + ('<creator type="lyricist">' + "&#10;".join(esc(x) for x in left) + "</creator>" if left else "")
+                   + "</identification>")
         parts = ['<part-list><score-part id="P1"><part-name>Drums</part-name>'
                  '<part-abbreviation>Dr.</part-abbreviation>']
         for code, (iid, ins) in self.instr_ids.items():

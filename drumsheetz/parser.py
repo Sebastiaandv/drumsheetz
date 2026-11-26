@@ -72,8 +72,9 @@ MARKS = {
 TEMPO_TEXT = {"rit": "rit.", "rit.": "rit.", "ritardando": "rit.", "rall": "rall.", "rall.": "rall.",
               "accel": "accel.", "accel.": "accel.", "accelerando": "accel.",
               "a-tempo": "a tempo", "atempo": "a tempo", "tempo-primo": "Tempo I",
-              "halftime": "half time feel", "half-time": "half time feel",
-              "doubletime": "double time feel", "double-time": "double time feel"}
+              "halftime-tekst": "half time feel", "doubletime-tekst": "double time feel"}
+FEELS = {"halftime": "halftime", "half-time": "halftime", "halftijd": "halftime", "half": "halftime",
+         "doubletime": "doubletime", "double-time": "doubletime", "dubbeltijd": "doubletime", "double": "doubletime"}
 CRASHES = {"crash": "CR", "crash2": "CR2", "china": "CH", "splash": "SP", "stack": "STK"}
 FLAGS = {
     "fermata": ("fermata", True),
@@ -342,7 +343,7 @@ class Parser:
         if "=" in w or re.fullmatch(r"[a-z]+[<>][a-z]+", lw):
             return True
         return (lw in DYNAMICS or lw in CRESC or lw in DIM or lw in MARKS or lw in TEMPO_TEXT
-                or lw in FLAGS or lw in VALUE_OPTS or lw in CRASHES or lw in TEXT_SIZES)
+                or lw in FLAGS or lw in VALUE_OPTS or lw in CRASHES or lw in TEXT_SIZES or lw in FEELS)
 
     def options(self, target, toks, ln, section_level=False):
         i = 0
@@ -402,6 +403,9 @@ class Parser:
                 target.setdefault("marks", []).append(MARKS[lw])
             elif lw in TEMPO_TEXT:
                 target["tempo_text"] = TEMPO_TEXT[lw]
+            elif lw in FEELS:
+                target["feel_mode"] = FEELS[lw]
+                target.setdefault("tempo_text", "Half time" if FEELS[lw] == "halftime" else "Double time")
             elif lw in TEXT_SIZES:
                 target["text_size"] = TEXT_SIZES[lw]
             elif lw in CRASHES:
@@ -414,7 +418,7 @@ class Parser:
             else:
                 import difflib
                 known = sorted(set(DYNAMICS) | CRESC | DIM | set(MARKS) | set(TEMPO_TEXT) | set(FLAGS)
-                               | set(VALUE_OPTS) | set(CRASHES) | set(TEXT_SIZES))
+                               | set(VALUE_OPTS) | set(CRASHES) | set(TEXT_SIZES) | set(FEELS))
                 close = difflib.get_close_matches(lw, known, n=2)
                 hint = f" Bedoel je: {', '.join(close)}?" if close else ""
                 if self.book.get(w):

@@ -31,16 +31,16 @@ PROPS = [
     ("artiest", "artist", "Artiest", "text", None, "Rechtsboven", "Algemeen", None),
     ("vermelding", "credit", "Vermelding", "text", None,
      "Rechtsboven onder de artiest, bv. 'Drum sheet: {naam}'. Leeg = niets. Meerdere regels met \\n", "Algemeen", "credit"),
-    ("componist", "composer", "Componist", "text", None, "Alleen informatief", "Algemeen", None),
-    ("album", "album", "Album", "text", None, "Alleen informatief", "Algemeen", None),
-    ("jaar", "year", "Jaar", "text", None, "Alleen informatief", "Algemeen", None),
+    ("componist", "composer", "Componist", "text", None, "Linksboven op het blad als 'Muziek: …'", "Algemeen", None),
+    ("album", "album", "Album", "text", None, "Linksboven op het blad", "Algemeen", None),
+    ("jaar", "year", "Jaar", "text", None, "Linksboven, achter het album", "Algemeen", None),
     ("tempo", "bpm", "Tempo", "text", None, "Bv. 92, of 4.=60 / 8=200", "Muziek", None),
     ("maat", "meter", "Maatsoort", "text", None, "Bv. 4/4, 6/8, 7/8 (2+2+3)", "Muziek", None),
     ("stijl", "feel", "Stijl", "text", None, "Cursieve regel onder het tempo", "Muziek", None),
     ("notitie", "notes", "Notitie", "text", None, "Extra cursieve regel", "Muziek", None),
     ("swing", "swing", "Swing", "select", ["", "ja", "16"], "'Swing' bij de stijl en swing in de MIDI", "Muziek", None),
     ("aftellen", "countin", "Aftellen (maten)", "number", None, "Maten stokken tikken vooraf", "Muziek", None),
-    ("toonsoort", "key", "Toonsoort", "text", None, "Alleen informatief", "Muziek", None),
+    ("toonsoort", "key", "Toonsoort", "text", None, "Linksboven op het blad", "Muziek", None),
     ("stemmen", "voices", "Stemmen", "select", ["", "1", "2"],
      "1 = alles stok omhoog, 2 = voeten apart omlaag", "Opmaak", "voices"),
     ("layout", "layout", "Indeling", "select", ["", "secties", "doorlopend"],
@@ -59,13 +59,13 @@ PROPS = [
      "Opmaak", "wedge_pos"),
     ("dynamiek", "dyn_pos", "Losse dynamiek", "select", ["", "boven", "onder"], "mf, p, ... boven of onder",
      "Opmaak", "dyn_pos"),
-    ("duur", "duration", "Duur", "text", None, "Voor setlists, bv. 4:32 (anders berekend)", "Setlist en info", None),
-    ("status", "status", "Status", "text", None, "Bv. klaar, bezig, nakijken", "Setlist en info", None),
-    ("tags", "tags", "Tags", "text", None, "Vrije trefwoorden", "Setlist en info", None),
-    ("pdf", "pdf", "Externe PDF", "text", None, "Gebruik deze PDF in setlists in plaats van de eigen sheet",
-     "Setlist en info", None),
-    ("bron", "source", "Bron", "text", None, "Waar de partij vandaan komt", "Setlist en info", None),
-    ("audio", "audio", "Audio", "text", None, "Pad naar een opname", "Setlist en info", None),
+    ("duur", "duration", "Duur", "text", None, "Niet op het blad: voor de lijst en setlists, bv. 4:32 (anders berekend)", "Lijsten en setlists", None),
+    ("status", "status", "Status", "text", None, "Bv. klaar, concept. Linksboven op het blad en in de lijst", "Algemeen", None),
+    ("tags", "tags", "Tags", "text", None, "Niet op het blad: trefwoorden om op te zoeken (lijst --zoek)", "Lijsten en setlists", None),
+    ("pdf", "pdf", "Externe PDF", "text", None, "Niet op het blad: in setlists deze PDF gebruiken in plaats van de eigen sheet",
+     "Lijsten en setlists", None),
+    ("bron", "source", "Bron", "text", None, "Linksboven op het blad als 'Bron: …'", "Algemeen", None),
+    ("audio", "audio", "Audio", "text", None, "Niet op het blad: pad naar een opname om mee te oefenen", "Lijsten en setlists", None),
 ]
 
 
@@ -278,6 +278,29 @@ class Studio:
                    "default": (cfg.get(c, "") if c else "")} for k, i, lab, t, o, h, g, c in PROPS]
         return {"fields": fields, "aliases": HEADER_KEYS}
 
+    def search(self, q, case=False):
+        out = []
+        if not q:
+            return {"results": out}
+        files = []
+        for d, exts in (("nummers", (".drum", ".py")), ("setlists", (".txt",)), ("voorbeelden", (".drum", ".py"))):
+            if (self.root / d).exists():
+                files += sorted(p for p in (self.root / d).rglob("*") if p.suffix in exts)
+        files += [self.root / f for f in ("bibliotheek.drum", "instellingen.txt", "HANDLEIDING.md")
+                  if (self.root / f).exists()]
+        needle = q if case else q.lower()
+        for p in files:
+            try:
+                lines = p.read_text(encoding="utf-8").splitlines()
+            except OSError:
+                continue
+            for i, line in enumerate(lines, 1):
+                if needle in (line if case else line.lower()):
+                    out.append({"path": self.rel(p), "line": i, "text": line.strip()[:200]})
+                    if len(out) >= 300:
+                        return {"results": out, "more": True}
+        return {"results": out}
+
     def status(self):
         from .musescore import find_musescore
         p = self.project()
@@ -387,6 +410,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, s.kit())
             if u.path == "/api/help":
                 return self.send(200, s.help())
+            if u.path == "/api/search":
+                return self.send(200, s.search(q.get("q", ""), q.get("case") == "1"))
             if u.path == "/api/props":
                 return self.send(200, s.props())
             if u.path == "/api/status":

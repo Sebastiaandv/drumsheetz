@@ -115,6 +115,38 @@ def add_crash(bar, code, kit):
     return Bar(bar.meter, dedupe(keep + [Hit(Fr(0), cr)]))
 
 
+# Halftime / doubletime: snare, toms en bassdrum op halve of dubbele snelheid; bekkens en hi-hat
+# (ook de hi-hat-voet) blijven zoals ze zijn.
+FEEL_GROUPS = {"drum"}
+FEEL_CODES = {"BD", "BD2", "CL"}
+
+
+def _feel_hit(h):
+    return h.instr.group in FEEL_GROUPS or h.instr.code in FEEL_CODES
+
+
+def feel_transform(bars, mode):
+    """halftime: elke maat wordt twee maten; de eerste helft van de maat wordt over maat 1 uitgerekt,
+    de tweede helft over maat 2. doubletime: het patroon wordt in de helft van de maat gespeeld (2× per maat)."""
+    out = []
+    for b in bars:
+        if b.rest:
+            out += [b, b] if mode == "halftime" else [b]
+            continue
+        L = b.meter.length
+        keep = [h for h in b.hits if not _feel_hit(h)]
+        moving = [h for h in b.hits if _feel_hit(h)]
+        if mode == "halftime":
+            for half in (0, 1):
+                part = [Hit((h.pos - half * L / 2) * 2, h.instr, h.mods, h.text) for h in moving
+                        if half * L / 2 <= h.pos < (half + 1) * L / 2]
+                out.append(Bar(b.meter, dedupe(keep + part)))
+        else:
+            part = [Hit(h.pos / 2 + k * L / 2, h.instr, h.mods, h.text) for h in moving for k in (0, 1)]
+            out.append(Bar(b.meter, dedupe(keep + part)))
+    return out
+
+
 def slash_bar(meter):
     sl = KIT["SL"]
     return Bar(meter, tuple(Hit(p, sl, frozenset({"~"})) for p, _ in meter.beats()))
@@ -161,8 +193,13 @@ class Arranger:
                 if e.line is None:
                     raise self.err(e.msg, ph)
                 raise
+            feel = ph.get("feel_mode")
+            if feel:
+                pat = feel_transform(pat, feel)
             bars = [pat[i % len(pat)] for i in range(n)]
         unit = self.unit_len(groove, meter)
+        if ph.get("feel_mode") and groove not in REST_NAMES and self.book.get(str(groove)):
+            unit = len(feel_transform(self.book.compile(groove, meter), ph["feel_mode"]))
         if fills:
             fbars = []
             for f in fills:

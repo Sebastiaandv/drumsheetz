@@ -116,8 +116,13 @@ Ctrl+C in de terminal). Je typt nog steeds gewoon in de `.drum`-bestanden, maar 
 | **Rechts** | *Document*: alle eigenschappen van het nummer (titel, ondertitel, vermelding, tempo, maat, stijl, aftellen, stemmen, tekstgrootte, accenten, vorken, duur, …) als invulvelden. Wat je invult komt direct bovenin het bestand; leeg = standaard uit `instellingen.txt` (staat er grijs bij). *Gereedschap*: klik om in te voegen: blokken (groove, fill, sectie, volta's, segno/coda, …), opties (crash, fill, mf, cresc, …), tekens (accent, ghost, flam, …), tellen (`*8`, `2&`, …) en instrumenten. *Bibliotheek*: alle grooves en fills doorzoeken, met voorbeeld. *Help*: doorzoek deze handleiding. |
 | **Boven** | Nieuw nummer, nieuwe setlist, Document (eigenschappen), opslaan, controleren, **Maak PDF** (of setlist), PDF openen, MIDI (tempo %, aftellen, klik), alles maken, archiveren, instellingen, help. |
 
-Sneltoetsen: **⌘/Ctrl+S** opslaan, **⌘/Ctrl+Enter** PDF maken, **Tab** = 2 spaties, **Enter** houdt
-de inspringing aan. De panelen kun je breder/smaller slepen. Andere poort: `python3 drums.py studio --poort 9000`.
+Sneltoetsen: **⌘/Ctrl+S** opslaan, **⌘/Ctrl+Enter** PDF maken, **⌘/Ctrl+Z** ongedaan maken en
+**⌘/Ctrl+Shift+Z** (of Ctrl+Y) opnieuw (werkt ook na opslaan en na wijzigingen via het Document-paneel of
+het gereedschap), **⌘/Ctrl+F** zoeken en vervangen (met *Alle bestanden* zoek je in al je nummers en
+setlists; klik op een resultaat om er naartoe te gaan), **Tab** = 2 spaties, **Enter** houdt de inspringing aan.
+
+Patronen die je hebt gemaakt maar nergens in de opbouw gebruikt, staan **grijs en doorgestreept** in
+de editor, zodat je ze makkelijk kunt opruimen. De panelen kun je breder/smaller slepen. Andere poort: `python3 drums.py studio --poort 9000`.
 
 ---
 
@@ -230,7 +235,8 @@ Bovenaan, als `sleutel: waarde`. Alleen `titel` is eigenlijk nodig.
 | `herhaaltekens` | `nee` = nooit %-maten, alles uitschrijven | `herhaaltekens: nee` |
 | `duur` | Duur voor de setlist (anders berekend uit maten en tempo) | `duur: 4:32` |
 | `pdf` | Gebruik in setlists deze (gekochte) PDF in plaats van de eigen sheet | `pdf: archief/pdf-gekocht/x.pdf` |
-| `toonsoort`, `status`, `tags`, `bron`, `audio`, `album`, `jaar`, `componist` | Alleen informatief (zichtbaar in `lijst`/setlists) | `status: klaar` |
+| `componist`, `album`, `jaar`, `toonsoort`, `bron`, `status` | Komen **linksboven** op het blad (bv. "Muziek: …", "Album · 1999", "Toonsoort: F", "Bron: …", "Status: concept"), alleen wat je invult | `toonsoort: F` |
+| `tags`, `audio` | Niet op het blad: `tags` om op te zoeken (`lijst --zoek`), `audio` als verwijzing naar een opname | `tags: ballad koor` |
 
 ### 4.2 Patronen: grooves en fills
 
@@ -568,7 +574,8 @@ Alle **opties**, op een regel of achter de sectienaam:
 | `"tekst"` | cursieve tekst boven de eerste maat |
 | `klein`, `normaal`, `groot`, `heelklein`, `heelgroot`, `grootte=7` | grootte van de tekst op deze regel (of sectie) |
 | `tempo=120`, `tempo 120`, `tempo=4.=60` | nieuw tempo (metronoomteken) |
-| `rit` `rall` `accel` `a-tempo` `tempo-primo` `halftime` `doubletime` | tempotekst |
+| `rit` `rall` `accel` `a-tempo` `tempo-primo` | tempotekst |
+| `halftime`, `doubletime` | groove op halve/dubbele snelheid, met tekst (zie hieronder) |
 | `fermata` | fermate op het laatste slag van de laatste maat |
 | `maat=7/8`, `maat=7/8(2+2+3)` | maatwissel (blijft gelden tot de volgende) |
 | `uitgeschreven` | geen %-maten: elke maat uitschrijven |
@@ -669,6 +676,28 @@ tempo: 8=210                    achtste = 210 (bv. voor 7/8)
   4 rock rit                    "rit." boven de maat
   1 hit fermata                 fermate op het laatste slag
 ```
+
+### Halftime en doubletime
+
+Speel een groove in **halftime** of **doubletime** zonder hem opnieuw uit te schrijven:
+
+```
+[Brug] 8 rock halftime         snare op 3, bassdrum op halve snelheid, met "Half time" erboven
+[Solo] 8 rock doubletime       snare op elke &, bassdrum op elke tel, met "Double time" erboven
+```
+
+Wat er gebeurt: **snare, toms, clap en bassdrum** gaan op halve (of dubbele) snelheid; **bekkens,
+hi-hat en hi-hat-voet blijven gelijk**. Bij halftime wordt de eerste helft van de maat over een hele
+maat uitgerekt en de tweede helft over de volgende maat (een groove van 1 maat wordt er dus 2). Bij
+doubletime wordt de maat in de helft van de tijd gespeeld, twee keer per maat.
+
+| Groove | Normaal | `halftime` | `doubletime` |
+|---|---|---|---|
+| `rock` | SD 2 4 · BD 1 3 | SD 3 · BD 1 | SD op elke & · BD op elke tel |
+
+Werkt met alle grooves (ook je eigen), fills blijven gewoon zoals ze zijn. Wil je alleen de tekst
+zonder dat de groove verandert, gebruik dan `halftime-tekst` of `doubletime-tekst`. (De ingebouwde
+groove die `halftime` heet gebruik je zoals altijd: `8 halftime`.)
 
 ### 4.15 Maatsoorten en maatwisselingen
 
@@ -1162,6 +1191,7 @@ CB TAMB TRI SHK CLV WB WBL AGH AGL CGH CGL BGH BGL TBH TBL | CK SL | ST
                                 8 a mf           8 crash  (zelfde groove, met crash)
                                 8 b fill x       1 {SD: *16; BD: 1}  (inline)
 opties: crash  crash=CR2  china  splash  fill x  fill x,y  ppp…fff sfz fp  cresc dim  p<f  f>p  cresc p-f
+        halftime  doubletime
         "tekst"  klein groot grootte=7  tempo=120  rit rall accel a-tempo  fermata  maat=7/8  uitgeschreven
         herhaal 2  volta 1  volta 2  segno coda fine naar-coda ds ds-al-coda dc dc-al-fine
         nieuweregel nieuwepagina doorlopen einde

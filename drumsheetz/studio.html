@@ -94,6 +94,22 @@ aside,section{min-height:0;min-width:0}
 .k-num{color:var(--hl-num)}.k-str{color:var(--hl-str)}.k-com{color:var(--hl-com);font-style:italic}
 .k-opt{color:var(--hl-opt)}
 .k-bad{color:var(--err);text-decoration:wavy underline var(--err)}
+.k-unused{color:var(--muted);font-style:italic;text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--muted) 60%,transparent)}
+.ed-find{color:transparent!important;z-index:0}
+.ed-find mark{background:color-mix(in srgb,#f2c94c 45%,transparent);color:transparent;border-radius:2px}
+.ed-find mark.cur{background:color-mix(in srgb,#f2994a 70%,transparent);outline:1px solid #f2994a}
+.findbar{position:absolute;top:6px;right:14px;z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:6px;box-shadow:0 6px 20px rgba(0,0,0,.15);display:none;flex-direction:column;gap:5px;width:360px}
+.findbar.show{display:flex}
+.findbar .row{display:flex;gap:4px;align-items:center}
+.findbar input:not([type=checkbox]){flex:1;min-width:0;padding:4px 7px;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
+.findbar .fcount{font-size:11px;color:var(--muted);min-width:44px;text-align:center}
+.findbar .fopt{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:2px;cursor:pointer}
+.btn.small{padding:2px 7px;font-size:12px}
+.sres{padding:4px 12px;border-bottom:1px solid var(--line);cursor:pointer;font:12px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sres:hover{background:var(--panel2)}
+.sres b{color:var(--accent);font-weight:600}
+.sres .ln{color:var(--muted)}
 /* ---------- onderpaneel ---------- */
 .hsplit{cursor:row-resize}
 .hsplit:hover{background:var(--line)}
@@ -220,8 +236,16 @@ dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
   <section id="center">
     <div class="ed-wrap" id="edWrap">
       <div class="ed-gutter" id="gutter"></div>
-      <div class="ed-scroll"><pre class="ed-hl" id="hl"></pre>
+      <div class="ed-scroll"><pre class="ed-hl ed-find" id="findhl"></pre><pre class="ed-hl" id="hl"></pre>
         <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea></div>
+      <div class="findbar" id="findbar">
+        <div class="row"><input id="fFind" placeholder="Zoeken (⌘/Ctrl+F)"><span id="fCount" class="fcount"></span>
+          <button class="icon-btn" id="fPrev" title="Vorige (Shift+Enter)">↑</button><button class="icon-btn" id="fNext" title="Volgende (Enter)">↓</button>
+          <label class="fopt" title="Hoofdletters tellen mee"><input type="checkbox" id="fCase">Aa</label>
+          <button class="icon-btn" id="fClose" title="Sluiten (Esc)">✕</button></div>
+        <div class="row"><input id="fRepl" placeholder="Vervangen door…"><button class="btn small" id="fRep1">Vervang</button>
+          <button class="btn small" id="fRepAll">Alles</button><button class="btn small" id="fGlobal" title="Zoek in alle bestanden">Alle bestanden</button></div>
+      </div>
       <div class="empty-ed" id="emptyEd"><div><b>Kies links een bestand</b><br>of maak een nieuw nummer met <b>＋ Nummer</b>.<br><br>
         <span>⌘/Ctrl+S opslaan · ⌘/Ctrl+Enter PDF maken · Tab = 2 spaties</span></div></div>
     </div>
@@ -232,12 +256,14 @@ dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
         <div class="tab" data-t="prob">Problemen<span class="badge zero" id="probBadge">0</span></div>
         <div class="tab" data-t="pdf">PDF</div>
         <div class="tab" data-t="log">Log</div>
+        <div class="tab" data-t="search">Zoeken<span class="badge warn zero" id="searchBadge">0</span></div>
       </div>
       <div class="tabbody active" id="t-tab"><pre class="out" id="tabOut"><span class="hint">Hier verschijnt het nummer als drumtab terwijl je typt.</span></pre></div>
       <div class="tabbody" id="t-prob"></div>
       <div class="tabbody" id="t-pdf" style="overflow:hidden"><div class="hint" id="pdfHint">Nog geen PDF. Klik op <b>Maak PDF</b>.</div>
         <iframe id="pdfFrame" style="display:none"></iframe></div>
       <div class="tabbody" id="t-log"><pre class="out" id="logOut"></pre></div>
+      <div class="tabbody" id="t-search"><div class="hint">Zoek in alle bestanden via ⌘/Ctrl+F → <b>Alle bestanden</b>.</div></div>
     </div>
   </section>
   <div class="split" data-side="right"></div>
@@ -326,7 +352,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&
 const OPTS = new Set(("crash china splash crash2 stack fill fills ppp pp p mp mf f ff fff sfz sf fp sfp rfz cresc dim decresc < > "+
   "rit rall accel a-tempo tempo-primo halftime doubletime fermata uitgeschreven herhaal volta segno coda fine naar-coda ds "+
   "ds-al-coda ds-al-fine dc dc-al-coda dc-al-fine nieuweregel nieuwepagina doorlopen einde klein groot normaal heelklein "+
-  "heelgroot tacet rust tijd vrij maten maat").split(" "));
+  "heelgroot tacet rust tijd vrij maten maat halftime doubletime half-time double-time").split(" "));
 function splitComment(line){
   let q=false;
   for(let i=0;i<line.length;i++){ const c=line[i]; if(c==='"') q=!q; else if(c==="#"&&!q) return [line.slice(0,i), line.slice(i)]; }
@@ -360,7 +386,9 @@ function hlLine(line, inPattern){
   let m;
   if((m=code.match(/^(\s*)\[([^\]]*)\](.*)$/))) h = esc(m[1])+'<span class="k-sec">['+esc(m[2])+']</span>'+hlPhase(m[3]);
   else if((m=code.match(/^(groove|fill|patroon|pattern|ritme)(\s+)([^\s=:]+)(.*)$/i)))
-    h = '<span class="k-kw">'+m[1]+'</span>'+m[2]+'<span class="k-name">'+esc(m[3])+'</span>'+esc(m[4]);
+    h = '<span class="k-kw">'+m[1]+'</span>'+m[2]+(USED.used.has(m[3])
+      ? '<span class="k-name">'+esc(m[3])+'</span>'
+      : '<span class="k-unused" title="wordt nergens in de opbouw gebruikt">'+esc(m[3])+'</span>')+esc(m[4]);
   else if((m=code.match(/^(instrument|kit)(\s+)(.*)$/i))) h='<span class="k-kw">'+m[1]+'</span>'+m[2]+esc(m[3]);
   else if(inPattern && (m=code.match(/^(\s*)([A-Za-z][\w\-]*)(\s*:\s*)(.*)$/))){
     const isOpt = /^(info|maten|maat|basis|bars|meter|base|uitleg|doc)$/i.test(m[2]);
@@ -386,13 +414,38 @@ function hlPhase(s){
   }
   return out;
 }
+/* namen van patronen die in de opbouw (secties) gebruikt worden, plus hun basis-patronen */
+function usedPatterns(lines){
+  const defs={}, used=new Set(); let inPattern=false, cur=null;
+  const OPT=/^(crash|china|splash|crash2|stack|fill|fills|tacet|rust|tijd|vrij|maten|maat)$/i;
+  for(const raw of lines){
+    const code=splitComment(raw)[0];
+    let m=code.match(/^(groove|fill|patroon|pattern|ritme)\s+([^\s=:]+)(?:\s*=\s*([^\s:]+))?/i);
+    if(m){ inPattern=true; cur=m[2]; defs[cur]=new Set(m[3]?[m[3]]:[]); continue; }
+    if(inPattern && (/^\s/.test(code) || /^[A-Za-z][\w\-]*\s*:/.test(code) || !code.trim())){
+      const b=code.match(/^\s*(basis|base)\s*:\s*(\S+)/i); if(b&&cur) defs[cur].add(b[2]); continue; }
+    inPattern=false;
+    const ph=code.match(/^\s*(?:\[[^\]]*\]\s*)?\d+x?\s+(?:maten?\s+)?([^\s"{]+)/i);
+    if(ph && !OPT.test(ph[1])) used.add(ph[1]);
+    for(const f of code.matchAll(/\bfills?\s*[=: ]\s*([^\s"]+)/gi)) f[1].split(",").forEach(x=>x&&used.add(x));
+    for(const b of code.matchAll(/(?:basis|base)\s*:\s*([^;}\s]+)/gi)) used.add(b[1]);
+  }
+  let grow=true; while(grow){ grow=false; for(const n of [...used]) for(const b of (defs[n]||[])) if(!used.has(b)){ used.add(b); grow=true; } }
+  return {used, defs};
+}
+let USED={used:new Set(),defs:{}};
+let KITSET=new Set(["BD","SD","HH","RD","CR","T1","T2","T3","FT"]);
 function render(){
   const lines = ed.value.split("\n");
+  USED = usedPatterns(lines);
   let inPattern=false, html="", g="";
   lines.forEach((ln,i)=>{
     const code = splitComment(ln)[0];
     if(/^(groove|fill|patroon|pattern|ritme)\s/i.test(code)) inPattern = true;
-    else if(code.trim() && !/^\s/.test(code) && !/^[A-Za-z][\w\-]*\s*:/.test(code)) inPattern = false;
+    else if(code.trim() && !/^\s/.test(code)){
+      const km = code.match(/^([A-Za-z][\w\-]*)\s*:/);    // zelfde regel als het programma: alleen instrument/optie blijft in het blok
+      if(!km || !(KITSET.has(km[1].toUpperCase()) || /^(maten|maat|basis|base|info|uitleg|doc|bars|meter|st|stick|sticking|plak|hand|handen)$/i.test(km[1]))) inPattern = false;
+    }
     const err = state.errLine===i+1;
     html += '<span class="l'+(err?" err":"")+'">'+(hlLine(ln, inPattern && !/^(groove|fill|patroon|pattern|ritme)\s/i.test(code))||"​")+'</span>';
     g += '<div'+(err?' class="err"':'')+'>'+(i+1)+'</div>';
@@ -400,15 +453,36 @@ function render(){
   if(state.kind==="text" || state.kind==="settings" || (state.path||"").endsWith(".py") || (state.path||"").endsWith(".md")){
     html = lines.map((ln,i)=>'<span class="l'+(state.errLine===i+1?" err":"")+'">'+(esc(ln)||"​")+'</span>').join("");
   }
-  hl.innerHTML = html; gut.innerHTML = g; syncScroll();
+  hl.innerHTML = html; gut.innerHTML = g; renderFind(); syncScroll();
 }
 function syncScroll(){
   hl.style.transform = `translate(${-ed.scrollLeft}px,${-ed.scrollTop}px)`;
+  $("#findhl").style.transform = hl.style.transform;
   gut.scrollTop = ed.scrollTop;
 }
 
 /* ------------------------------------------------------------ editor gedrag */
 function dirty(){ return state.path && ed.value !== state.saved; }
+
+/* eigen ongedaan maken / opnieuw: werkt ook na opslaan, invoegen en wijzigingen via het Document-paneel */
+const H = { stack:[], i:-1, t:0, force:false };
+function histReset(){ H.stack=[{v:ed.value,s:0,e:0}]; H.i=0; H.t=0; }
+function histRecord(force){
+  const snap={v:ed.value,s:ed.selectionStart,e:ed.selectionEnd};
+  if(H.i>=0 && H.stack[H.i].v===snap.v) return;
+  const now=Date.now();
+  if(!force && !H.force && H.i>0 && now-H.t<700){ H.stack[H.i]=snap; }
+  else { H.stack=H.stack.slice(0,H.i+1); H.stack.push(snap); H.i++; if(H.stack.length>500){ H.stack.shift(); H.i--; } }
+  H.t=now; H.force=false;
+}
+function histApply(d){
+  if(!state.path) return;
+  histRecord(true);
+  const j=H.i+d; if(j<0||j>=H.stack.length){ toast(d<0?"Niets meer om ongedaan te maken":"Niets meer om opnieuw te doen"); return; }
+  H.i=j; const s=H.stack[j];
+  ed.value=s.v; ed.focus(); ed.setSelectionRange(s.s,s.e);
+  render(); updateTitle(); scheduleCheck(); refreshDoc(); cursorPos(); H.t=0;
+}
 function updateTitle(){
   $("#fname").innerHTML = state.path ? esc(state.path)+(dirty()?' <span class="dirty">●</span>':"") : "geen bestand";
   const k=state.kind, can = k==="song"||k==="setlist"||k==="library";
@@ -417,7 +491,7 @@ function updateTitle(){
   $("#bBuild").textContent = k==="setlist" ? "Maak setlist" : (k==="library" ? "Maak catalogus" : "Maak PDF");
 }
 ed.addEventListener("scroll", syncScroll);
-ed.addEventListener("input", ()=>{ render(); updateTitle(); scheduleCheck(); clearTimeout(ed._d); ed._d=setTimeout(refreshDoc,400); });
+ed.addEventListener("input", ()=>{ histRecord(); render(); updateTitle(); scheduleCheck(); clearTimeout(ed._d); ed._d=setTimeout(refreshDoc,400); });
 ed.addEventListener("keyup", cursorPos); ed.addEventListener("click", cursorPos);
 function cursorPos(){
   const before = ed.value.slice(0, ed.selectionStart).split("\n");
@@ -436,6 +510,7 @@ function insertText(t, selectInside){
   if(!state.path){ toast("Open eerst een bestand"); return; }
   ed.focus();
   const a=ed.selectionStart, b=ed.selectionEnd;
+  histRecord(true); H.force=true;
   ed.setRangeText(t, a, b, "end");
   if(selectInside){ const i=t.indexOf(selectInside); if(i>=0){ ed.setSelectionRange(a+i, a+i+selectInside.length); } }
   ed.dispatchEvent(new Event("input"));
@@ -451,7 +526,11 @@ function gotoLine(n){
   ed.scrollTop = Math.max(0,(n-6)*20); syncScroll(); cursorPos();
 }
 document.addEventListener("keydown", e=>{
-  const mod = e.metaKey||e.ctrlKey;
+  const mod = e.metaKey||e.ctrlKey, k=e.key.toLowerCase();
+  const inField = document.activeElement && document.activeElement!==ed && /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);
+  if(mod && !inField && state.path && (k==="z" || k==="y")){ e.preventDefault(); histApply(k==="z" && !e.shiftKey ? -1 : 1); return; }
+  if(mod && k==="f" && state.path){ e.preventDefault(); openFind(); return; }
+  if(e.key==="Escape" && $("#findbar").classList.contains("show")){ closeFind(); return; }
   if(mod && e.key.toLowerCase()==="s"){ e.preventDefault(); save(); }
   if(mod && e.key==="Enter"){ e.preventDefault(); if(!$("#bBuild").disabled) build(); }
 });
@@ -492,7 +571,7 @@ async function openFile(path){
     state.path=j.path; state.kind=j.kind; state.saved=j.content; state.errLine=null; state.pdf=null;
     ed.value=j.content; ed.scrollTop=0; ed.scrollLeft=0; $("#emptyEd").style.display="none";
     localStorage.setItem("ds-last", path);
-    render(); updateTitle(); drawTree(); cursorPos(); drawDoc();
+    histReset(); render(); updateTitle(); drawTree(); cursorPos(); drawDoc();
     $("#pdfFrame").style.display="none"; $("#pdfHint").style.display="block";
     $("#tabOut").innerHTML='<span class="hint">Controleren…</span>';
     check();
@@ -542,6 +621,9 @@ function setProblems(list){
 $("#t-prob").addEventListener("click", e=>{ const p=e.target.closest(".problem"); if(p&&p.dataset.line) gotoLine(+p.dataset.line); });
 
 /* ------------------------------------------------------------ acties */
+document.querySelector("header").addEventListener("click", e=>{
+  if(e.target.closest("button") && state.path) setTimeout(()=>{ if(!document.querySelector("dialog[open]")) ed.focus(); }, 0);
+});
 function showTab(group, t){
   $$(`#${group} .tab`).forEach(x=>x.classList.toggle("active", x.dataset.t===t));
   const prefix = group==="btabs"?"t-":"r-";
@@ -625,7 +707,7 @@ const SNIPS = [
   ["slot", "[Outro]\n  4 rock crash\n  1 hit fermata\n", "Outro"],
 ];
 const OPTCHIPS = ["crash","fill ","\"tekst\"","mf","p","f","ff","cresc","dim","p<f","f>p","tempo=","rit","fermata","maat=","herhaal 2",
-  "volta 1","volta 2","segno","coda","ds-al-coda","naar-coda","uitgeschreven","nieuweregel","klein","groot","tacet","tijd"];
+  "volta 1","volta 2","segno","coda","ds-al-coda","naar-coda","uitgeschreven","nieuweregel","klein","groot","tacet","tijd","halftime","doubletime"];
 const COUNTS = [["*4","kwarten"],["*8","8sten"],["*16","16den"],["*8t","triolen"],["*&","de &-en"],["1 3",""],["2 4",""],
   ["1e",""],["1&",""],["1a",""],["1t",""],["1l",""],["3-4*16",""],["!3&","weghalen"],[":X","accent"],[":g","ghost"],[":o","open"]];
 function chip(label, small){ return `<span class="chip">${esc(label)}${small?`<small>${esc(small)}</small>`:""}</span>`; }
@@ -642,6 +724,7 @@ async function initTools(){
   $$("#counts .chip").forEach((c,i)=>c.onclick=()=>{ const t=COUNTS[i][0]; if(t[0]===":") insertText(t); else insertWord(t); });
   try{
     const k = await api("/api/kit");
+    KITSET = new Set(k.instruments.flatMap(i=>[i.code, ...i.aliases])); render();
     $("#insts").innerHTML = k.instruments.map(i=>`<span class="chip" title="${esc(i.name)} · ${i.pos} · ${esc(i.head)}${i.aliases.length?" · ook: "+esc(i.aliases.join(", ")):""}">${i.code}<small>${esc(i.name.split(" (")[0].split(" /")[0])}</small></span>`).join("")+
       `<span class="chip" title="sticking-rij">ST<small>sticking</small></span>`;
     $$("#insts .chip").forEach(c=>c.onclick=()=>{ const code=c.firstChild.textContent;
@@ -652,6 +735,74 @@ async function initTools(){
     $$("#mods .modrow").forEach(r=>r.onclick=()=>insertText(r.querySelector("code").textContent));
   }catch(e){}
 }
+
+/* ------------------------------------------------------------ zoeken en vervangen */
+const F = { matches:[], cur:-1 };
+function findRegex(){
+  const q=$("#fFind").value; if(!q) return null;
+  return new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"), $("#fCase").checked?"g":"gi");
+}
+function computeFind(){
+  F.matches=[]; const re=findRegex();
+  if(re && $("#findbar").classList.contains("show")){ let m; while((m=re.exec(ed.value))){ F.matches.push([m.index, m.index+m[0].length]); if(m[0].length===0) re.lastIndex++; } }
+  if(F.cur>=F.matches.length) F.cur=F.matches.length-1;
+  $("#fCount").textContent = $("#fFind").value ? (F.matches.length ? `${F.cur+1>0?F.cur+1:0}/${F.matches.length}` : "0") : "";
+}
+function renderFind(){
+  const layer=$("#findhl");
+  if(!$("#findbar").classList.contains("show") || !$("#fFind").value){ layer.innerHTML=""; return; }
+  computeFind();
+  const v=ed.value; let out="", last=0;
+  F.matches.forEach(([a,b],n)=>{ out+=esc(v.slice(last,a))+`<mark${n===F.cur?' class="cur"':""}>`+esc(v.slice(a,b))+"</mark>"; last=b; });
+  out+=esc(v.slice(last));
+  layer.innerHTML = out.split("\n").map(l=>'<span class="l">'+(l||"\u200b")+"</span>").join("");
+}
+function gotoMatch(d){
+  computeFind(); if(!F.matches.length){ renderFind(); return; }
+  const pos=ed.selectionEnd;
+  if(d>0){ F.cur = F.matches.findIndex(m=>m[0]>=pos - (F.cur>=0&&F.matches[F.cur]&&F.matches[F.cur][1]===pos?0:1)); if(F.cur<0) F.cur=0; }
+  else { const s=ed.selectionStart; let i=-1; F.matches.forEach((m,n)=>{ if(m[0]<s) i=n; }); F.cur = i<0 ? F.matches.length-1 : i; }
+  const [a,b]=F.matches[F.cur]; ed.setSelectionRange(a,b);
+  const line=ed.value.slice(0,a).split("\n").length;
+  if(line*20 < ed.scrollTop+20 || line*20 > ed.scrollTop+ed.clientHeight-40) ed.scrollTop=Math.max(0,(line-6)*20);
+  syncScroll(); renderFind(); cursorPos();
+}
+function openFind(){
+  const fb=$("#findbar"); fb.classList.add("show");
+  const sel=ed.value.slice(ed.selectionStart, ed.selectionEnd);
+  if(sel && !sel.includes("\n")) $("#fFind").value=sel;
+  $("#fFind").focus(); $("#fFind").select(); F.cur=-1; renderFind();
+}
+function closeFind(){ $("#findbar").classList.remove("show"); renderFind(); ed.focus(); }
+$("#fFind").addEventListener("input", ()=>{ F.cur=-1; renderFind(); });
+$("#fCase").addEventListener("change", ()=>{ F.cur=-1; renderFind(); });
+$("#fFind").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); gotoMatch(e.shiftKey?-1:1); $("#fFind").focus(); } });
+$("#fNext").onclick=()=>gotoMatch(1); $("#fPrev").onclick=()=>gotoMatch(-1); $("#fClose").onclick=closeFind;
+$("#fRep1").onclick=()=>{
+  computeFind(); const [a,b]=F.matches[F.cur]||[];
+  if(a===undefined || ed.selectionStart!==a || ed.selectionEnd!==b){ gotoMatch(1); return; }
+  ed.focus(); ed.setSelectionRange(a,b); insertText($("#fRepl").value); gotoMatch(1);
+};
+$("#fRepAll").onclick=()=>{
+  const re=findRegex(); if(!re) return; const n=(ed.value.match(re)||[]).length; if(!n) return;
+  histRecord(true); ed.value=ed.value.replace(re, ()=>$("#fRepl").value); histRecord(true);
+  render(); updateTitle(); scheduleCheck(); refreshDoc(); toast(`${n}× vervangen`);
+};
+$("#fGlobal").onclick=async ()=>{
+  const q=$("#fFind").value.trim(); if(!q) return;
+  const j=await api("/api/search?q="+encodeURIComponent(q)+($("#fCase").checked?"&case=1":""));
+  const box=$("#t-search"), b=$("#searchBadge");
+  b.textContent=j.results.length; b.classList.toggle("zero", !j.results.length);
+  const re=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"), $("#fCase").checked?"g":"gi");
+  box.innerHTML = j.results.length ? j.results.map(r=>`<div class="sres" data-p="${esc(r.path)}" data-l="${r.line}"><span class="ln">${esc(r.path)}:${r.line}</span>  ${esc(r.text).replace(re, m=>"<b>"+m+"</b>")}</div>`).join("")+(j.more?'<div class="hint">Meer dan 300 resultaten; zoek specifieker.</div>':"")
+    : `<div class="hint">Niets gevonden voor "${esc(q)}".</div>`;
+  showTab("btabs","search");
+};
+$("#t-search").addEventListener("click", async e=>{
+  const r=e.target.closest(".sres"); if(!r) return;
+  if(r.dataset.p!==state.path) await openFile(r.dataset.p);
+  if(r.dataset.p===state.path) gotoLine(+r.dataset.l);
+});
 
 /* ------------------------------------------------------------ documenteigenschappen */
 let PROPS=null, ALIAS={};
@@ -683,7 +834,8 @@ function setHeader(field, value){
     if(at<0){ at=0; while(at<h.end && /^\s*#/.test(lines[at])) at++; at--; }
     lines.splice(at+1,0,`${field.key}: ${value}`);
   }
-  const sel=ed.selectionStart; ed.value=lines.join("\n"); ed.setSelectionRange(sel,sel);
+  histRecord(true);
+  const sel=ed.selectionStart; ed.value=lines.join("\n"); ed.setSelectionRange(sel,sel); histRecord(true);
   render(); updateTitle(); scheduleCheck();
 }
 function drawDoc(){

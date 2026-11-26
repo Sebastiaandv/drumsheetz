@@ -123,7 +123,9 @@ def _opts(ph, section=False):
         o.append("cresc" if ph["wedge"].startswith("cresc") else "dim")
     if ph.get("tempo"):
         o.append(f"tempo={ph['tempo']}")
-    if ph.get("tempo_text"):
+    if ph.get("feel_mode"):
+        o.append(ph["feel_mode"])
+    if ph.get("tempo_text") and not (ph.get("feel_mode") and ph["tempo_text"] in ("Half time", "Double time")):
         o.append(TT_OUT.get(ph["tempo_text"], ph["tempo_text"]))
     if ph.get("meter"):
         v = ph["meter"]
