@@ -88,6 +88,7 @@ aside,section{min-height:0;min-width:0}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none;background:var(--muted)}
 .dot.actueel{background:var(--ok)}.dot.nieuw{background:#3b82f6}.dot.pdf,.dot.gegevens,.dot.verouderd{background:var(--warn)}
 .dot.geen-pdf{background:transparent;border:1px solid var(--muted)}.dot.fout{background:var(--err)}
+.warnmark{color:var(--warn);margin-left:4px}
 .fs-info{margin:6px 8px 0;padding:5px 7px;border-radius:5px;font-size:11px;background:var(--panel2);color:var(--muted)}
 .fs-info.ok{color:var(--ok)} .fs-info.warn{color:var(--warn)}
 .fs-info a{color:var(--accent);cursor:pointer;text-decoration:underline}
@@ -231,7 +232,7 @@ dialog input[type=checkbox]{display:inline;width:auto;margin-right:6px}
 dialog .row{display:flex;gap:8px}
 dialog .row>*{flex:1}
 dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
-.toast{position:fixed;bottom:34px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);
+.toast{position:fixed;bottom:34px;left:50%;transform:translateX(-50%);max-width:min(640px,90vw);text-align:center;background:var(--text);color:var(--bg);
   padding:7px 14px;border-radius:7px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.show{opacity:.95}
 .busy{position:fixed;inset:0;background:rgba(0,0,0,.08);display:none;place-items:center;z-index:8;cursor:progress}
@@ -395,7 +396,7 @@ async function api(url, body){
   if(!r.ok) throw new Error(j.error || r.statusText);
   return j;
 }
-function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200); }
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),Math.max(2200, 45*String(msg).length)); }
 function busy(on,msg){ $("#busyMsg").textContent=msg||"Bezig…"; $("#busy").classList.toggle("show",!!on); }
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -597,7 +598,7 @@ $("#ltabs").addEventListener("click", e=>{
 });
 
 /* ------------------------------------------------------------ forScore-beheer */
-const FS = { data:null, open:new Set(["notyet","map","setlists"]), extra:{map:[],genre:[],labels:[],tags:[]} };
+const FS = { data:null, open:new Set(["dups","notyet","map","setlists"]), extra:{map:[],genre:[],labels:[],tags:[]} };
 const FS_GROUPS = [["map","Mappen","map","library"],["genre","Genres","genre","genre"],["labels","Labels","labels","labels"],["tags","Tags","tags","tags"]];
 const STATUS_TXT = {actueel:"staat actueel in forScore", nieuw:"nog niet in forScore", pdf:"gewijzigd sinds het versturen: opnieuw versturen",
   gegevens:"gegevens gewijzigd", verouderd:"nummer gewijzigd sinds de laatste PDF", "geen-pdf":"nog geen PDF gemaakt", fout:"fout in het nummer"};
@@ -606,9 +607,11 @@ async function loadFs(){
 }
 function fsSongRow(s, top, group){
   const st = {niet:"nieuw", gewijzigd:"pdf"}[s.status] || s.status;
-  return `<div class="fs-song${top?" top":""}${s.path===state.path?" active":""}" draggable="true" data-id="${esc(s.id)}" data-path="${esc(s.path)}" title="${esc(s.name||"")} · ${esc(STATUS_TXT[st]||st)}${s.error?": "+esc(s.error):""}">
-    <span class="dot ${st}"></span><span class="t">${esc(s.title)}</span><span class="a">${esc(s.artist||"")}</span><span class="grow"></span>
-    ${group?`<button class="act" data-rm="${esc(group[0])}|${esc(group[1])}" title="uit '${esc(group[1])}' halen">✕</button>`:""}
+  const tip = (s.sent ? `in forScore als '${s.name}'` : `wordt '${s.name}' in forScore`) + " · " + (STATUS_TXT[st]||st) +
+    (s.error?": "+s.error:"") + ((s.dups||[]).length?` · LET OP: ${s.dups.length}× in forScore`:"");
+  return `<div class="fs-song${top?" top":""}${s.path===state.path?" active":""}" draggable="true" data-id="${esc(s.id)}" data-path="${esc(s.path)}" data-sent="${s.sent?1:0}" title="${esc(tip)}">
+    <span class="dot ${st}"></span><span class="t">${esc(s.title)}</span><span class="a">${esc(s.artist||"")}</span>${(s.dups||[]).length?'<span class="warnmark" title="staat dubbel in forScore">⚠</span>':""}<span class="grow"></span>
+    ${group && !s.sent?`<button class="act" data-rm="${esc(group[0])}|${esc(group[1])}" title="uit '${esc(group[1])}' halen">✕</button>`:""}
     <button class="act" data-send="${esc(s.path)}" title="naar forScore sturen">→</button></div>`;
 }
 function drawFs(){
@@ -624,6 +627,10 @@ function drawFs(){
   let html="";
   const notyet = songs.filter(s=>!s.sent);
   const insf = songs.filter(s=>s.sent);          // in de mappen staan alleen stukken die al in forScore staan
+  if((d.duplicates||[]).length){
+    html += sec("dups","Dubbel in forScore", d.duplicates.length, '<div class="hint" style="padding:2px 14px 4px">Deze stukken staan meer dan één keer in forScore. Verwijder de kopieën in forScore (de kopie heeft meestal geen labels) en klik op ⟳.</div>'+
+      d.duplicates.map(g=>`<div class="fs-song top" title="${esc(g.join("\n"))}"><span class="warnmark">⚠</span><span class="t">${esc(g.join("  ·  "))}</span></div>`).join(""));
+  }
   html += sec("notyet","Nog niet in forScore", notyet.length, notyet.map(s=>fsSongRow(s,true)).join("") ||
     '<div class="hint" style="padding:4px 14px">Alles staat in forScore.</div>');
   for(const [key,title,hkey,field] of FS_GROUPS.filter(g=>g[0]==="map")){
@@ -642,6 +649,9 @@ function drawFs(){
     if(key==="map" && none.length){ const open=FS.open.has("map:-"); body += `<div class="fs-grp" data-grp="map:-">${open?"▾":"▸"} <i>zonder map</i><span class="n">${none.length}</span></div>`+(open?none.map(s=>fsSongRow(s)).join(""):""); }
     html += sec(key, title, names.length, body || `<div class="hint" style="padding:4px 14px">Maak een map met ＋ Map en sleep er nummers in.</div>`, hkey+"|");
   }
+  if((d.only_forscore||[]).length)
+    html += sec("onlyfs","Alleen in forScore", d.only_forscore.length, '<div class="hint" style="padding:2px 14px 4px">Stukken in forScore zonder bijbehorend nummer in Drumsheetz (bv. gekochte PDF\'s).</div>'+
+      d.only_forscore.map(f=>`<div class="fs-song top"><span class="dot actueel"></span><span class="t">${esc(f)}</span></div>`).join(""));
   html += sec("setlists","Setlists", d.setlists.length, d.setlists.map(sl=>{
     const gk="set:"+sl.name, open=FS.open.has(gk);
     return `<div class="fs-grp" data-grp="${esc(gk)}" data-setlist="${esc(sl.path)}" title="${sl.sent?"al eens naar forScore gestuurd":"nog niet in forScore"}">${open?"▾":"▸"} ☰ ${esc(sl.title)}<span class="n">${sl.items.filter(i=>i.kind!=="break").length}</span>
@@ -677,6 +687,11 @@ $("#fsTree").addEventListener("dragleave", e=>{ const t=e.target.closest("[data-
 $("#fsTree").addEventListener("drop", async e=>{
   const t=e.target.closest("[data-drop]"); if(!t) return; e.preventDefault(); t.classList.remove("drop-ok");
   const path=e.dataTransfer.getData("text/x-ds-path"); let [hkey,g]=t.dataset.drop.split(/\|(.*)/s);
+  const song=(FS.data?FS.data.songs:[]).find(s=>s.path===path);
+  if(song && song.sent){
+    toast(`'${song.title}' staat al in forScore: geef het daar het label${g?" '"+g+"'":""} en klik daarna op ⟳. (Drumsheetz past labels in forScore niet aan, om je annotaties niet te beschadigen.)`);
+    return;
+  }
   if(!g){ g=prompt(`Naam voor de nieuwe ${hkey==="map"?"map":hkey}:`); if(!g) return; }
   await fsSetHeader(path, hkey, g.trim(), "add");
 });

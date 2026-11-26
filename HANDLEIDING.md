@@ -1014,13 +1014,18 @@ Je maakt de nummers op de Mac; Drumsheetz zet ze in **forScore voor Mac**, en de
 
 ### Hoe het werkt
 
+forScore is de baas over je bibliotheek: labels, annotaties en indeling die je in forScore maakt,
+worden nooit door Drumsheetz aangepast of overschreven. Drumsheetz **kijkt** in de forScore-bibliotheek
+op je Mac (alleen lezen) en stuurt bestanden die forScore zelf importeert.
+
 | Wat | Hoe |
 |---|---|
-| **Stukken** | Als PDF met een vaste naam, **"Titel - Artiest.pdf"** (of `forscore-naam:` in de kop), met titel en componist in de PDF. forScore herkent een stuk aan die naam. Bestaat het al, kies dan in forScore **Overschrijven**: je annotaties blijven bewaard. |
-| **Controle** | Na het versturen kijkt Drumsheetz in de forScore-bibliotheek op je Mac of het stuk er écht in staat. Alleen dan geldt het als "in forScore". Lukt het lezen niet, dan zie je dat bovenin het forScore-tabblad en wordt het bijgehouden op basis van wat er verstuurd is. |
-| **Setlists** | Eerst gaan de stukken die er nog niet (actueel) in staan, dan de setlist in het officiële **Open Setlist**-formaat. Een stuk dat (nog) niet in forScore staat, komt als plaatshouder in de setlist, net als pauzes en set-koppen. Daarna wordt gecontroleerd of de setlist er staat. |
-| **Mappen** | Een map in Drumsheetz is een **label** in forScore. **↻ Labels** haalt de labels uit forScore op en zet ze als mappen in je nummers. |
-| **Gegevens** (titel, componist, labels/mappen, genre, …) | Nieuwe stukken gaan als `.4sc` (PDF + gegevens in één), **zodra de zelftest heeft vastgesteld** dat forScore die gegevens overneemt; de zelftest onthoudt ook welke schrijfwijze werkt. Daarvóór gaan ze als PDF. Forceren kan met `forscore-formaat: pdf` of `forscore-formaat: 4sc` in `instellingen.txt` (standaard `auto`). |
+| **Herkennen** | Een nummer hoort bij een stuk in forScore als de bestandsnaam klopt ("Titel - Artiest.pdf"), óf als de **titel** gelijk is en de componist niet tegenspreekt. Dus ook stukken die je zelf in forScore hebt gezet, of die er onder een andere naam in staan, worden herkend. Twee nummers met dezelfde titel maar een andere artiest worden niet door elkaar gehaald. |
+| **Nieuw stuk** | Gaat als `.4sc`: PDF + titel, componist, **map als label**, genre, trefwoorden (zodra de zelftest dat heeft bevestigd; anders als PDF). Daarna wordt gecontroleerd of het er staat. |
+| **Bestaand stuk bijwerken** | Gaat altijd als PDF onder de **naam die het in forScore al heeft**. forScore vraagt wat hij moet doen: kies **Overschrijven** (niet "dupliceren"). Labels en annotaties blijven bewaard. Drumsheetz controleert of forScore de nieuwe versie echt heeft overgenomen, en meldt het als er een kopie is gemaakt of als er niets is veranderd. |
+| **Mappen (labels)** | Voor stukken in forScore zijn de mappen de **echte labels in forScore**. Een label van zo'n stuk verander je in forScore zelf (daarna ⟳); Drumsheetz verandert labels in forScore niet. Voor nummers die nog niet in forScore staan bepaal je met de map het label dat ze bij het versturen krijgen. |
+| **Setlists** | Eerst gaan de stukken die nog ontbreken, dan de setlist (**Open Setlist**). Daarna wordt gecontroleerd of hij **compleet** is. Bestaat er al een setlist met die naam, dan stuurt Drumsheetz hem niet: verwijder de oude eerst in forScore. |
+| **Dubbelen** | Staat een stuk twee keer in forScore (bv. "Naam 2.pdf"), dan zie je dat in de Studio onder **Dubbel in forScore** en bij het versturen. Verwijder de kopie in forScore (meestal die zonder labels). |
 
 ### Opdrachten
 
@@ -1046,17 +1051,21 @@ forScore-bibliotheek gelezen kan worden (groen) of niet (oranje, met een link na
 
 | Onderdeel | Wat |
 |---|---|
-| **Nog niet in forScore** | Nummers die niet in forScore staan. → stuurt er één. |
+| **Dubbel in forScore** | Alleen als het voorkomt: stukken die meer dan één keer in forScore staan. |
+| **Nog niet in forScore** | Nummers die niet in forScore staan. → stuurt er één. Sleep ze op een map om te bepalen welk label ze krijgen. |
 | **Mappen** | Wat in forScore staat, per map (= label); wat in geen map zit staat onder *zonder map*. **＋ Map** maakt een map; **sleep** een nummer op een map, ✕ haalt het eruit, → stuurt de hele map. |
+| **Alleen in forScore** | Alleen als het voorkomt: stukken in forScore zonder nummer in Drumsheetz (bv. gekochte PDF's). |
 | **Setlists** | Je setlists. → stuurt de setlist (met de ontbrekende stukken); ✎ opent het bestand. |
 
 Knoppen: **Werk forScore bij** (alles wat in forScore staat en sindsdien is veranderd opnieuw
 versturen), **＋ Map**, **↻ Labels** (labels uit forScore ophalen als mappen) en **Zelftest**.
 Bolletjes: groen = actueel in forScore, blauw = nog niet in forScore, oranje = gewijzigd, open = nog geen PDF.
 
-Let op: een nummer dat al in forScore staat krijgt een **gewijzigde map** niet vanzelf als label in
-forScore (dan zou het stuk vervangen moeten worden, inclusief annotaties). Zet het label in forScore
-zelf; met **↻ Labels** wordt Drumsheetz daarna weer gelijk.
+Een stuk dat al in forScore staat kun je hier niet naar een andere map slepen: geef het in forScore
+het label en klik op ⟳. Met **↻ Labels** zet je de labels uit forScore ook als `map:` in je nummers.
+
+De koppeling wordt getest tegen een nagemaakte forScore met dezelfde database en hetzelfde gedrag als
+de echte (`python3 -m unittest discover -s tests`).
 
 ---
 

@@ -23,6 +23,12 @@ from xml.sax.saxutils import quoteattr
 from .project import fmt_duration, parse_duration, safe_filename
 
 VERIFY_SECONDS = 40
+TEST_OPEN = "DRUMSHEETZ_FORSCORE_OPEN"     # voor de tests: commando dat forScore nabootst
+
+
+def _poll():
+    import os
+    return float(os.environ.get("DRUMSHEETZ_FORSCORE_POLL", "3"))
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +209,9 @@ def library():
 
 
 def find_app():
+    import os
+    if os.environ.get(TEST_OPEN):
+        return "test"
     if platform.system() != "Darwin":
         return None
     try:
@@ -233,8 +242,13 @@ def open_files(files, log):
         log("✗ forScore voor Mac niet gevonden. Installeer forScore uit de Mac App Store (zelfde Apple-ID als "
             "op de iPad) en zet daar 'Sync with iCloud' aan.")
         return False
+    import os
+    import shlex
     for f in files:
         try:
+            if os.environ.get(TEST_OPEN):
+                subprocess.run(shlex.split(os.environ[TEST_OPEN]) + [str(f)], check=True, timeout=60)
+                continue
             subprocess.run(["open", "-a", app, str(f)], check=True, timeout=60)
             time.sleep(0.8)
         except (OSError, subprocess.SubprocessError) as e:
@@ -243,13 +257,13 @@ def open_files(files, log):
     return True
 
 
-def wait_for(names, setlist=None, seconds=VERIFY_SECONDS, log=print):
+def wait_for(names, setlist=None, seconds=None, log=print):
     """Wacht tot de bestandsnamen (en eventueel de setlist) in de forScore-bibliotheek staan.
     Geeft (bibliotheek, ontbrekende namen) of (bibliotheek, None) als er niet gecontroleerd kan worden."""
-    deadline = time.time() + seconds
+    deadline = time.time() + (seconds or VERIFY_SECONDS * _poll() / 3)
     lib = None
     while time.time() < deadline:
-        time.sleep(3)
+        time.sleep(_poll())
         lib = library()
         if not lib.ok:
             return lib, None
@@ -262,75 +276,179 @@ def wait_for(names, setlist=None, seconds=VERIFY_SECONDS, log=print):
 # ---------------------------------------------------------------------------
 # versturen
 
+def _norm(x):
+    import re
+    import unicodedata
+    x = unicodedata.normalize("NFKD", str(x or "")).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "", x)
+
+
+def _base(filename):
+    """Bestandsnaam zonder '.pdf' en zonder kopie-achtervoegsel (' 2', ' (2)', ' kopie', ' copy')."""
+    import re
+    stem = re.sub(r"\.pdf$", "", str(filename), flags=re.I)
+    stem = re.sub(r"(\s+\d+|\s*\(\d+\)|\s+kopie|\s+copy)$", "", stem, flags=re.I)
+    return _norm(stem)
+
+
+def match(song, lib, state):
+    """Zoek het stuk in forScore: eerst de onthouden naam, dan 'Titel - Artiest.pdf', dan op titel (+ componist).
+    Geeft (record of None, lijst dubbele records)."""
+    if lib is None or not lib.ok:
+        return None, []
+    sent = state.song(song["_id"]) if state else {}
+    name = forscore_name(song)
+    title, artist = _norm(song.get("title")), _norm(song.get("composer") or song.get("artist"))
+    cands = []
+    known = {_base(name)} | ({_base(sent["name"])} if sent.get("name") else set())
+    for r in lib.scores.values():
+        base = _base(r["file"])
+        if base in known:
+            cands.append(r)
+        elif title and (_norm(r["title"]) == title or base == title):
+            # zelfde titel, andere naam: alleen als de componist niet tegenspreekt
+            comps = {_norm(c) for c in r["composers"]}
+            if not (artist and comps and artist not in comps):
+                cands.append(r)
+    if artist and len(cands) > 1:
+        narrowed = [r for r in cands if not r["composers"] or artist in {_norm(c) for c in r["composers"]}
+                    or artist in _norm(r["file"])]
+        cands = narrowed or cands
+    if not cands:
+        return None, []
+    # voorkeur: de onthouden naam, dan het stuk mét labels (het 'echte'), dan het oudste
+    pref = [r for r in cands if r["file"].lower() == str(sent.get("name", "")).lower()]
+    best = pref[0] if pref else sorted(cands, key=lambda r: (not r["labels"], r.get("added") or 0))[0]
+    return best, (cands if len(cands) > 1 else [])
+
+
 def status(project, song, lib, state):
     """'geen-pdf', 'niet' (niet in forScore), 'gewijzigd', 'actueel'."""
+    return resolve(project, song, lib, state)[0]
+
+
+def resolve(project, song, lib, state):
+    """(status, forScore-record of None, dubbelen)"""
     pdf = project.out("pdf", f"{song['_id']}.pdf")
-    if not pdf.exists():
-        return "geen-pdf"
-    name = forscore_name(song)
     sent = state.song(song["_id"])
-    in_fs = lib.has(name) if lib is not None and lib.ok else bool(sent)
-    if not in_fs:
-        return "niet"
+    rec, dups = match(song, lib, state) if lib is not None and lib.ok else (None, [])
+    if not pdf.exists():
+        return "geen-pdf", rec, dups
+    if lib is not None and lib.ok:
+        if rec is None:
+            return "niet", None, []
+    elif not sent:
+        return "niet", None, []
     if sent and sent.get("hash") not in (None, _hash(pdf.read_bytes())):
-        return "gewijzigd"
-    return "actueel"
+        return "gewijzigd", rec, dups
+    if not sent and rec is not None:
+        # staat in forScore maar is niet door Drumsheetz gestuurd: vergelijk tijd van de PDF met forScore
+        return "gewijzigd" if _pdf_newer(pdf, rec) else "actueel", rec, dups
+    return "actueel", rec, dups
+
+
+def _pdf_newer(pdf, rec):
+    """Is onze PDF nieuwer dan het stuk in forScore? (Core Data-tijd = seconden sinds 2001-01-01)"""
+    m = rec.get("modified") or rec.get("added")
+    if not isinstance(m, (int, float)):
+        return False
+    return pdf.stat().st_mtime > m + 978307200 + 60
+
+
+def wait_updated(file, before, seconds=None, log=print):
+    """Wacht tot forScore het bestaande stuk heeft vervangen (wijzigingstijd of grootte verandert)."""
+    deadline = time.time() + (seconds or 90 * _poll() / 3)
+    while time.time() < deadline:
+        time.sleep(_poll())
+        lib = library()
+        rec = lib.get(file) if lib.ok else None
+        if rec is None:
+            continue
+        if (rec.get("modified"), rec.get("size")) != before:
+            return True, lib
+    return False, library()
 
 
 def send(project, items, force=False, open_app=True, log=print, force_meta=False, lib=None):
-    """items: (song, pdf[, score]). Stuurt wat nieuw of gewijzigd is en controleert of het aankomt.
-    Geeft de lijst bestandsnamen die (nu) in forScore staan."""
+    """items: (song, pdf[, score]). Nieuw → .4sc/PDF met gegevens; bestaand → PDF onder de BESTAANDE
+    forScore-naam (forScore vraagt 'Overschrijven'; labels en annotaties blijven). Alles wordt gecontroleerd.
+    Geeft de lijst forScore-bestandsnamen die (nu) in forScore staan."""
     out = project.out("forscore")
     out.mkdir(parents=True, exist_ok=True)
     state = State(project)
     lib = lib or library()
     four, style = use_4sc(project)
-    todo, present = [], []
+    new_items, upd_items, present = [], [], []
     for it in items:
         song, pdf = it[0], it[1]
         score = it[2] if len(it) > 2 else None
-        st = status(project, song, lib, state)
-        name = forscore_name(song)
+        st, rec, dups = resolve(project, song, lib, state)
         if st == "geen-pdf":
             log(f"  ! {song.get('_id')}: nog geen PDF")
             continue
+        if dups:
+            log(f"  ! {song.get('title')}: staat {len(dups)}× in forScore ({', '.join(d['file'] for d in dups)}). "
+                f"Ik gebruik '{rec['file']}'; verwijder de andere in forScore.")
         if st == "actueel" and not force and not force_meta:
-            present.append(name)
+            present.append(rec["file"] if rec else forscore_name(song))
+            if rec:
+                state.data["songs"].setdefault(song["_id"], {"hash": _hash(pdf.read_bytes()), "name": rec["file"]})
             continue
-        new = st == "niet"
-        if four and (new or force_meta):
-            dst = out / (name[:-4] + ".4sc")
-            dst.write_bytes(build_4sc(name, pdf.read_bytes(), metadata(song, score), style))
-        else:
-            dst = out / name
+        if rec is None:                                           # nieuw stuk
+            name = forscore_name(song)
+            if four:
+                dst = out / (name[:-4] + ".4sc")
+                dst.write_bytes(build_4sc(name, pdf.read_bytes(), metadata(song, score), style))
+            else:
+                dst = out / name
+                write_pdf(pdf, dst, song)
+            new_items.append((song, dst, name, _hash(pdf.read_bytes())))
+        else:                                                     # bestaand stuk: altijd PDF, zelfde naam
+            dst = out / rec["file"]
             write_pdf(pdf, dst, song)
-        todo.append((song, dst, name, _hash(pdf.read_bytes()), new))
-    if not todo:
+            upd_items.append((song, dst, rec, _hash(pdf.read_bytes())))
+    if not new_items and not upd_items:
         log("= forScore: alles staat er al actueel in")
+        state.save()
         return present
     if not open_app:
-        log(f"✓ {len(todo)} bestand(en) klaargezet in {out.relative_to(project.root)}/")
+        log(f"✓ {len(new_items) + len(upd_items)} bestand(en) klaargezet in {out.relative_to(project.root)}/")
         return present
-    log(f"→ naar forScore: {', '.join(t[2] for t in todo)}")
-    if any(not t[4] for t in todo):
-        log("  forScore vraagt bij een bestaand stuk wat hij moet doen: kies 'Overschrijven' "
-            "(je annotaties en gegevens blijven bewaard).")
-    if not open_files([t[1] for t in todo], log):
-        return present
-    missing = []
-    if lib.ok:
-        log("  controleren in de forScore-bibliotheek…")
-        _, missing = wait_for([t[2] for t in todo if t[4]], log=log)
-        missing = missing or []
-    else:
-        log("  (de forScore-bibliotheek kon niet gelezen worden, dus niet gecontroleerd: kijk zelf in forScore)")
-    for song, dst, name, h, new in todo:
-        if name in missing:
-            log(f"  ✗ {name}: niet in forScore verschenen (vroeg forScore iets? kijk in forScore op de Mac)")
+    if new_items:
+        log(f"→ nieuw in forScore: {', '.join(t[2] for t in new_items)}")
+        if open_files([t[1] for t in new_items], log):
+            missing = []
+            if lib.ok:
+                _, missing = wait_for([t[2] for t in new_items], log=log)
+                missing = missing or []
+            for song, dst, name, h in new_items:
+                if name in missing:
+                    log(f"  ✗ {name}: niet in forScore verschenen (vroeg forScore iets? kijk op de Mac)")
+                    continue
+                state.data["songs"][song["_id"]] = {"hash": h, "name": name, "time": int(time.time())}
+                present.append(name)
+                log(f"  ✓ {name}" + (" staat in forScore" if lib.ok else ""))
+    for song, dst, rec, h in upd_items:
+        log(f"→ bijwerken in forScore: {rec['file']}")
+        log("  forScore vraagt wat hij moet doen met het bestaande stuk: kies OVERSCHRIJVEN (niet 'dupliceren').")
+        before = (rec.get("modified"), rec.get("size"))
+        if not open_files([dst], log):
             continue
-        state.data["songs"][song["_id"]] = {"hash": h, "name": name, "time": int(time.time())}
-        present.append(name)
-        log(f"  ✓ {name}" + (" staat in forScore" if lib.ok and new else ""))
+        if lib.ok:
+            ok, lib2 = wait_updated(rec["file"], before, log=log)
+            dup = [r["file"] for r in lib2.scores.values() if r["file"] != rec["file"]
+                   and _norm(r["file"][:-4]).startswith(_norm(rec["file"][:-4]))] if lib2.ok else []
+            if dup:
+                log(f"  ✗ forScore heeft een KOPIE gemaakt ({', '.join(dup)}) in plaats van te overschrijven. "
+                    "Verwijder die kopie in forScore en probeer opnieuw (kies 'Overschrijven').")
+                continue
+            if not ok:
+                log(f"  ✗ {rec['file']}: forScore heeft de nieuwe versie niet overgenomen (binnen 90 s). "
+                    "Kies 'Overschrijven' in forScore op de Mac en klik daarna op ↻ in de Studio.")
+                continue
+            log(f"  ✓ {rec['file']} bijgewerkt (labels en annotaties blijven)")
+        state.data["songs"][song["_id"]] = {"hash": h, "name": rec["file"], "time": int(time.time())}
+        present.append(rec["file"])
     state.save()
     return present
 
@@ -383,7 +501,11 @@ def send_setlist(project, name, open_app=True, log=print):
         else:
             rows.append((e.title or e.ref, None))
             continue
-        real = lib.get(fname) if lib.ok else None
+        real = None
+        if lib.ok:
+            real = lib.get(fname)
+            if real is None and e.kind == "song":
+                real, _ = match(s, lib, State(project))
         if lib.ok and not real:
             missing.append(fname)
             rows.append((t, None))                 # plaatshouder, zodat de setlist compleet blijft
@@ -441,7 +563,7 @@ def pull_labels(project, apply=False, log=print):
             song = load_and_arrange(project, f).song
         except NotationError:
             continue
-        rec = lib.get(forscore_name(song))
+        rec, _ = match(song, lib, State(project))
         if rec is None:
             continue
         own = set(split_list(song.get("labels")))           # eigen 'labels:' blijven labels
@@ -475,6 +597,7 @@ def catalog(project):
     state = State(project)
     lib = library()
     songs = []
+    matched = set()
     for f in project.song_files():
         sid = project.song_id(f)
         rel = str(f.relative_to(project.root)).replace("\\", "/")
@@ -485,16 +608,20 @@ def catalog(project):
                           "sent": False, "library": []})
             continue
         s = sc.song
-        st = status(project, s, lib, state)
+        st, rec, dups = resolve(project, s, lib, state)
         pdf = project.out_file("pdf", f, "pdf")
-        if st not in ("geen-pdf", "niet") and pdf.stat().st_mtime < f.stat().st_mtime:
+        if st in ("actueel", "gewijzigd") and pdf.stat().st_mtime < f.stat().st_mtime:
             st = "verouderd"
-        name = forscore_name(s)
-        rec = lib.get(name) if lib.ok else None
+        in_fs = rec is not None if lib.ok else bool(state.song(sid))
+        if rec is not None:
+            matched.add(rec["file"].lower())
+            for d in dups:
+                matched.add(d["file"].lower())
+        # in forScore: de echte labels uit forScore zijn de mappen; anders de map uit het nummer
+        folders = sorted(rec["labels"]) if rec is not None else split_list(s.get("fs_library"))
         songs.append({"id": sid, "path": rel, "title": s.get("title", f.stem), "artist": s.get("artist", ""),
-                      "name": name, "status": st, "sent": st in ("actueel", "gewijzigd", "verouderd"),
-                      "library": split_list(s.get("fs_library")),
-                      "fs_labels": sorted(rec["labels"]) if rec else [],
+                      "name": rec["file"] if rec else forscore_name(s), "status": st, "sent": in_fs,
+                      "library": folders, "dups": [d["file"] for d in dups],
                       "duration": fmt_duration(sc.seconds())})
     setlists = []
     if project.setlists_dir.exists():
@@ -508,7 +635,17 @@ def catalog(project):
             in_fs = (title in lib.setlists) if lib.ok else (f.stem in state.data["setlists"])
             setlists.append({"name": f.stem, "path": f"setlists/{f.name}", "title": title, "items": items,
                              "sent": in_fs})
+    # stukken in forScore die bij geen enkel nummer horen, en dubbele titels
+    only_fs = [r["file"] for k, r in lib.scores.items() if k not in matched] if lib.ok else []
+    duplicates = [s_["dups"] for s_ in songs if s_.get("dups")]     # per nummer: meerdere stukken in forScore
+    seen = {f.lower() for d in duplicates for f in d}
+    groups = {}
+    for r in (lib.scores.values() if lib.ok else []):
+        if r["file"].lower() not in seen:
+            groups.setdefault(_base(r["file"]), []).append(r["file"])
+    duplicates += [v for v in groups.values() if len(v) > 1]
     return {"songs": songs, "setlists": setlists, "library_ok": lib.ok, "notes": lib.notes,
+            "only_forscore": sorted(only_fs), "duplicates": duplicates,
             "fs_counts": {"scores": len(lib.scores), "labels": len(lib.labels), "setlists": len(lib.setlists)}}
 
 

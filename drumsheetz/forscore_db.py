@@ -23,6 +23,8 @@ SYSTEM_TABLES = {"Z_PRIMARYKEY", "Z_METADATA", "Z_MODELCACHE", "SQLITE_SEQUENCE"
 
 def candidate_files():
     """Alle SQLite-databases in de containers van forScore op deze Mac, grootste eerst."""
+    if os.environ.get("DRUMSHEETZ_FORSCORE_DB"):          # voor de tests
+        return [pathlib.Path(os.environ["DRUMSHEETZ_FORSCORE_DB"])]
     if platform.system() != "Darwin":
         return []
     roots = []
@@ -192,7 +194,8 @@ def _read_forscore_schema(con, tables, lib):
     if "Z_PRIMARYKEY" in tables:
         ents = {r["Z_ENT"]: str(r["Z_NAME"]) for r in con.execute("select Z_ENT, Z_NAME from Z_PRIMARYKEY")}
     icols = [c for c, _ in tables["ZITEM"]]
-    sel = ["Z_PK", "Z_ENT", "ZPATH", "ZTITLE"] + [c for c in ("ZSCORE", "ZPLACEHOLDER") if c in icols]
+    sel = ["Z_PK", "Z_ENT", "ZPATH", "ZTITLE"] + [c for c in ("ZSCORE", "ZPLACEHOLDER", "ZMODIFIED", "ZADDED",
+                                                              "ZSIZE") if c in icols]
     allitems = {r["Z_PK"]: dict(r) for r in con.execute("select " + ", ".join(sel) + " from ZITEM")}
     by_pk, owner = {}, {}
     for pk, r in allitems.items():
@@ -204,7 +207,8 @@ def _read_forscore_schema(con, tables, lib):
             continue
         fname = pathlib.Path(str(path)).name
         rec = {"file": fname, "title": r["ZTITLE"] or fname[:-4], "pk": pk,
-               "labels": set(), "composers": set(), "genres": set(), "keywords": set()}
+               "labels": set(), "composers": set(), "genres": set(), "keywords": set(),
+               "modified": r.get("ZMODIFIED"), "added": r.get("ZADDED"), "size": r.get("ZSIZE")}
         lib.scores[fname.lower()] = rec
         by_pk[pk] = rec
     for pk, r in allitems.items():           # bladwijzers horen bij hun stuk
