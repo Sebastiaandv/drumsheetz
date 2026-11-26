@@ -410,6 +410,7 @@ def to_musicxml(score, config=None):
     offsets = Offsets(w.offsets)
     mode = str(score.song.get("count_pos") or (config or {}).get("count_pos") or "binnen").lower()
     offsets.counts = [] if mode in ("boven", "above") else list(w.counts)
+    offsets.count_side = "links" if mode in ("links", "binnen-links", "left") else "rechts"
     offsets.subtitle = w.subtitle
     offsets.accent = str(score.song.get("accent_pos") or (config or {}).get("accent_pos") or "boven").lower()
     return xml, offsets
@@ -420,3 +421,4 @@ class Offsets(dict):
     counts = []
     accent = "boven"
     subtitle = ""
+    count_side = "rechts"

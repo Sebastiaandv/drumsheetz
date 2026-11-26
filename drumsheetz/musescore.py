@@ -90,6 +90,7 @@ def run_job(ms, jobs, timeout=900):
 
 # 'N×' midden in de balk, links van het %-teken, met een wit vlakje achter de tekst zodat de
 # notenbalklijnen er niet doorheen lopen (offset in spatiums vanaf de bovenste lijn).
+COUNT_X = 0.3
 COUNT_STYLE = ('<autoplace>0</autoplace><offset x="0.3" y="2.55"/><frameType>1</frameType>'
                '<frameWidth>0</frameWidth><framePadding>0.15</framePadding>'
                '<frameFgColor r="255" g="255" b="255" a="0"/><frameBgColor r="255" g="255" b="255" a="255"/>')
@@ -155,6 +156,8 @@ def patch_mscx(path, offsets, min_system_distance="12"):
         if idx[0] in counts:
             body, n = COUNT_RE.subn(_count_style, body, count=1)
             placed[0] += n
+            if n and "<stretch>" not in body:          # wat extra ruimte voor '% N×'
+                body = body.replace(">", ">\n          <stretch>1.6</stretch>", 1)
         return body
 
     try:
@@ -193,8 +196,11 @@ def render(ms, items, cfg, log=print):
             jobs1.append((it["xml"], [it["mscx"]]))
         run_job(ms, jobs1)
         jobs2 = []
+        right = []
         for it in items:
             placed, wanted = patch_mscx(it["mscx"], it["offsets"], cfg.get("minSystemDistance", "12"))
+            if placed and getattr(it["offsets"], "count_side", "rechts") == "rechts":
+                right.append(it)
             if placed < wanted:
                 log(f"  ! {it.get('id', '')}: {wanted - placed} van {wanted} herhaaltellers niet in de balk gezet "
                     "(stuur uitvoer/debug/*.mscx mee als je dit meldt)")
@@ -207,7 +213,60 @@ def render(ms, items, cfg, log=print):
                 if pathlib.Path(o).exists():
                     pathlib.Path(o).unlink()
             jobs2.append((it["mscx"], outs))
+        if right:
+            place_counts(ms, right, tmp, log)
         run_job(ms, jobs2)
+
+
+def place_counts(ms, items, tmp, log=print):
+    """Proef-SVG maken, meten waar elk %-teken staat en de 'N×' er rechts naast zetten."""
+    from .svgplace import count_shifts
+    jobs = [(it["mscx"], [tmp / f"meet{i}.svg"]) for i, it in enumerate(items)]
+    try:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+            json.dump([{"in": str(s), "out": str(o[0])} for s, o in jobs], f)
+            jf = f.name
+        subprocess.run([ms, "-j", jf], capture_output=True, text=True, env=_env(), timeout=900)
+        os.unlink(jf)
+    except (subprocess.TimeoutExpired, OSError):
+        pass
+    for i, it in enumerate(items):
+        pages = sorted(tmp.glob(f"meet{i}*.svg"), key=lambda p: [int(x) for x in re.findall(r"-(\d+)\.svg$", p.name)] or [0])
+        if not pages:
+            try:
+                run(ms, it["mscx"], tmp / f"meet{i}.svg")
+            except MuseScoreError:
+                pass       # bij meerdere pagina's heten de bestanden meet0-1.svg, meet0-2.svg, ...
+            pages = sorted(tmp.glob(f"meet{i}*.svg"),
+                           key=lambda p: [int(x) for x in re.findall(r"-(\d+)\.svg$", p.name)] or [0])
+        text = pathlib.Path(it["mscx"]).read_text(encoding="utf-8")
+        marker = f'<offset x="{COUNT_X}" y="2.55"/>'
+        n = text.count(marker)
+        shifts = count_shifts([p.read_text(encoding="utf-8", errors="replace") for p in pages]) if pages else []
+        if not n:
+            continue
+        if len(shifts) != n or (shifts and all(s is None for s in shifts)):
+            log(f"  ! {it.get('id', '')}: herhaaltellers niet naast het %-teken gezet "
+                f"({len([s for s in shifts if s is not None])} van {n} gemeten); ze staan links in de maat. "
+                "Stuur uitvoer/debug/ mee als je dit meldt.")
+            if it.get("pdf"):
+                dbg = pathlib.Path(it["pdf"]).parent.parent / "debug"
+                dbg.mkdir(parents=True, exist_ok=True)
+                for p in pages:
+                    shutil.copyfile(p, dbg / f"{it.get('id', 'nummer')}-{p.name}")
+                shutil.copyfile(it["mscx"], dbg / f"{it.get('id', 'nummer')}.mscx")
+            continue
+        k = [0]
+
+        def repl(_):
+            s = shifts[k[0]]
+            k[0] += 1
+            x = COUNT_X if s is None else round(COUNT_X + s, 2)
+            return f'<offset x="{x}" y="2.55"/>'
+
+        text = text.replace(marker, "\0MARK\0")
+        text = re.sub("\0MARK\0", repl, text)
+        pathlib.Path(it["mscx"]).write_text(text, encoding="utf-8")
 
 
 def version(ms):

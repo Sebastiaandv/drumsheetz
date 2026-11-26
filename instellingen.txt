@@ -14,7 +14,8 @@ ondertitel:
 # 2 = handen omhoog, voeten omlaag (zoals de oude sheets).
 stemmen: 1
 
-# binnen = 'N×' bij een %-maat in de balk zelf (vóór het %-teken); boven = boven de maat zoals vroeger.
+# binnen = 'N×' in de balk rechts naast het %-teken; links = in de balk aan het begin van de maat;
+# boven = boven de maat zoals vroeger.
 herhaalteller: binnen
 
 # Grootte van de cursieve teksten bij de maten (lyrics, aanwijzingen): klein, normaal, groot of een getal.
