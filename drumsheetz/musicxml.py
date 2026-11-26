@@ -36,13 +36,15 @@ class Writer:
         # stemmen uitrekenen
         self.voices = []
         all_ev = []
+        voices = str(self.song.get("voices") or self.cfg.get("voices") or "2").strip()
+        single = voices in ("1", "een", "één", "one")
         for m in ms:
             if m.bar.rest:
                 v1 = voice_events([], m.bar.meter)
                 v2 = []
             else:
-                hands = [h for h in m.bar.hits if not h.is_foot and h.instr.code != "ST"]
-                feet = [h for h in m.bar.hits if h.is_foot]
+                hands = [h for h in m.bar.hits if (single or not h.is_foot) and h.instr.code != "ST"]
+                feet = [] if single else [h for h in m.bar.hits if h.is_foot]
                 v1 = voice_events(hands, m.bar.meter, True)
                 v2 = voice_events(feet, m.bar.meter, False)
                 if not hands and not feet:

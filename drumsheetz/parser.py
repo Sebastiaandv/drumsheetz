@@ -44,6 +44,7 @@ HEADER_KEYS = {
     "maten-per-regel": "bars_per_line", "regel": "bars_per_line", "maten_per_regel": "bars_per_line",
     "herhaaltekens": "compress", "compress": "compress", "procent": "compress",
     "swing": "swing", "shuffle": "swing",
+    "stemmen": "voices", "voices": "voices", "stem": "voices",
     "componist": "composer", "composer": "composer", "jaar": "year", "year": "year",
     "album": "album",
 }

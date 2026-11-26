@@ -25,7 +25,7 @@ DEFAULT_CONFIG = {
 CONFIG_KEYS = {"naam": "name", "name": "name", "ondertitel": "subtitle", "subtitle": "subtitle",
                "credit": "credit", "vermelding": "credit", "musescore": "musescore", "mscore": "musescore",
                "regelafstand": "minSystemDistance", "minsystemdistance": "minSystemDistance",
-               "pdf-viewer": "viewer"}
+               "pdf-viewer": "viewer", "stemmen": "voices", "voices": "voices"}
 
 
 class Project:

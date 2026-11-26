@@ -194,6 +194,7 @@ Bovenaan, als `sleutel: waarde`. Alleen `titel` is eigenlijk nodig.
 | `door` | Wie het uitschreef (overschrijft je naam uit de instellingen) | `door: Jan Jansen` |
 | `swing` | Zet "Swing" bij de stijl én laat de MIDI swingen. `ja` of `8` = 8sten, `16` = 16den | `swing: ja` |
 | `aftellen` | Aantal maten aftellen met stokken (staat op het blad én in de MIDI) | `aftellen: 1` |
+| `stemmen` | `1` = alles (ook bassdrum en hi-hat-voet) in één stem met de stokken omhoog, zonder losse rusten; `2` = handen omhoog, voeten omlaag (de oude opmaak). Standaard uit `instellingen.txt` | `stemmen: 2` |
 | `layout` | `secties` (standaard: elke sectie op een nieuwe regel) of `doorlopend` | `layout: doorlopend` |
 | `maten-per-regel` | Forceer een vast aantal maten per regel | `maten-per-regel: 4` |
 | `herhaaltekens` | `nee` = nooit %-maten, alles uitschrijven | `herhaaltekens: nee` |
@@ -271,8 +272,9 @@ Extra regels in een patroon:
 | `SL` | ritme-slash (ensemble-figuur, klinkt niet) | middelste lijn | slash | `SLASH`, `HITS` |
 | `ST` | sticking-rij (geen instrument, zie [4.7](#47-sticking-rl)) | onder de balk | tekst | `STICKING` |
 
-Voeten (`BD`, `BD2`, `HF`, `HS`) staan met de stok omlaag, al het andere met de stok omhoog —
-precies zoals op de oude sheets. Je kunt plek, nootkop en MIDI-geluid aanpassen of eigen
+Met `stemmen: 1` (zo staat het in `instellingen.txt`) staan álle noten in één stem met de stok
+omhoog, zonder losse rusten voor de voeten. Met `stemmen: 2` staan de voeten (`BD`, `BD2`, `HF`,
+`HS`) met de stok omlaag en de rest omhoog, zoals op de oude sheets. Per nummer in te stellen in de kop. Je kunt plek, nootkop en MIDI-geluid aanpassen of eigen
 instrumenten toevoegen: zie [4.22](#422-eigen-instrumenten-en-notenbalkposities).
 
 Tip: `python3 drums.py instrumenten` laat deze lijst altijd actueel zien.
@@ -1022,6 +1024,7 @@ ondertitel: Drum sheet                 # standaard-ondertitel
 vermelding: Drum sheet: {naam}         # de tekst rechtsboven; {naam} wordt je naam
 musescore: /Applications/MuseScore 4.app/Contents/MacOS/mscore   # alleen nodig als hij niet gevonden wordt
 regelafstand: 12                       # ruimte tussen de regels op het blad
+stemmen: 1                             # 1 = alles stok omhoog in één stem, 2 = voeten apart omlaag
 ```
 
 MuseScore wordt gezocht in (op volgorde): `musescore:` in de instellingen, de omgevingsvariabele
@@ -1060,7 +1063,7 @@ Fouten noemen bestand, regelnummer en vaak een suggestie:
 ```
 # ---------- kop ----------
 titel: …   artiest: …   tempo: 92 (of 4.=60, 8=200)   maat: 4/4, 6/8, 7/8 (2+2+3)
-stijl: …   notitie: …   aftellen: 1   swing: ja   layout: doorlopend   maten-per-regel: 4
+stemmen: 1|2   stijl: …   notitie: …   aftellen: 1   swing: ja   layout: doorlopend   maten-per-regel: 4
 herhaaltekens: nee   duur: 4:32   pdf: pad.pdf   door: naam
 
 # ---------- patronen ----------
