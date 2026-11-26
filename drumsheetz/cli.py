@@ -111,7 +111,8 @@ def main(argv=None, root=None):
     p.add_argument("nummers", nargs="*")
     p.add_argument("--xml", action="store_true")
 
-    p = sub.add_parser("forscore", aliases=["fs"], help="stuur nieuwe/gewijzigde PDF's naar forScore (Mac → iPad)")
+    p = sub.add_parser("forscore", aliases=["fs"],
+                       help="forScore gelijk maken aan Drumsheetz (zonder nummers: alles, ook setlists)")
     p.add_argument("nummers", nargs="*", help="leeg = alle nummers")
     p.add_argument("-a", "--alles", action="store_true", help="ook ongewijzigde opnieuw sturen")
     p.add_argument("--geen-open", action="store_true", help="alleen klaarzetten in uitvoer/forscore/")
@@ -516,6 +517,9 @@ def cmd_forscore(project, args):
     if args.labels_ophalen:
         fs.pull_labels(project, apply=args.toepassen)
         return
+    if not args.nummers and not args.setlist and not args.alles and not args.gegevens:
+        todo = fs.sync(project, open_app=not args.geen_open)
+        return 0 if not todo else 0
     if args.nummers or not args.setlist:
         paths = select(project, args.nummers)
         res = build(project, paths, log=lambda m: print(m) if m.startswith(("✗", "  !")) else None)

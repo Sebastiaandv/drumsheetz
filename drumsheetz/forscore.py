@@ -51,10 +51,17 @@ def split_list(v):
     return [x.strip() for x in str(v).replace(";", ",").split(",") if x.strip()]
 
 
+def folder_labels(song):
+    """De mappen waarin het nummer staat (binnen nummers/) = labels in forScore.
+    Geparkeerde mappen (_naam) tellen niet mee."""
+    parts = str(song.get("_id", "")).split("/")[:-1]
+    return [p for p in parts if p and not p.startswith(("_", "."))]
+
+
 def song_labels(song):
-    """Mappen + eigen labels = labels in forScore."""
+    """Labels in forScore: de mappen van het nummer, plus 'labels:' (en het oude 'map:') uit de kop."""
     out = []
-    for x in split_list(song.get("fs_library")) + split_list(song.get("labels")):
+    for x in folder_labels(song) + split_list(song.get("fs_library")) + split_list(song.get("labels")):
         if x not in out:
             out.append(x)
     return out
@@ -546,6 +553,89 @@ def send_setlist(project, name, open_app=True, log=print):
 
 
 # ---------------------------------------------------------------------------
+# alles in één keer: Drumsheetz → forScore
+
+def sync(project, open_app=True, log=print):
+    """Zorg dat forScore gelijk is aan Drumsheetz: nieuwe en gewijzigde nummers, en setlists.
+    Wat niet automatisch kan (labels van bestaande stukken, bestaande setlists) komt als takenlijst."""
+    from . import setlist as sl
+    from .build import build
+    lib = library()
+    if not lib.ok:
+        log("! de forScore-bibliotheek kon niet gelezen worden (" + "; ".join(lib.notes) + "). Ik stuur wel, maar "
+            "kan niet controleren wat er al in staat.")
+    files = project.song_files()
+    log(f"… {len(files)} nummers bijwerken (PDF's maken waar nodig)")
+    res = build(project, files, log=lambda m: log(m) if m.startswith(("✗", "  !")) else None)
+    items = [(sc.song, project.out_file("pdf", p, "pdf"), sc) for p, sc, err in res if sc]
+    send(project, items, open_app=open_app, log=log, lib=lib)
+    todo = []
+    lib = library()
+    if lib.ok:
+        state = State(project)
+        for song, pdf, sc in items:
+            rec, dups = match(song, lib, state)
+            if rec is None:
+                continue
+            want, have = set(song_labels(song)), set(rec["labels"])
+            if want != have:
+                extra, missing = sorted(have - want), sorted(want - have)
+                todo.append(f"'{rec['title']}': " + "; ".join(
+                    ([f"label toevoegen: {', '.join(missing)}"] if missing else []) +
+                    ([f"label weghalen: {', '.join(extra)}"] if extra else [])))
+            if dups:
+                todo.append(f"'{rec['title']}' staat {len(dups)}× in forScore: verwijder "
+                            + ", ".join(d["file"] for d in dups if d["file"] != rec["file"]))
+    # setlists
+    if project.setlists_dir.exists():
+        for f in sorted(project.setlists_dir.glob("*.txt")):
+            meta, entries = sl.parse_setlist(f.read_text(encoding="utf-8"), f.stem)
+            sl.resolve(project, entries, f)
+            title = meta.get("title") or f.stem
+            if lib.ok and title in lib.setlists:
+                expected = _setlist_rows(project, entries, lib)
+                got = lib.setlists[title]
+                if [x.lower() for x in got] != [x.lower() for x in expected]:
+                    todo.append(f"setlist '{title}' is veranderd: verwijder hem in forScore, dan zet de volgende "
+                                "sync de nieuwe erin")
+                continue
+            send_setlist(project, f.stem, open_app=open_app, log=log)
+    if todo:
+        log("\nZelf doen in forScore (dit kan Drumsheetz niet veilig voor je doen):")
+        for t in todo:
+            log(f"  • {t}")
+    else:
+        log("\n✓ forScore is gelijk aan Drumsheetz")
+    return todo
+
+
+def _setlist_rows(project, entries, lib):
+    """Wat er in forScore in een setlist hoort te staan (bestandsnamen en [plaatshouders])."""
+    from .build import load_and_arrange
+    from .rows import NotationError
+    state = State(project)
+    rows = []
+    for e in entries:
+        if e.kind == "break":
+            if e.display:
+                rows.append(f"[{e.display}]")
+            continue
+        if e.kind == "song":
+            if not e.path:
+                rows.append(f"[{e.title or e.ref}]")
+                continue
+            try:
+                s = load_and_arrange(project, e.path).song
+            except NotationError:
+                continue
+            rec, _ = match(s, lib, state)
+            rows.append(rec["file"] if rec else f"[{s.get('title', e.ref)}]")
+        elif e.kind == "pdf" and e.pdf:
+            rows.append(pathlib.Path(e.pdf).name)
+    return rows
+
+
+# ---------------------------------------------------------------------------
 # labels ophalen (forScore → mappen in Drumsheetz)
 
 def pull_labels(project, apply=False, log=print):
@@ -566,21 +656,22 @@ def pull_labels(project, apply=False, log=print):
         rec, _ = match(song, lib, State(project))
         if rec is None:
             continue
-        own = set(split_list(song.get("labels")))           # eigen 'labels:' blijven labels
-        new = sorted(x for x in rec["labels"] if x not in own)
-        cur = split_list(song.get("fs_library"))
-        if sorted(cur) != new:
+        folders = set(folder_labels(song))                       # de map telt al als label
+        new = sorted(x for x in rec["labels"] if x not in folders)
+        cur = sorted(set(split_list(song.get("labels"))) | set(split_list(song.get("fs_library"))))
+        if cur != new:
             changes.append((f, cur, new))
     for f, cur, new in changes:
-        log(f"  {project.song_id(f)}: map {', '.join(cur) or '—'} → {', '.join(new) or '—'}")
+        log(f"  {project.song_id(f)}: extra labels {', '.join(cur) or '—'} → {', '.join(new) or '—'}")
     if not changes:
-        log("✓ de mappen zijn gelijk aan de labels in forScore")
+        log("✓ de labels in forScore zijn gelijk aan Drumsheetz")
     elif apply:
         from .studio import Studio
         st = Studio(project.root)
         for f, cur, new in changes:
-            st.set_header({"path": str(f.relative_to(project.root)).replace("\\", "/"), "key": "map",
-                           "value": ", ".join(new), "mode": "set"})
+            rel = str(f.relative_to(project.root)).replace("\\", "/")
+            st.set_header({"path": rel, "key": "map", "value": "", "mode": "set"})       # oud veld opruimen
+            st.set_header({"path": rel, "key": "labels", "value": ", ".join(new), "mode": "set"})
         log(f"✓ {len(changes)} nummer(s) bijgewerkt")
     else:
         log("(nog niets veranderd)")
@@ -619,9 +710,12 @@ def catalog(project):
                 matched.add(d["file"].lower())
         # in forScore: de echte labels uit forScore zijn de mappen; anders de map uit het nummer
         folders = sorted(rec["labels"]) if rec is not None else split_list(s.get("fs_library"))
+        want = song_labels(s)
+        label_todo = sorted(set(want) ^ set(rec["labels"])) if rec is not None else []
         songs.append({"id": sid, "path": rel, "title": s.get("title", f.stem), "artist": s.get("artist", ""),
                       "name": rec["file"] if rec else forscore_name(s), "status": st, "sent": in_fs,
-                      "library": folders, "dups": [d["file"] for d in dups],
+                      "library": folders, "dups": [d["file"] for d in dups], "labels_want": want,
+                      "labels_have": sorted(rec["labels"]) if rec is not None else [], "label_todo": label_todo,
                       "duration": fmt_duration(sc.seconds())})
     setlists = []
     if project.setlists_dir.exists():

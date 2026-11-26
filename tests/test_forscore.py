@@ -103,7 +103,7 @@ class ForScoreTest(unittest.TestCase):
 
     # ----------------------------------------------------------------- tests
     def test_new_song_goes_as_4sc_with_title_and_folder_label(self):
-        f = self.song("Hatikwa/The River.drum", "The River", "Hatikwa", "map: Hatikwa")
+        f = self.song("Hatikwa/The River.drum", "The River", "Hatikwa")     # de map wordt het label
         self.send(f)
         rec = self.lib().get("The River - Hatikwa.pdf")
         self.assertIsNotNone(rec, self.logs)
@@ -178,8 +178,45 @@ class ForScoreTest(unittest.TestCase):
         fake_forscore.set_label(self.db, "Lied - X.pdf", "Top 2000 band")
         changes = fs.pull_labels(self.p, apply=True, log=self.logs.append)
         self.assertEqual(len(changes), 1)
-        self.assertIn("map: Top 2000 band", f.read_text())
+        self.assertIn("labels: Top 2000 band", f.read_text())
         self.assertEqual(fs.pull_labels(self.p, log=self.logs.append), [])
+
+    def test_pull_labels_ignores_folder_label(self):
+        f = self.song("Band/Lied.drum", "Lied", "X")
+        self.send(f)
+        self.assertEqual(fs.pull_labels(self.p, log=self.logs.append), [])
+
+    def test_sync_everything_in_one_go(self):
+        self.song("Kerk/Alpha.drum", "Alpha", "X")
+        self.song("Band/Beta.drum", "Beta", "Y")
+        self.song("_oud/Gamma.drum", "Gamma", "Z")                  # geparkeerd: gaat niet mee
+        (self.dir / "setlists" / "dienst.txt").write_text("titel: Dienst\nAlpha\nBeta\n", encoding="utf-8")
+        todo = fs.sync(self.p, log=self.logs.append)
+        self.assertEqual(todo, [], self.logs)
+        lib = self.lib()
+        self.assertEqual(lib.get("Alpha - X.pdf")["labels"], {"Kerk"})
+        self.assertEqual(lib.get("Beta - Y.pdf")["labels"], {"Band"})
+        self.assertIsNone(lib.get("Gamma - Z.pdf"))
+        self.assertEqual(lib.setlists["Dienst"], ["Alpha - X.pdf", "Beta - Y.pdf"])
+        self.assertIn("\n✓ forScore is gelijk aan Drumsheetz", self.logs)
+        n = len(self.opened())
+        self.assertEqual(fs.sync(self.p, log=self.logs.append), [])   # tweede keer: niets te doen
+        self.assertEqual(len(self.opened()), n)
+
+    def test_sync_reports_moved_song_and_changed_setlist(self):
+        self.song("Kerk/Alpha.drum", "Alpha", "X")
+        self.song("Beta.drum", "Beta", "Y")
+        (self.dir / "setlists" / "dienst.txt").write_text("titel: Dienst\nAlpha\n", encoding="utf-8")
+        fs.sync(self.p, log=self.logs.append)
+        (self.dir / "nummers" / "Band").mkdir()
+        (self.dir / "nummers" / "Kerk" / "Alpha.drum").rename(self.dir / "nummers" / "Band" / "Alpha.drum")
+        (self.dir / "setlists" / "dienst.txt").write_text("titel: Dienst\nAlpha\nBeta\n", encoding="utf-8")
+        todo = fs.sync(self.p, log=self.logs.append)
+        self.assertTrue(any("label toevoegen: Band" in t and "label weghalen: Kerk" in t for t in todo), todo)
+        self.assertTrue(any("setlist 'Dienst' is veranderd" in t for t in todo), todo)
+        self.assertEqual(list(self.lib().setlists).count("Dienst"), 1)
+        c = next(s for s in fs.catalog(self.p)["songs"] if s["title"] == "Alpha")
+        self.assertEqual(c["label_todo"] and sorted(c["labels_want"]), ["Band"])
 
     def test_setlist_complete_in_order_with_placeholders(self):
         a = self.song("A.drum", "Alpha", "X")
