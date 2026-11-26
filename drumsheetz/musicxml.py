@@ -359,6 +359,9 @@ class Writer:
 
     def notations(self, h):
         md = h.mods
+        pos = str(self.song.get("accent_pos") or self.cfg.get("accent_pos") or "boven").lower()
+        pl = {"boven": ' placement="above"', "above": ' placement="above"', "onder": ' placement="below"',
+              "below": ' placement="below"'}.get(pos, "")
         s = ""
         if "z" in md:
             s += '<ornaments><tremolo type="unmeasured">0</tremolo></ornaments>'
@@ -366,18 +369,18 @@ class Writer:
             s += '<ornaments><tremolo type="single">3</tremolo></ornaments>'
         tech = ""
         if "o" in md:
-            tech += "<open-string/>"
+            tech += f"<open-string{pl}/>"
         if "h" in md:
-            tech += "<half-muted/>"
+            tech += f"<half-muted{pl}/>"
         if "+" in md:
-            tech += "<stopped/>"
+            tech += f"<stopped{pl}/>"
         if tech:
             s += f"<technical>{tech}</technical>"
         art = ""
         if ">" in md:
-            art += "<accent/>"
+            art += f"<accent{pl}/>"
         if "^" in md:
-            art += '<strong-accent type="up"/>'
+            art += f'<strong-accent type="up"{pl}/>'
         if "k" in md:
             art += "<breath-mark/>"
         if art:
@@ -391,9 +394,11 @@ def to_musicxml(score, config=None):
     offsets = Offsets(w.offsets)
     mode = str(score.song.get("count_pos") or (config or {}).get("count_pos") or "binnen").lower()
     offsets.counts = [] if mode in ("boven", "above") else list(w.counts)
+    offsets.accent = str(score.song.get("accent_pos") or (config or {}).get("accent_pos") or "boven").lower()
     return xml, offsets
 
 
 class Offsets(dict):
     """Maatnummer-verschuivingen, plus de maten waarvan de 'N×' in de balk moet."""
     counts = []
+    accent = "boven"

@@ -27,6 +27,7 @@ CONFIG_KEYS = {"naam": "name", "name": "name", "ondertitel": "subtitle", "subtit
                "regelafstand": "minSystemDistance", "minsystemdistance": "minSystemDistance",
                "pdf-viewer": "viewer", "stemmen": "voices", "voices": "voices",
                "herhaalteller": "count_pos", "teller": "count_pos",
+               "accenten": "accent_pos", "accent": "accent_pos",
                "tekstgrootte": "text_size", "stijlgrootte": "feel_size"}
 
 

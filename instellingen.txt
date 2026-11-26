@@ -7,3 +7,5 @@ herhaalteller: binnen
 # Grootte van de cursieve teksten bij de maten (lyrics, aanwijzingen): klein, normaal, groot of een getal in punten.
 # Per nummer in de kop ('tekstgrootte: 9') of per regel ('klein', 'groot', 'grootte=7') aan te passen.
 tekstgrootte: klein
+# Accenten (> en ^) en open/dicht-tekens: boven (boven de noten), onder, of auto (MuseScore kiest).
+accenten: boven

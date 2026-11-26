@@ -196,6 +196,7 @@ Bovenaan, als `sleutel: waarde`. Alleen `titel` is eigenlijk nodig.
 | `aftellen` | Aantal maten aftellen met stokken (staat op het blad én in de MIDI) | `aftellen: 1` |
 | `stemmen` | `1` = alles (ook bassdrum en hi-hat-voet) in één stem met de stokken omhoog, zonder losse rusten; `2` = handen omhoog, voeten omlaag (de oude opmaak). Standaard uit `instellingen.txt` | `stemmen: 2` |
 | `herhaalteller` | Waar de `N×` bij een %-maat staat: `binnen` (in de balk, vóór het %-teken, met wit vlakje; standaard) of `boven` (boven de maat, zoals vroeger) | `herhaalteller: boven` |
+| `accenten` | Waar accenten (`>`, `^`) en open/dicht-tekens staan: `boven` (boven de noten, standaard), `onder`, of `auto` (MuseScore kiest, meestal bij de nootkop) | `accenten: auto` |
 | `tekstgrootte` | Grootte van de cursieve teksten bij de maten (lyrics, aanwijzingen): `klein` (8), `normaal` (10), `groot` (12), `heelklein`, `heelgroot` of een getal in punten. Standaard uit `instellingen.txt` | `tekstgrootte: 9` |
 | `stijlgrootte` | Hetzelfde voor de `stijl`- en `notitie`-regel bovenaan | `stijlgrootte: klein` |
 | `layout` | `secties` (standaard: elke sectie op een nieuwe regel) of `doorlopend` | `layout: doorlopend` |
@@ -1042,6 +1043,7 @@ musescore: /Applications/MuseScore 4.app/Contents/MacOS/mscore   # alleen nodig 
 regelafstand: 12                       # ruimte tussen de regels op het blad
 stemmen: 1                             # 1 = alles stok omhoog in één stem, 2 = voeten apart omlaag
 herhaalteller: binnen                  # 'N×' bij een %-maat: binnen (in de balk) of boven (boven de maat)
+accenten: boven                        # accenten en open/dicht-tekens: boven, onder of auto
 tekstgrootte: klein                    # teksten bij de maten: klein, normaal, groot of punten (bv. 9)
 stijlgrootte: normaal                  # de stijl/notitie-regel bovenaan
 ```

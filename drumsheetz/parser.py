@@ -45,6 +45,7 @@ HEADER_KEYS = {
     "herhaaltekens": "compress", "compress": "compress", "procent": "compress",
     "swing": "swing", "shuffle": "swing",
     "herhaalteller": "count_pos", "teller": "count_pos",
+    "accenten": "accent_pos", "accent": "accent_pos",
     "tekstgrootte": "text_size", "tekst-grootte": "text_size", "textsize": "text_size",
     "stijlgrootte": "feel_size", "stijl-grootte": "feel_size",
     "stemmen": "voices", "voices": "voices", "stem": "voices",

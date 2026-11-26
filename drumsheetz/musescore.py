@@ -108,6 +108,20 @@ def _count_style(m):
     return m.group(1) + middle + COUNT_STYLE + m.group(3)
 
 
+# Accenten/marcato/open-dicht boven (of onder) de noten zetten, ongeacht de stokrichting.
+ARTIC_RE = re.compile(r"<Articulation>(?:(?!</Articulation>).)*?</Articulation>", re.S)
+
+
+def _artic(m, up):
+    a = m.group(0)
+    if up:
+        a = re.sub(r"(<subtype>artic\w*?)Below(</subtype>)", r"\1Above\2", a)
+    else:
+        a = re.sub(r"(<subtype>artic\w*?)Above(</subtype>)", r"\1Below\2", a)
+    a = re.sub(r"\s*<direction>[^<]*</direction>", "", a)
+    return a.replace("</subtype>", f"</subtype>\n              <direction>{'up' if up else 'down'}</direction>", 1)
+
+
 def patch_mscx(path, offsets, min_system_distance="12"):
     """Zet <noOffset> ('tel op bij maatnummer') op de maat na elke herhaalmaat,
     en geef de regels wat meer ruimte zodat dynamiek bij de juiste balk hoort."""
@@ -136,6 +150,10 @@ def patch_mscx(path, offsets, min_system_distance="12"):
         text = text[:start] + staff + text[end:]
     except ValueError:
         pass
+    acc = getattr(offsets, "accent", "")
+    if acc in ("boven", "above", "onder", "below"):
+        up = acc in ("boven", "above")
+        text = ARTIC_RE.sub(lambda m: _artic(m, up), text)
     if min_system_distance:
         tag = f"<minSystemDistance>{min_system_distance}</minSystemDistance>"
         if "<minSystemDistance>" in text:
