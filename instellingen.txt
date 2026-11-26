@@ -2,3 +2,5 @@ naam: Sebastiaan Johan de Vries
 # 1 = alle noten (ook bassdrum en hi-hat-voet) in één stem met de stokken omhoog: geen losse rusten.
 # 2 = handen omhoog, voeten omlaag (zoals de oude sheets). Per nummer te overrulen met 'stemmen: 2'.
 stemmen: 1
+# binnen = 'N×' bij een %-maat in de balk zelf (vóór het %-teken); boven = boven de maat zoals vroeger.
+herhaalteller: binnen

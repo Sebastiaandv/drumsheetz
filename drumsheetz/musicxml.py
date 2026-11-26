@@ -25,6 +25,7 @@ class Writer:
         self.cfg = config or {}
         self.out = []
         self.offsets = {}
+        self.counts = []          # maten met een 'N×'-teller bij de %
         self.instr_ids = {}
 
     def w(self, s):
@@ -220,6 +221,7 @@ class Writer:
             reps = m.pct // m.pct_unit
             if reps > 1:
                 self.w(self.words(f"{reps}×"))
+                self.counts.append(idx)
         v1, v2 = self.voices[idx]
         sticking = {h.pos: h.text for h in m.bar.hits if h.instr.code == "ST"}
         self.voice(v1, 1, sticking, m, meter)
@@ -367,4 +369,12 @@ class Writer:
 def to_musicxml(score, config=None):
     w = Writer(score, config)
     xml = w.build()
-    return xml, w.offsets
+    offsets = Offsets(w.offsets)
+    mode = str(score.song.get("count_pos") or (config or {}).get("count_pos") or "binnen").lower()
+    offsets.counts = [] if mode in ("boven", "above") else list(w.counts)
+    return xml, offsets
+
+
+class Offsets(dict):
+    """Maatnummer-verschuivingen, plus de maten waarvan de 'N×' in de balk moet."""
+    counts = []

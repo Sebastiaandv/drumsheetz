@@ -195,6 +195,7 @@ Bovenaan, als `sleutel: waarde`. Alleen `titel` is eigenlijk nodig.
 | `swing` | Zet "Swing" bij de stijl én laat de MIDI swingen. `ja` of `8` = 8sten, `16` = 16den | `swing: ja` |
 | `aftellen` | Aantal maten aftellen met stokken (staat op het blad én in de MIDI) | `aftellen: 1` |
 | `stemmen` | `1` = alles (ook bassdrum en hi-hat-voet) in één stem met de stokken omhoog, zonder losse rusten; `2` = handen omhoog, voeten omlaag (de oude opmaak). Standaard uit `instellingen.txt` | `stemmen: 2` |
+| `herhaalteller` | Waar de `N×` bij een %-maat staat: `binnen` (in de balk, vóór het %-teken, met wit vlakje; standaard) of `boven` (boven de maat, zoals vroeger) | `herhaalteller: boven` |
 | `layout` | `secties` (standaard: elke sectie op een nieuwe regel) of `doorlopend` | `layout: doorlopend` |
 | `maten-per-regel` | Forceer een vast aantal maten per regel | `maten-per-regel: 4` |
 | `herhaaltekens` | `nee` = nooit %-maten, alles uitschrijven | `herhaaltekens: nee` |
@@ -1025,6 +1026,7 @@ vermelding: Drum sheet: {naam}         # de tekst rechtsboven; {naam} wordt je n
 musescore: /Applications/MuseScore 4.app/Contents/MacOS/mscore   # alleen nodig als hij niet gevonden wordt
 regelafstand: 12                       # ruimte tussen de regels op het blad
 stemmen: 1                             # 1 = alles stok omhoog in één stem, 2 = voeten apart omlaag
+herhaalteller: binnen                  # 'N×' bij een %-maat: binnen (in de balk) of boven (boven de maat)
 ```
 
 MuseScore wordt gezocht in (op volgorde): `musescore:` in de instellingen, de omgevingsvariabele

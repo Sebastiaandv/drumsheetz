@@ -88,21 +88,37 @@ def run_job(ms, jobs, timeout=900):
                 run(ms, s, d)
 
 
+# 'N×' midden in de balk, links van het %-teken, met een wit vlakje achter de tekst zodat de
+# notenbalklijnen er niet doorheen lopen (offset in spatiums vanaf de bovenste lijn).
+COUNT_STYLE = ('<autoplace>0</autoplace><offset x="0.3" y="2.55"/><frameType>1</frameType>'
+               '<frameWidth>0</frameWidth><framePadding>0.15</framePadding>'
+               '<frameFgColor r="255" g="255" b="255" a="0"/><frameBgColor r="255" g="255" b="255" a="255"/>')
+
+
 def patch_mscx(path, offsets, min_system_distance="12"):
     """Zet <noOffset> ('tel op bij maatnummer') op de maat na elke herhaalmaat,
     en geef de regels wat meer ruimte zodat dynamiek bij de juiste balk hoort."""
     text = pathlib.Path(path).read_text(encoding="utf-8")
+    counts = set(getattr(offsets, "counts", []) or [])
     idx = [-1]
 
     def repl(m):
+        body = m.group(0)
+        if "<multiMeasureRest>" in body:      # samenvattingsmaat van een rustgroep: telt niet mee
+            return body
         idx[0] += 1
         off = offsets.get(idx[0])
-        return m.group(0) + (f"\n          <noOffset>{off}</noOffset>" if off else "")
+        if off:
+            body = body.replace(">", f">\n          <noOffset>{off}</noOffset>", 1)
+        if idx[0] in counts:
+            body = re.sub(r"<StaffText>(\s*)(<text><i>\d+×</i></text>)",
+                          lambda t: "<StaffText>" + t.group(1) + COUNT_STYLE + t.group(1) + t.group(2), body, count=1)
+        return body
 
     try:
         start = text.index('<Staff id="1">', text.index("</Part>"))
         end = text.index("</Staff>", start)
-        staff = re.sub(r"<Measure(?: [^>]*)?>", repl, text[start:end])
+        staff = re.sub(r"<Measure(?: [^>]*)?>.*?</Measure>", repl, text[start:end], flags=re.S)
         text = text[:start] + staff + text[end:]
     except ValueError:
         pass
