@@ -530,10 +530,10 @@ def cmd_forscore(project, args):
             print(f"✗ {e}")
         songs = [e.path for e in entries if e.kind == "song" and e.path]
         r2 = build(project, songs)
-        send(project, [(sc.song, project.out_file("pdf", p, "pdf"), sc) for p, sc, err in r2 if sc],
-             open_app=not args.geen_open)
+        n = send(project, [(sc.song, project.out_file("pdf", p, "pdf"), sc) for p, sc, err in r2 if sc],
+                 open_app=not args.geen_open)
         from .forscore import send_setlist
-        send_setlist(project, f.stem, meta, entries, open_app=not args.geen_open)
+        send_setlist(project, f.stem, meta, entries, open_app=not args.geen_open, wait=6 if n else 0)
 
 
 def cmd_studio(project, args):

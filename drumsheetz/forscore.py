@@ -103,10 +103,15 @@ def build_4sc(name, pdf_bytes, meta):
 
 
 def build_4ss(title, scores):
-    """scores: lijst (titel, bestandsnaam)."""
-    lines = [f'<forScore kind="setlist" title={quoteattr(title)}>']
+    """forScore 'Open Setlist' (forScore 12+). scores: lijst (titel, bestandsnaam) of (titel, None) voor
+    een plaatshouder (bv. een pauze of een stuk dat niet in forScore staat)."""
+    lines = ['<?xml version="1.0" encoding="UTF-8" ?>',
+             f'<forScore kind="setlist" version="1.0" title={quoteattr(title)}>']
     for t, path in scores:
-        lines.append(f"<score title={quoteattr(t)} path={quoteattr(path)}/>")
+        if path:
+            lines.append(f"\t<score title={quoteattr(t)} path={quoteattr(path)} />")
+        else:
+            lines.append(f"\t<placeholder title={quoteattr(t)} />")
     lines.append("</forScore>")
     return "\n".join(lines) + "\n"
 
@@ -263,13 +268,15 @@ def send(project, items, force=False, open_app=True, log=print, force_meta=False
     return len(todo)
 
 
-def send_setlist(project, name, meta, entries, open_app=True, log=print):
+def send_setlist(project, name, meta, entries, open_app=True, log=print, wait=0):
     """Setlist als .4ss naar forScore. Nummers die nog niet in forScore staan worden eerst verstuurd."""
     out = project.out("forscore")
     out.mkdir(parents=True, exist_ok=True)
     scores = []
     for e in entries:
-        if e.kind == "song" and e.path:
+        if e.kind == "break" and e.display:
+            scores.append((e.display, None))         # pauze / set-kop als plaatshouder
+        elif e.kind == "song" and e.path:
             from .build import load_and_arrange
             sc = load_and_arrange(project, e.path)
             scores.append((sc.song.get("title", e.title), forscore_name(sc.song)))
@@ -287,7 +294,14 @@ def send_setlist(project, name, meta, entries, open_app=True, log=print):
             shutil.copyfile(e.pdf, p)
             files.append(p)
     if open_app:
-        open_in_forscore(project, files + [dst], log)
+        if files:
+            open_in_forscore(project, files, log)
+            wait = max(wait, 4)
+        if wait:                    # forScore eerst de nieuwe stukken laten importeren
+            import time
+            log(f"  even wachten tot forScore de stukken heeft geïmporteerd ({wait} s)…")
+            time.sleep(wait)
+        open_in_forscore(project, [dst], log)
     state = State(project)
     state.data["setlists"][name] = {"hash": _hash(dst.read_bytes()), "title": title}
     state.save()
