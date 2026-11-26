@@ -396,17 +396,27 @@ def send_setlist(project, name, open_app=True, log=print):
     if not open_app:
         log(f"✓ setlist klaargezet: {dst.relative_to(project.root)}")
         return True
-    log(f"→ setlist '{title}' naar forScore ({sum(1 for r in rows if r[1])} stukken)")
+    if lib.ok and title in lib.setlists:
+        log(f"  ! er staat al een setlist '{title}' in forScore ({len(lib.setlists[title])} regels). forScore werkt "
+            "een bestaande setlist niet altijd goed bij: verwijder hem in forScore en stuur dan opnieuw.")
+        return False
+    log(f"→ setlist '{title}' naar forScore ({sum(1 for r in rows if r[1])} stukken, "
+        f"{sum(1 for r in rows if not r[1])} plaatshouders)")
     if not open_files([dst], log):
         return False
     if lib.ok:
         lib2, _ = wait_for([], setlist=title, log=log)
-        if lib2 is not None and title in lib2.setlists:
-            log(f"  ✓ setlist '{title}' staat in forScore ({len(lib2.setlists[title])} stukken gekoppeld)")
-        else:
-            log(f"  ✗ setlist '{title}' niet in forScore verschenen. Draai 'python3 drums.py forscore --zelftest' "
-                "en stuur het rapport op.")
+        if lib2 is None or title not in lib2.setlists:
+            log(f"  ✗ setlist '{title}' niet in forScore verschenen (vroeg forScore iets? kijk op de Mac)")
             return False
+        got = lib2.setlists[title]
+        want = [r[1] if r[1] else f"[{r[0]}]" for r in rows]
+        got_files = [g.lower() for g in got]
+        lost = [w for w in want if not w.startswith("[") and w.lower() not in got_files]
+        if lost:
+            log(f"  ✗ setlist staat in forScore, maar {len(lost)} stuk(ken) zijn niet gekoppeld: {', '.join(lost)}")
+            return False
+        log(f"  ✓ setlist '{title}' staat compleet in forScore ({len(got)} regels)")
     st = State(project)
     st.data["setlists"][f.stem] = {"title": title, "time": int(time.time())}
     st.save()
@@ -533,7 +543,8 @@ def selftest(project, log=print):
     if pdf is None:
         say("✗ geen PDF om mee te testen (maak eerst een nummer)")
         return _report(project, lines)
-    a = out / "Drumsheetz zelftest - PDF.pdf"
+    stamp = time.strftime("%H%M%S")
+    a = out / f"Drumsheetz zelftest {stamp} - PDF.pdf"
     write_pdf(pdf, a, {"title": "Drumsheetz zelftest", "artist": "PDF", "tags": "drumsheetz-test"})
     say("\n1. PDF importeren")
     open_files([a], say)
@@ -546,7 +557,6 @@ def selftest(project, log=print):
         rec = lib2.get(a.name)
         say(f"   ✓ verschenen als '{rec['file']}', titel '{rec['title']}'")
     say("\n2. .4sc met gegevens: welke manier neemt forScore over?")
-    stamp = time.strftime("%H%M")
     meta = {"composer": "Zelftest Componist", "labels": "Drumsheetz test", "genre": "Testgenre",
             "keywords": "drumsheetz-test", "bpm": 100, "rating": 3}
     results = {}
@@ -581,20 +591,23 @@ def selftest(project, log=print):
         say("   → onthouden: geen .4sc, alleen PDF")
 
     say("\n3. setlist (Open Setlist .4ss)")
-    s = out / "Drumsheetz zelftest.4ss"
-    s.write_text(build_4ss("Drumsheetz zelftest", [("Pauze", None), ("Drumsheetz zelftest", a.name)]),
-                 encoding="utf-8")
+    st_title = f"Drumsheetz zelftest {stamp}"
+    s = out / (st_title + ".4ss")
+    s.write_text(build_4ss(st_title, [("Pauze", None), ("Drumsheetz zelftest", a.name),
+                                      ("Zelftest text", files["text"][0])]), encoding="utf-8")
     open_files([s], say)
-    lib4, _ = wait_for([], setlist="Drumsheetz zelftest", log=say)
+    lib4, _ = wait_for([], setlist=st_title, log=say)
     if lib4 is None or not lib4.ok:
         say("   (niet te controleren)")
-    elif "Drumsheetz zelftest" in lib4.setlists:
-        say(f"   ✓ setlist verschenen, gekoppelde stukken: {lib4.setlists['Drumsheetz zelftest']}")
+    elif st_title in lib4.setlists:
+        got = lib4.setlists[st_title]
+        ok = a.name in got and files["text"][0] in got
+        say(f"   {'✓' if ok else '✗'} setlist verschenen met: {got}")
     else:
         say("   ✗ setlist niet verschenen (of niet herkend in de database)")
     say("\n4. database (alleen namen van tabellen en kolommen, plus wat er herkend is)")
     investigate(log=say)
-    say("\nVerwijder in forScore zelf: de stukken 'Drumsheetz zelftest…' en de setlist 'Drumsheetz zelftest'.")
+    say("\nVerwijder in forScore zelf: de stukken en de setlist die met 'Drumsheetz zelftest' beginnen.")
     return _report(project, lines)
 
 
