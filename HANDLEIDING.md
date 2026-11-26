@@ -1043,6 +1043,25 @@ forScore-bibliotheek vanuit Drumsheetz op orde te houden.
 | **Mappen** | Alles wat al in forScore staat, per map; wat in geen map zit staat onder *zonder map*. **＋ Map** maakt een nieuwe map; **sleep** een nummer op een map om het erin te zetten, ✕ haalt het eruit, → stuurt de hele map. |
 | **Setlists** | Je setlists met hun nummers. → stuurt de setlist naar forScore (met de nummers die er nog niet in staan); ✎ opent het setlistbestand. |
 
+**Mappen = labels in forScore.** forScore kent zelf geen mappen; een map in Drumsheetz gaat daarom
+als **label** naar forScore (naast eventuele `labels:` die je zelf invult). In forScore filter je dan
+op dat label.
+
+**↻ Labels** haalt de labels uit forScore op je Mac en zet ze als mappen in je nummers (bv. als je in
+forScore op de iPad een label hebt toegevoegd). Je ziet eerst in de Log wat er verandert en bevestigt
+daarna. Dit leest alleen een kopie van de forScore-database; er wordt niets in forScore veranderd.
+Vanaf de opdrachtregel:
+
+```bash
+python3 drums.py forscore --labels-ophalen               # laat zien wat er zou veranderen
+python3 drums.py forscore --labels-ophalen --toepassen   # en voer het door
+python3 drums.py forscore --onderzoek                    # wat er in de forScore-database gevonden wordt
+```
+
+Let op: een nummer dat al in forScore staat krijgt een **gewijzigde map** niet vanzelf als label in
+forScore (dan zou het stuk vervangen moeten worden, inclusief annotaties). Zet het label dan in
+forScore zelf; met ↻ Labels komt het daarna weer gelijk in Drumsheetz.
+
 **Werk forScore bij** stuurt alle nummers die al in forScore staan maar sindsdien zijn veranderd
 opnieuw. Het bolletje voor een nummer: groen = actueel in forScore, oranje = gewijzigd, open = nog
 geen PDF.

@@ -62,8 +62,13 @@ def metadata(song, score=None):
         m["genre"] = ", ".join(split_list(song["genre"]))
     if song.get("tags"):
         m["keywords"] = ", ".join(split_list(song["tags"]))
-    if song.get("labels"):
-        m["labels"] = ", ".join(split_list(song["labels"]))
+    # mappen in Drumsheetz = labels in forScore (forScore kent zelf geen mappen)
+    labels = []
+    for x in split_list(song.get("fs_library")) + split_list(song.get("labels")):
+        if x not in labels:
+            labels.append(x)
+    if labels:
+        m["labels"] = ", ".join(labels)
     if song.get("reference"):
         m["reference"] = str(song["reference"])
     for k in ("rating", "difficulty"):
@@ -85,8 +90,6 @@ def metadata(song, score=None):
             pass
     if song.get("key"):
         m["key"] = str(song["key"])
-    if song.get("fs_library"):
-        m["library"] = ", ".join(split_list(song["fs_library"]))
     return m
 
 

@@ -269,6 +269,7 @@ dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
       <div class="fs-bar">
         <button class="btn small primary" id="fsSendChanged" title="Nummers die al in forScore staan en sindsdien gewijzigd zijn opnieuw versturen">Werk forScore bij</button>
         <button class="btn small" id="fsNewGroup" title="Nieuwe map">＋ Map</button>
+        <button class="btn small" id="fsPull" title="Labels uit forScore ophalen als mappen">↻ Labels</button>
       </div>
       <input id="fsFilter" placeholder="Zoek in forScore-overzicht…">
       <div id="fsTree"></div>
@@ -625,7 +626,7 @@ function drawFs(){
     const none = key==="map" ? songs.filter(s=>!(s.library||[]).length) : [];
     let body = names.map(g=>{
       const gk=key+":"+g, open=FS.open.has(gk);
-      return `<div class="fs-grp" data-grp="${esc(gk)}" data-drop="${esc(hkey)}|${esc(g)}">${open?"▾":"▸"} ${key==="map"?"📁":"#"} ${esc(g)}<span class="n">${groups[g].length}</span>
+      return `<div class="fs-grp" data-grp="${esc(gk)}" data-drop="${esc(hkey)}|${esc(g)}">${open?"▾":"▸"} ${esc(g)}<span class="n">${groups[g].length}</span>
         <button class="act" data-sendgrp="${esc(gk)}" title="alle stukken in deze groep naar forScore">→</button></div>`+
         (open?groups[g].map(s=>fsSongRow(s,false,[hkey,g])).join(""):"");
     }).join("");
@@ -695,6 +696,18 @@ $("#fsSendChanged").onclick = ()=>{
   const paths=(FS.data?FS.data.songs:[]).filter(s=>s.sent && ["pdf","verouderd"].includes(s.status)).map(s=>s.path);
   if(!paths.length){ toast("Alles in forScore is al bijgewerkt"); return; }
   fsSend({paths});
+};
+$("#fsPull").onclick = async ()=>{
+  if(dirty()) await save();
+  busy(true,"Labels uit forScore lezen…");
+  try{
+    const j=await api("/api/forscore/labels",{}); log(j.log); showTab("btabs","log");
+    if(/→/.test(j.log) && confirm("De mappen hierboven (zie Log) overnemen uit forScore?")){
+      const k=await api("/api/forscore/labels",{apply:true}); log(k.log); toast("Mappen bijgewerkt uit forScore");
+      if(state.path){ const f=await api("/api/file?path="+encodeURIComponent(state.path)); if(!dirty()){ ed.value=f.content; state.saved=f.content; histReset(); render(); drawDoc(); } }
+      await loadFs();
+    } else if(!/→/.test(j.log)) toast("Niets over te nemen (zie Log)");
+  }catch(err){ toast(err.message); } finally{ busy(false); }
 };
 $("#fsNewGroup").onclick = ()=>{
   const key = "map";

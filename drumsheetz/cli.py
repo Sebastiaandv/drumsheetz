@@ -118,6 +118,10 @@ def main(argv=None, root=None):
     p.add_argument("--gegevens", action="store_true",
                    help="ook bestaande stukken opnieuw met alle gegevens sturen (.4sc; vervangt annotaties!)")
     p.add_argument("--setlist", action="append", default=[], help="stuur ook deze setlist (.4ss)")
+    p.add_argument("--labels-ophalen", action="store_true",
+                   help="labels uit forScore (Mac) als mappen in de nummers zetten (laat eerst zien wat er verandert)")
+    p.add_argument("--toepassen", action="store_true", help="met --labels-ophalen: de wijzigingen echt doorvoeren")
+    p.add_argument("--onderzoek", action="store_true", help="laat zien wat er in de forScore-database gevonden wordt")
 
     p = sub.add_parser("studio", aliases=["interface", "ui", "app"], help="open de Studio (editor in je browser)")
     p.add_argument("--poort", type=int, default=8765)
@@ -500,6 +504,14 @@ def cmd_setlist(project, args):
 def cmd_forscore(project, args):
     from .build import build
     from .forscore import send
+    if args.onderzoek:
+        from .forscore_db import investigate
+        investigate()
+        return
+    if args.labels_ophalen:
+        from .forscore_db import pull_labels
+        pull_labels(project, apply=args.toepassen)
+        return
     paths = select(project, args.nummers)
     from . import setlist as sl
     if args.setlist and not args.nummers:
