@@ -1000,97 +1000,63 @@ Een voorbeeld staat in `setlists/voorbeeld.txt` (de volgorde van de oude map `ar
 
 ## 7. forScore op de iPad
 
-Je maakt de nummers op de Mac; met één opdracht staan ze in **forScore**, en via de
-**iCloud-synchronisatie** van forScore ook op je iPad.
+Je maakt de nummers op de Mac; Drumsheetz zet ze in **forScore voor Mac**, en de
+**iCloud-synchronisatie** van forScore zet ze op je iPad.
 
-**Eenmalig instellen**
-1. Installeer **forScore voor Mac** (zelfde Apple-ID als op de iPad).
+### Eenmalig instellen
+
+1. Installeer **forScore voor Mac** (Mac App Store, zelfde Apple-ID als op de iPad) en open hem één keer.
 2. Zet in forScore op de Mac én op de iPad **Sync with iCloud** aan (menu → Sync with iCloud).
-3. Voor titels/artiesten in de PDF: `pip3 install pypdf`.
+3. `pip3 install pypdf` (voor titel en componist in de PDF).
+4. Draai één keer de **zelftest** (zie hieronder). macOS vraagt misschien of de Terminal "gegevens van
+   andere apps" mag lezen: sta dat toe. Daarmee kan Drumsheetz in de forScore-bibliotheek **kijken**
+   (alleen lezen) of alles echt is aangekomen.
 
-**Gebruik**
+### Hoe het werkt
+
+| Wat | Hoe |
+|---|---|
+| **Stukken** | Als PDF met een vaste naam, **"Titel - Artiest.pdf"** (of `forscore-naam:` in de kop), met titel en componist in de PDF. forScore herkent een stuk aan die naam. Bestaat het al, kies dan in forScore **Overschrijven**: je annotaties blijven bewaard. |
+| **Controle** | Na het versturen kijkt Drumsheetz in de forScore-bibliotheek op je Mac of het stuk er écht in staat. Alleen dan geldt het als "in forScore". Lukt het lezen niet, dan zie je dat bovenin het forScore-tabblad en wordt het bijgehouden op basis van wat er verstuurd is. |
+| **Setlists** | Eerst gaan de stukken die er nog niet (actueel) in staan, dan de setlist in het officiële **Open Setlist**-formaat. Een stuk dat (nog) niet in forScore staat, komt als plaatshouder in de setlist, net als pauzes en set-koppen. Daarna wordt gecontroleerd of de setlist er staat. |
+| **Mappen** | Een map in Drumsheetz is een **label** in forScore. **↻ Labels** haalt de labels uit forScore op en zet ze als mappen in je nummers. |
+| **Extra gegevens** (genre, waardering, …) | Gaan alleen mee met het experimentele `.4sc`-formaat: zet `forscore-formaat: 4sc` in `instellingen.txt` **als de zelftest laat zien dat het werkt**. |
+
+### Opdrachten
 
 ```bash
-python3 drums.py forscore                 # alle nieuwe en gewijzigde nummers naar forScore
-python3 drums.py forscore theriver        # alleen dit nummer
-python3 drums.py forscore -a              # alles opnieuw sturen
-python3 drums.py maak theriver --forscore # maken en meteen versturen
+python3 drums.py forscore                     # alle nieuwe en gewijzigde nummers
+python3 drums.py forscore "The River"         # één nummer
+python3 drums.py forscore --setlist bruiloft  # een setlist (met de stukken die nog ontbreken)
+python3 drums.py forscore --labels-ophalen    # labels uit forScore → mappen (eerst bekijken)
+python3 drums.py forscore --labels-ophalen --toepassen
+python3 drums.py forscore --zelftest          # alles één keer uitproberen, met rapport
+python3 drums.py forscore --onderzoek         # wat er in de forScore-database herkend wordt
 ```
 
-Of in de Studio met de knop **→ forScore**. Wil je dat het altijd gebeurt na `maak`, zet dan
-`forscore: automatisch` in `instellingen.txt`.
-
-Wat er gebeurt:
-- Alleen nummers die **nieuw of veranderd** zijn worden verstuurd (de rest wordt overgeslagen).
-- Elke PDF krijgt een vaste naam **"Titel - Artiest.pdf"**, en titel, artiest en trefwoorden staan in
-  de PDF zelf, zodat forScore ze kan overnemen.
-- De PDF's gaan naar `uitvoer/forscore/` en worden met forScore op de Mac geopend; forScore importeert ze.
-- Bestaat het stuk al in forScore, dan vraagt forScore wat hij moet doen: kies **Overschrijven**.
-  De nieuwe PDF komt dan in de plaats van de oude en je gegevens en annotaties blijven bewaard.
-  (Verander je de titel of artiest, dan krijgt het bestand een andere naam en komt het als nieuw stuk
-  binnen; het oude kun je dan in forScore verwijderen.)
-
----
+**Zelftest:** stuurt een test-PDF, een test-`.4sc` en een testsetlist (alle drie "Drumsheetz
+zelftest"), controleert per stap of ze in forScore verschijnen, en schrijft een rapport naar
+`uitvoer/forscore-zelftest.txt`. Gooi de teststukken en de testsetlist daarna in forScore weg. Gaat er
+iets mis met forScore, stuur dan dat rapport op: daarin staat precies wat werkt en wat niet.
 
 ### forScore-beheer in de Studio
 
-In de Studio staat links naast **Bestanden** het tabblad **forScore**: een overzicht om je
-forScore-bibliotheek vanuit Drumsheetz op orde te houden.
+In de Studio staat links naast **Bestanden** het tabblad **forScore**. Bovenaan zie je of de
+forScore-bibliotheek gelezen kan worden (groen) of niet (oranje, met een link naar de zelftest).
 
 | Onderdeel | Wat |
 |---|---|
-| **Nog niet in forScore** | Nummers die je nog nooit naar forScore hebt gestuurd. → stuurt er één. |
-| **Mappen** | Alles wat al in forScore staat, per map; wat in geen map zit staat onder *zonder map*. **＋ Map** maakt een nieuwe map; **sleep** een nummer op een map om het erin te zetten, ✕ haalt het eruit, → stuurt de hele map. |
-| **Setlists** | Je setlists met hun nummers. → stuurt de setlist naar forScore (met de nummers die er nog niet in staan); ✎ opent het setlistbestand. |
+| **Nog niet in forScore** | Nummers die niet in forScore staan. → stuurt er één. |
+| **Mappen** | Wat in forScore staat, per map (= label); wat in geen map zit staat onder *zonder map*. **＋ Map** maakt een map; **sleep** een nummer op een map, ✕ haalt het eruit, → stuurt de hele map. |
+| **Setlists** | Je setlists. → stuurt de setlist (met de ontbrekende stukken); ✎ opent het bestand. |
 
-**Mappen = labels in forScore.** forScore kent zelf geen mappen; een map in Drumsheetz gaat daarom
-als **label** naar forScore (naast eventuele `labels:` die je zelf invult). In forScore filter je dan
-op dat label.
-
-**↻ Labels** haalt de labels uit forScore op je Mac en zet ze als mappen in je nummers (bv. als je in
-forScore op de iPad een label hebt toegevoegd). Je ziet eerst in de Log wat er verandert en bevestigt
-daarna. Dit leest alleen een kopie van de forScore-database; er wordt niets in forScore veranderd.
-Vanaf de opdrachtregel:
-
-```bash
-python3 drums.py forscore --labels-ophalen               # laat zien wat er zou veranderen
-python3 drums.py forscore --labels-ophalen --toepassen   # en voer het door
-python3 drums.py forscore --onderzoek                    # wat er in de forScore-database gevonden wordt
-```
+Knoppen: **Werk forScore bij** (alles wat in forScore staat en sindsdien is veranderd opnieuw
+versturen), **＋ Map**, **↻ Labels** (labels uit forScore ophalen als mappen) en **Zelftest**.
+Bolletjes: groen = actueel in forScore, blauw = nog niet in forScore, oranje = gewijzigd, open = nog geen PDF.
 
 Let op: een nummer dat al in forScore staat krijgt een **gewijzigde map** niet vanzelf als label in
-forScore (dan zou het stuk vervangen moeten worden, inclusief annotaties). Zet het label dan in
-forScore zelf; met ↻ Labels komt het daarna weer gelijk in Drumsheetz.
-
-**Werk forScore bij** stuurt alle nummers die al in forScore staan maar sindsdien zijn veranderd
-opnieuw. Het bolletje voor een nummer: groen = actueel in forScore, oranje = gewijzigd, open = nog
-geen PDF.
-
-De indeling wordt gewoon in de kop van het nummer bewaard, dus je kunt hem ook typen of in het
-Document-paneel invullen:
-
-```
-genre: Gospel, Pop
-labels: koor, akoestisch
-tags: rustig
-map: Hatikwa
-waardering: 4
-moeilijkheid: 2
-referentie: Map 3, blz 12
-```
-
-Bij het **eerste** versturen gaat een nummer als `.4sc` naar forScore, met de gegevens erin: titel,
-componist (= `componist`, anders de artiest), genre, tags, labels, referentie, waardering,
-moeilijkheid, duur, tempo en toonsoort. Daarna gaat alleen nog de PDF (overschrijven houdt je
-annotaties). Gewijzigde *gegevens* van een nummer dat al in forScore staat, pas je in forScore aan,
-of stuur je met `python3 drums.py forscore <nummer> --gegevens` opnieuw. Let op: dat vervangt het
-stuk, inclusief annotaties.
-
-Setlists versturen kan ook vanaf de opdrachtregel:
-
-```bash
-python3 drums.py forscore --setlist bruiloft
-```
+forScore (dan zou het stuk vervangen moeten worden, inclusief annotaties). Zet het label in forScore
+zelf; met **↻ Labels** wordt Drumsheetz daarna weer gelijk.
 
 ---
 

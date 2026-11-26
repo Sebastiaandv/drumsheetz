@@ -122,6 +122,8 @@ def main(argv=None, root=None):
                    help="labels uit forScore (Mac) als mappen in de nummers zetten (laat eerst zien wat er verandert)")
     p.add_argument("--toepassen", action="store_true", help="met --labels-ophalen: de wijzigingen echt doorvoeren")
     p.add_argument("--onderzoek", action="store_true", help="laat zien wat er in de forScore-database gevonden wordt")
+    p.add_argument("--zelftest", action="store_true",
+                   help="probeer PDF, .4sc en setlist één keer uit in forScore en maak een rapport")
 
     p = sub.add_parser("studio", aliases=["interface", "ui", "app"], help="open de Studio (editor in je browser)")
     p.add_argument("--poort", type=int, default=8765)
@@ -503,37 +505,26 @@ def cmd_setlist(project, args):
 
 def cmd_forscore(project, args):
     from .build import build
-    from .forscore import send
+    from . import forscore as fs
+    if args.zelftest:
+        fs.selftest(project)
+        return
     if args.onderzoek:
         from .forscore_db import investigate
         investigate()
         return
     if args.labels_ophalen:
-        from .forscore_db import pull_labels
-        pull_labels(project, apply=args.toepassen)
+        fs.pull_labels(project, apply=args.toepassen)
         return
-    paths = select(project, args.nummers)
-    from . import setlist as sl
-    if args.setlist and not args.nummers:
-        paths = []
-    res = build(project, paths)            # eerst zorgen dat de PDF's bijgewerkt zijn
-    if res:
-        send(project, [(sc.song, project.out_file("pdf", p, "pdf"), sc) for p, sc, err in res if sc],
-             force=args.alles, open_app=not args.geen_open, force_meta=args.gegevens)
+    if args.nummers or not args.setlist:
+        paths = select(project, args.nummers)
+        res = build(project, paths, log=lambda m: print(m) if m.startswith(("✗", "  !")) else None)
+        fs.send(project, [(sc.song, project.out_file("pdf", p, "pdf"), sc) for p, sc, err in res if sc],
+                force=args.alles, open_app=not args.geen_open, force_meta=args.gegevens)
+    ok = True
     for name in args.setlist:
-        f = project.setlists_dir / (name if name.endswith(".txt") else f"{name}.txt")
-        if not f.exists():
-            raise NotationError(f"setlist '{name}' niet gevonden")
-        meta, entries = sl.parse_setlist(f.read_text(encoding="utf-8"), f.stem)
-        errs = sl.resolve(project, entries, f)
-        for e in errs:
-            print(f"✗ {e}")
-        songs = [e.path for e in entries if e.kind == "song" and e.path]
-        r2 = build(project, songs)
-        n = send(project, [(sc.song, project.out_file("pdf", p, "pdf"), sc) for p, sc, err in r2 if sc],
-                 open_app=not args.geen_open)
-        from .forscore import send_setlist
-        send_setlist(project, f.stem, meta, entries, open_app=not args.geen_open, wait=6 if n else 0)
+        ok = fs.send_setlist(project, name, open_app=not args.geen_open) and ok
+    return 0 if ok else 1
 
 
 def cmd_studio(project, args):

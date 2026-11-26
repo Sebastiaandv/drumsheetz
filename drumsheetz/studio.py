@@ -628,6 +628,7 @@ class Handler(BaseHTTPRequestHandler):
                                                  + (["--gegevens"] if data.get("meta") else [])
                                                  + sum((["--setlist", n] for n in data.get("setlists") or []), [])),
             "/api/forscore/catalog": lambda: s.fs_catalog(),
+            "/api/forscore/selftest": lambda: s.run_cli(["forscore", "--zelftest"]),
             "/api/forscore/labels": lambda: s.run_cli(["forscore", "--labels-ophalen"] + (["--toepassen"] if data.get("apply") else [])),
             "/api/set-header": lambda: s.set_header(data),
         }

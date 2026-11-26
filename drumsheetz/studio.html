@@ -66,7 +66,7 @@ aside,section{min-height:0;min-width:0}
 .node .ic{width:14px;text-align:center;color:var(--muted)}
 .kids{margin-left:12px}
 #left .tabs{padding:0 4px;align-items:center}
-.fs-bar{display:flex;gap:4px;padding:6px 8px 0}
+.fs-bar{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px 0}
 #fsFilter{margin:6px 8px;padding:4px 7px;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
 #fsTree{overflow:auto;flex:1;padding-bottom:10px}
 .fs-sec{display:flex;align-items:center;gap:5px;padding:6px 8px 3px;font-size:11px;text-transform:uppercase;
@@ -88,6 +88,9 @@ aside,section{min-height:0;min-width:0}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none;background:var(--muted)}
 .dot.actueel{background:var(--ok)}.dot.nieuw{background:#3b82f6}.dot.pdf,.dot.gegevens,.dot.verouderd{background:var(--warn)}
 .dot.geen-pdf{background:transparent;border:1px solid var(--muted)}.dot.fout{background:var(--err)}
+.fs-info{margin:6px 8px 0;padding:5px 7px;border-radius:5px;font-size:11px;background:var(--panel2);color:var(--muted)}
+.fs-info.ok{color:var(--ok)} .fs-info.warn{color:var(--warn)}
+.fs-info a{color:var(--accent);cursor:pointer;text-decoration:underline}
 .fs-legend{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 8px;border-top:1px solid var(--line);
   font-size:11px;color:var(--muted)}
 .kids.closed{display:none}
@@ -270,7 +273,9 @@ dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
         <button class="btn small primary" id="fsSendChanged" title="Nummers die al in forScore staan en sindsdien gewijzigd zijn opnieuw versturen">Werk forScore bij</button>
         <button class="btn small" id="fsNewGroup" title="Nieuwe map">＋ Map</button>
         <button class="btn small" id="fsPull" title="Labels uit forScore ophalen als mappen">↻ Labels</button>
+        <button class="btn small" id="fsTestBtn" title="Alles één keer uitproberen met forScore en een rapport maken">Zelftest</button>
       </div>
+      <div id="fsInfo" class="fs-info"></div>
       <input id="fsFilter" placeholder="Zoek in forScore-overzicht…">
       <div id="fsTree"></div>
       <div class="fs-legend"><span class="dot actueel"></span>actueel <span class="dot nieuw"></span>nieuw
@@ -594,13 +599,13 @@ $("#ltabs").addEventListener("click", e=>{
 /* ------------------------------------------------------------ forScore-beheer */
 const FS = { data:null, open:new Set(["notyet","map","setlists"]), extra:{map:[],genre:[],labels:[],tags:[]} };
 const FS_GROUPS = [["map","Mappen","map","library"],["genre","Genres","genre","genre"],["labels","Labels","labels","labels"],["tags","Tags","tags","tags"]];
-const STATUS_TXT = {actueel:"staat actueel in forScore", nieuw:"nog niet in forScore", pdf:"PDF gewijzigd: opnieuw versturen",
+const STATUS_TXT = {actueel:"staat actueel in forScore", nieuw:"nog niet in forScore", pdf:"gewijzigd sinds het versturen: opnieuw versturen",
   gegevens:"gegevens gewijzigd", verouderd:"nummer gewijzigd sinds de laatste PDF", "geen-pdf":"nog geen PDF gemaakt", fout:"fout in het nummer"};
 async function loadFs(){
   try{ FS.data = await api("/api/forscore/catalog"); drawFs(); }catch(err){ $("#fsTree").innerHTML='<div class="hint">'+esc(err.message)+'</div>'; }
 }
 function fsSongRow(s, top, group){
-  const st = s.status==="nieuw" && s.sent ? "pdf" : s.status;
+  const st = {niet:"nieuw", gewijzigd:"pdf"}[s.status] || s.status;
   return `<div class="fs-song${top?" top":""}${s.path===state.path?" active":""}" draggable="true" data-id="${esc(s.id)}" data-path="${esc(s.path)}" title="${esc(s.name||"")} · ${esc(STATUS_TXT[st]||st)}${s.error?": "+esc(s.error):""}">
     <span class="dot ${st}"></span><span class="t">${esc(s.title)}</span><span class="a">${esc(s.artist||"")}</span><span class="grow"></span>
     ${group?`<button class="act" data-rm="${esc(group[0])}|${esc(group[1])}" title="uit '${esc(group[1])}' halen">✕</button>`:""}
@@ -608,6 +613,10 @@ function fsSongRow(s, top, group){
 }
 function drawFs(){
   const d=FS.data; if(!d) return;
+  const info=$("#fsInfo");
+  if(d.library_ok){ info.className="fs-info ok"; info.innerHTML=`✓ forScore-bibliotheek gelezen: ${d.fs_counts.scores} stukken, ${d.fs_counts.labels} labels, ${d.fs_counts.setlists} setlists`; }
+  else { info.className="fs-info warn"; info.innerHTML=`⚠ forScore-bibliotheek niet gelezen: de status komt uit wat Drumsheetz verstuurde. <a id="fsTest">Zelftest</a>`; info.title=(d.notes||[]).join("\n"); }
+  const t=$("#fsTest"); if(t) t.onclick=fsSelfTest;
   const q=$("#fsFilter").value.toLowerCase().trim();
   const match = s => !q || (s.title+" "+s.artist+" "+(s.genre||[]).join(" ")+" "+(s.tags||[]).join(" ")+" "+(s.labels||[]).join(" ")+" "+(s.library||[]).join(" ")).toLowerCase().includes(q);
   const songs = d.songs.filter(match);
@@ -692,8 +701,14 @@ async function fsSend(body){
   try{ const j=await api("/api/forscore", body); log(j.log); showTab("btabs","log"); toast(j.ok?"Naar forScore gestuurd":"Klaar, met meldingen (zie Log)"); await loadFs(); }
   catch(err){ toast(err.message); } finally{ busy(false); }
 }
+async function fsSelfTest(){
+  if(!confirm("Zelftest: er worden 2 teststukken en 1 testsetlist ('Drumsheetz zelftest') naar forScore gestuurd en gecontroleerd. Daarna kun je ze in forScore weggooien. Doorgaan?")) return;
+  busy(true,"Zelftest met forScore (± 2 minuten)…");
+  try{ const j=await api("/api/forscore/selftest",{}); log(j.log); showTab("btabs","log"); toast("Zelftest klaar: rapport in de Log en in uitvoer/forscore-zelftest.txt"); await loadFs(); }
+  catch(err){ toast(err.message); } finally{ busy(false); }
+}
 $("#fsSendChanged").onclick = ()=>{
-  const paths=(FS.data?FS.data.songs:[]).filter(s=>s.sent && ["pdf","verouderd"].includes(s.status)).map(s=>s.path);
+  const paths=(FS.data?FS.data.songs:[]).filter(s=>s.sent && ["gewijzigd","verouderd"].includes(s.status)).map(s=>s.path);
   if(!paths.length){ toast("Alles in forScore is al bijgewerkt"); return; }
   fsSend({paths});
 };
@@ -709,6 +724,7 @@ $("#fsPull").onclick = async ()=>{
     } else if(!/→/.test(j.log)) toast("Niets over te nemen (zie Log)");
   }catch(err){ toast(err.message); } finally{ busy(false); }
 };
+$("#fsTestBtn").onclick = fsSelfTest;
 $("#fsNewGroup").onclick = ()=>{
   const key = "map";
   const name = prompt("Naam van de nieuwe map:"); if(!name) return;
