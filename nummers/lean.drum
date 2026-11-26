@@ -1,0 +1,35 @@
+# Omgezet uit archief/oud/lean.py
+
+titel: Lean on Me
+artiest: Bill Withers
+ondertitel: Drum lead sheet
+tempo: 76
+maat: 4/4
+stijl: Gospel-soul, recht en eenvoudig
+
+groove v:
+  HH: x-x-x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: x-------x-------
+
+groove br:
+  HH: xxxxxxxxxxxxxxxx
+  SD: ----x-------x---
+  BD: x---x---x---x---
+
+groove hit:
+  CR: x---------------
+  BD: x---------------
+
+[Intro] 4 tacet "piano · tacet"
+[Couplet 1] 8 v fill pick8
+[Refrein] 8 v fill bal4
+[Couplet 2] 8 v fill pick8
+[Refrein] 8 v fill sd34
+[Brug] 16 br crash fill sd34 "handclaps · drijvend"
+[Couplet 3] 8 v crash fill pick8
+[Refrein] 8 v fill sd34
+[Brug] 8 br crash fill sd34
+[Outro] einde
+  7 v crash "refrein-vamp"
+  1 hit

@@ -1,0 +1,27 @@
+# Omgezet uit archief/oud/onelove.py
+
+titel: One Love
+artiest: Bob Marley & The Wailers
+ondertitel: Drum lead sheet
+tempo: 76
+maat: 4/4
+stijl: Reggae one drop · 8sten licht geswingd
+
+groove od:
+  HH: x-x-x-x-x-x-x-x-
+  RS: --------c-------
+  BD: --------x-------
+
+fill drag:
+  SD: ------------xxx-
+  T2: ---------------x
+  BD: --------x-------
+
+[Intro] 4 od fill drag
+[Refrein] 8 od fill drag
+[Couplet 1] 8 od fill drag
+[Refrein] 8 od fill drag
+[Couplet 2] 8 od fill drag
+[Refrein] 8 od fill drag
+[Couplet 3] 8 od fill drag
+[Outro] 8 od einde "tot fade"

@@ -1,0 +1,356 @@
+# Omgezet uit archief/songs/froukje.py
+
+titel: Als Ik God Was
+artiest: Froukje
+ondertitel: Drum sheet
+tempo: 105
+maat: 4/4
+stijl: Getranscribeerd uit de opname
+
+groove b0:
+  HH: x-x-xxxxxxxxxxxx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b1:
+  HH: xxxxxxxx-xx-xxxx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b2:
+  HH: xxxxxxxx-xxx----
+  SD: ----x-----------
+  BD: x-x----x--x-----
+
+groove b3:
+  HH: xxxxxxxx-xxx--xx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b4:
+  HH: xxxxxxxx-xxxxxxx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b5:
+  HH: -xxxxxxx-xxxx-xx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b6:
+  HH: xxxx-xxx-xx-x-xx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b7:
+  HH: x-xxxxxx-xxxx-xx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b8:
+  HH: xxxxxxxxxxxxxxxx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b9:
+  HH: xxx-xxxx-xxxxx-x
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b10:
+  HH: xxxxxxxx-xx-xx-x
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b11:
+  HH: -xxx-x-x-xxx-x-x
+  SD: ----g-------x---
+
+groove b12:
+  HH: --xx-xx--xx-xx-x
+  SD: ----x-------x---
+
+groove b13:
+  HH: -xxx-x-x--xx--xx
+  SD: ----x-------x---
+
+groove b14:
+  HH: -xxx---x-xxx-x-x
+  SD: ----x-------x---
+
+groove b15:
+  HH: -xxx-xxx-x--x-x-
+  SD: ------------x---
+
+groove b16:
+  HH: -x----x--xx---x-
+  SD: ----g-------x---
+
+groove b17:
+  HH: --xx-xxx-xxxxxxx
+  SD: ----x-------x---
+
+groove b18:
+  HH: ------------x---
+  SD: ------------x---
+
+groove b19:
+  CR: x---------------
+  HH: x-x-x-xx-xx-xxxx
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b20:
+  HH: xxxxx-xxx-x-x-xx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b21:
+  HH: x-x-x-xx-xx-xxxx
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b22:
+  HH: x-xxx-xxxxx-xx--
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b23:
+  CR: x---------------
+  HH: --x-x-xx-xxxxxxx
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b24:
+  HH: xxxxx-xxxxxxxxxx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b25:
+  HH: x-x-x-x-xxx-x-x-
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b26:
+  HH: --xxx-xxxxxxx-xx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b27:
+  HH: -xxxxxxx-xxxxxxx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b28:
+  HH: xxxx-xxx-xxx----
+  SD: ----x-----------
+  BD: x-x----x--x-----
+
+groove b29:
+  HH: xxxxxxxx-xx-x-xx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b30:
+  HH: --xxxxxx-xxxxx-x
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b31:
+  HH: xxxxx-xx-xxx-xxx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b32:
+  HH: xxx-x-xx-xxxxxxx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b33:
+  HH: xxxxxxxx-xxxxxxx
+  SD: ----x-----------
+  BD: x-x----x--x-----
+
+groove b34:
+  HH: xxxxx-xx--xxx-xx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b35:
+  HH: x-x-xxxx-xx-x-xx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b36:
+  HH: x-x-x--x--xxx--x
+  T2: ----x-----------
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b37:
+  HH: -xxx------------
+  SD: ----x-----------
+  FT: ------------x--x
+  BD: x-x-------------
+
+groove b38:
+  CR: x-x-------------
+  BD: x-x----x--x-----
+
+groove b39:
+  BD: x-x----x--x-----
+
+groove b40:
+  HH: ------------x---
+  SD: ------------x---
+  BD: x-x-------------
+
+groove b41:
+  CR: x---------------
+  HH: x-x-x-xx--x-xx-x
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b42:
+  HH: -xxx--x-x-x-x-xx
+  T2: ----x-----------
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b43:
+  HH: x-x-x-xx-xxxx-x-
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b44:
+  HH: x-xxx-xxxxxxx-x-
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b45:
+  HH: x-xxx-xx--xxxxxx
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b46:
+  HH: xxxxx-xxx-xxxxxx
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b47:
+  HH: x-x-x-xx-xxxx-xx
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b48:
+  HH: --xxx-x--xx-----
+  T2: ------------x--x
+  SD: ----x-------x--x
+  BD: x-x----x--x-----
+
+groove b49:
+  CR: x---------------
+  HH: --x-x-xx--x-x-xx
+  T2: ----x-----------
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b50:
+  HH: x-xxx-xxxxxxxxxx
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b51:
+  HH: xxxxx-xxxxxxxxx-
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b52:
+  CR: x---------------
+  HH: --x-x-xx--xxxxx-
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b53:
+  HH: xxxxx-xxxxxxx-x-
+  SD: ----x-------x---
+  BD: x-x----x--x-----
+
+groove b54:
+  HH: x-xxxxxxx-x-x-x-
+  SD: ----x-------x---
+  BD: x-x----x--x--x--
+
+groove b55:
+  HH: --xxx-x---------
+  T2: ----x-----------
+  SD: ----x-----------
+  BD: x-x-------------
+
+[A]
+  1 b0 f
+  2 b1
+  1 b2
+  1 b3
+  1 b4
+  1 b5
+  1 b6
+  1 b7
+  1 b8
+  1 b9
+  1 b10 dim
+  1 b11 pp
+  1 b12
+  1 b13
+  1 b14
+  1 b15
+  1 b16
+  1 b17
+  1 b18 cresc
+  1 b19 f
+  1 b20
+  1 b21
+  1 b22
+  1 b23
+  1 b24
+  1 b25
+  1 b26
+  1 b27
+  1 b28
+  1 b9
+  1 b29
+  1 b30
+  1 b1
+  1 b31
+  1 b29
+  1 b32
+  1 b33
+  1 b34
+  1 b35
+[B]
+  1 b36 dim
+  1 b37 mf
+  1 b38
+  6 b39
+  1 b40
+  1 b41 f
+  1 b42
+[A]
+  1 b43
+  1 b44
+  1 b45
+  1 b46
+  1 b47
+  1 b48
+  1 b49
+  1 b20
+  1 b50
+  1 b51
+  1 b52
+  1 b53
+[C]
+  1 b54
+  1 b55
+  2 tacet
+[Tacet] einde
+  6 tacet

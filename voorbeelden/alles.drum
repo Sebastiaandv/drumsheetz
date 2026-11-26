@@ -1,0 +1,91 @@
+# Demonstratie van (bijna) alle notatie in één nummer.
+# Bouwen:   python3 drums.py maak voorbeelden/alles.drum
+# Bekijken: python3 drums.py toon voorbeelden/alles.drum
+
+titel: Alles-in-één
+artiest: Voorbeeldnummer
+tempo: 96
+maat: 4/4
+stijl: Demonstratie van alle notatie
+aftellen: 1                       # één maat stokken tikken vooraf
+
+# --- patronen ------------------------------------------------------------
+
+groove a:                         # telnotatie
+  HH: *8 4&:o                     # alle 8sten, open op 4&
+  SD: 2 4 2a:g 3e:g               # backbeat + twee ghost notes
+  BD: 1 2& 3
+
+groove b = a:                     # afgeleid van a ...
+  HH: -                           # ... zonder hi-hat ...
+  RD: *8 1:b 3:b                  # ... met ride (bell op 1 en 3)
+  CR2: 1
+
+groove bossa2:                    # patroon van twee maten
+  maten: 2
+  HH: *8
+  XS: 1 2& 4 || 2& 4              # || = volgende maat
+  BD: 1 2& 3 4&
+
+groove tuplets:                   # rasternotatie met stukken: 8sten | triool | sextool | kwintool
+  HH: x-x-|xxx|x-x-x-|xxxxx
+  SD: ----|x--|------|x----
+  BD: x---|---|x-----|-----
+
+groove kwarttriool:               # kwartnoot-triolen met breuken
+  SD: 1 1+2/3 2+1/3 3 4
+  BD: 1 3
+
+groove rudiments:                 # flam, drag, ruff, buzz, roffel + sticking
+  SD: 1:f 2:d 3:r 4:z 4&:t
+  BD: 1 3
+  ST: 1:R 2:L 3:R 4:L 4&:R
+
+groove bekkens:                   # dicht (+), open (o), half open (h), china, splash, choke (k), marcato (^)
+  HH: 1:+ 1&:o 2:h
+  CH: 3
+  SP: 3&
+  CR: 4:k
+  RD: 4&:^
+  BD: 1 3
+
+groove handen:                    # accent, rimshot (@), cross stick (c), sticking als raster
+  SD: *16 1:X 2:@ 3:c
+  T1: 4
+  ST: RLRLRLRLRLRLRLRL
+
+fill rond:                        # fill: vervangt het eind van de laatste maat
+  SD: 3 3e
+  T1: 3& 3a
+  T2: 4 4e
+  FT: 4& 4a
+
+# --- opbouw --------------------------------------------------------------
+
+[Intro] 2 a crash mf fill rond
+
+[Couplet] herhaal 2               # herhaaltekens rond de hele sectie
+  4 a "16den-ghosts" fill sd4     # sd4 komt uit de ingebouwde bibliotheek
+
+[Refrein] segno
+  2 b crash f
+  1 b volta 1 fill rond           # 1e keer
+  1 b volta 2 fill sd16           # 2e keer
+
+[Bossa] 8 bossa2 mp "bossa (2-maats herhaling)"
+
+[Triolen]
+  1 tuplets
+  1 kwarttriool
+  1 rudiments
+  1 bekkens
+  1 handen
+
+[Oneven] 2 rock78 maat=7/8 rit    # maatwissel + rit.
+[Wals] 4 jazzwals tempo=150 p cresc
+[Zes-acht] 4 ballad68 fill trip68
+[Vrij] 4 tijd maat=4/4 "solo · vrij spelen" ds-al-coda
+
+[Coda] coda
+  2 {HH: *16; SD: 2 4; BD: 1 1& 3} crash ff dim   # patroon direct in de regel
+  1 hitsd fermata

@@ -1,0 +1,15 @@
+# Het kortst mogelijke nummer: alleen ingebouwde grooves en fills.
+titel: Mijn Eerste Nummer
+artiest: De Band
+tempo: 120
+maat: 4/4
+stijl: Rechte rock
+
+[Intro]    4 rock crash fill sd4
+[Couplet]  16 rock mf fill pick8
+[Refrein]  8 rockride crash f fill tom34
+[Couplet]  16 rock mf fill pick8
+[Refrein]  8 rockride crash f fill tomfull
+[Outro]
+  4 rockride crash
+  1 hit fermata

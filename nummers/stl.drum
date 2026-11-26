@@ -1,0 +1,43 @@
+# Omgezet uit archief/oud/stl.py
+
+titel: Somebody To Love
+artiest: Queen
+ondertitel: Drum lead sheet
+tempo: 55
+maat: 6/8
+stijl: Gospel in 6/8 · tel in twee
+
+groove v:
+  HH: xxxxxx
+  SD: ---x--
+  BD: x----x
+
+groove ch:
+  RD: xxxxxx
+  SD: ---x--
+  BD: x-x--x
+
+groove clap:
+  SD: ---x--
+  BD: x-----
+
+fill trip:
+  SD: ---xxx
+  BD: x-----
+
+fill tom:
+  SD: xx----
+  T1: --xx--
+  FT: ----xx
+  BD: x--x--
+
+[Intro] 4 tacet "a cappella koor · tacet"
+[Couplet 1] 16 v crash fill trip
+[Refrein] 8 ch crash fill tom
+[Couplet 2] 16 v crash fill trip
+[Refrein] 8 ch crash fill tom
+[Gitaarsolo] 16 ch crash fill tom
+[Couplet 3] 16 v crash fill trip
+[Breakdown] 16 clap crash fill trip "stop-time · koor en handclaps"
+[Opbouw] 8 ch crash fill tom
+[Outro] 16 ch crash einde "koor-vamp · tot fade"

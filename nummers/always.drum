@@ -1,0 +1,116 @@
+# Omgezet uit archief/songs/always.py
+
+titel: I Will Always Love You
+artiest: Dolly Parton
+ondertitel: Drum sheet
+tempo: 68
+maat: 4/4
+stijl: Getranscribeerd uit de opname
+
+groove b0:
+  BD: ------x---------
+
+groove b1:
+  BD: x---------------
+
+groove b2:
+  HH: x---x-x-----x---
+  SD: ------------x---
+  BD: x---x-x-x---x---
+
+groove b3:
+  HH: x---x-x-x-x-x-x-
+  BD: x---x-x-x-x-x-x-
+
+groove b4:
+  HH: x---------------
+  SD: ------------x---
+  BD: x-----x-x-------
+
+groove b5:
+  BD: x-------x-----x-
+
+groove b6:
+  SD: ------------x---
+  BD: x-------x-------
+
+groove b7:
+  BD: --------------x-
+
+groove b8:
+  BD: x-------------x-
+
+groove b9:
+  BD: x-------x-------
+
+groove b10:
+  BD: --------x---x---
+
+groove b11:
+  BD: x-----x-x-------
+
+groove b12:
+  BD: x-----x-x-----x-
+
+groove b13:
+  FT: ----x-------x---
+  BD: x-------x-----x-
+
+groove b14:
+  HH: --------------x-
+  BD: --------x-x-x-x-
+
+groove b15:
+  BD: x---x-x-x---x-x-
+
+groove b16:
+  BD: x-----x-x---x-x-
+
+groove b17:
+  BD: x---x-x-x-------
+
+[Tacet]
+  4 tacet
+[A]
+  3 tacet
+  1 b0 mp
+[B]
+  1 b1
+  1 b2
+  1 b3
+  1 b4
+[C]
+  1 b1
+  1 tacet
+  1 b5 mp
+  1 b6
+[A]
+  1 b0
+  3 tacet
+[D]
+  1 b7 mp
+  1 b8
+  1 tacet
+  1 b9 mp cresc
+  1 b10 mf
+  1 b11
+  1 b12
+  1 b5
+  1 b8
+  1 b13
+  1 b1
+  1 tacet
+[Tacet]
+  4 tacet
+[E]
+  2 tacet
+  1 b14 f
+  1 b12
+[F]
+  1 b12
+  1 b15
+  1 b16
+  1 b17
+[G] einde
+  1 b1
+  2 tacet

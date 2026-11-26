@@ -1,0 +1,354 @@
+# Omgezet uit archief/songs/watch.py
+
+titel: Watch Over You
+artiest: Alter Bridge
+ondertitel: Drum sheet
+tempo: 86
+maat: 4/4
+stijl: Getranscribeerd uit de opname
+
+groove b0:
+  BD: x---------------
+
+groove b1:
+  BD: ---------------x
+
+groove b2:
+  HH: ------------x---
+
+groove b3:
+  HH: x-------x-------
+
+groove b4:
+  CR: x---------------
+  HH: x---x-x-x-x-x-x-
+  SD: ----x--g----x---
+  BD: x-------x-----x-
+
+groove b5:
+  HH: x-x-x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: --x-----x-x-----
+
+groove b6:
+  HH: x-x-x-x-x-x-x-x-
+  SD: ----x--g----x--g
+  BD: x-------x-----x-
+
+groove b7:
+  CR: x---------------
+  HH: ----x-x-x-x-x-x-
+  SD: ----x--g----x--g
+  BD: x-------x-----x-
+
+groove b8:
+  HH: x-x-x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: --------x-------
+
+groove b9:
+  HH: x-x-x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: x-------x-----x-
+
+groove b10:
+  CR: x---------------
+  HH: ----x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: x-------x-----x-
+
+groove b11:
+  HH: x-x-x-xxx-x-x-x-
+  SD: ----x-------x---
+  BD: --------x-x-----
+
+groove b12:
+  HH: x-x-x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: x-------x-x---x-
+
+groove b13:
+  HH: x-x-x-x-x-------
+  T2: -------------x--
+  SD: ----x-------x---
+  FT: --------------x-
+  BD: --x-----x-x-----
+
+groove b14:
+  RD: x---x---x---x---
+  SD: ----x-------x---
+  BD: x-------x-x---x-
+
+groove b15:
+  RD: x-x-x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: --x-----x-x-----
+
+groove b16:
+  RD: x-x-x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: x-------x-x---x-
+
+groove b17:
+  RD: x-x-x-x-x-x-x---
+  SD: ----x-------x---
+  BD: --x-----x-x-----
+
+groove b18:
+  RD: x-x-x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: --------x-x---x-
+
+groove b19:
+  RD: x-x-x-x-x-x-x-x-
+  HH: x-------x---x-x-
+  BD: x-x-x-x-x-x-x-x-
+
+groove b20:
+  HH: x-x-x-x---------
+  SD: --------xx-xxxx-
+  BD: x-x-x-x-x-x-x--x
+
+groove b21:
+  RD: x-x-x-x-x-x-x-x-
+  HH: ------------x---
+  SD: ----x-------x---
+  BD: x-x---x-x-x---x-
+
+groove b22:
+  RD: x-x-x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: x-xx--x-x-x--x-x
+
+groove b23:
+  RD: x-x-x---x-x-x-x-
+  HH: ----x-------x---
+  SD: ----x-------x---
+  BD: x-x---x-x-x---x-
+
+groove b24:
+  CR: x-----x---------
+  HH: ----x-x-xxx-x-x-
+  SD: ----x---xx--x-x-
+  BD: x-x---x-x--x-x-x
+
+groove b25:
+  RD: x-x-x---x-------
+  HH: ----x-------x---
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b26:
+  RD: x---x---x-x-x-x-
+  HH: ----x-------x---
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b27:
+  CR: --x-x---x-------
+  HH: ------------x---
+  SD: ----x-------x---
+  BD: --x-----x-x---x-
+
+groove b28:
+  CR: x-------x-------
+  HH: ----x-------x---
+  SD: ----x-------x---
+  BD: x-------x-x---x-
+
+groove b29:
+  RD: x-x-x---x-------
+  HH: ------------x---
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b30:
+  RD: x---x---x---x-x-
+  HH: ----x-------x---
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b31:
+  CR: ----x----x------
+  T2: -------------x--
+  SD: ----x----x-xx---
+  FT: --------------x-
+  BD: --x-----x-x----x
+
+groove b32:
+  RD: x-x-x---x---x-x-
+  HH: ----x-----------
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b33:
+  CR: ------x---------
+  HH: ----x-x-x-x-x-x-
+  BD: x-x-x-x-x-x-x-x-
+
+groove b34:
+  HH: x---x-x-x-x-x-x-
+  BD: x-x-x-x-x-x-x-x-
+
+groove b35:
+  HH: x-x-x-x-x-x-x-x-
+  BD: x-x-x-x-x-x-x-x-
+
+groove b36:
+  HH: x-x-x-----------
+  T2: -------------xx-
+  SD: ------xxxxxxx---
+  BD: x-x-x-x-x-x-x--x
+
+groove b37:
+  RD: x---x---x---x-x-
+  HH: x---x-------x---
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b38:
+  RD: --x-----x-x---x-
+  HH: ----x-------x---
+  SD: ----x--g----x---
+  BD: --x-----x-x---x-
+
+groove b39:
+  RD: x-x-----x-x-x-x-
+  HH: ----x-----x-----
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b40:
+  RD: --x-x---x-x---x-
+  HH: ----x-------x---
+  SD: ----x-------x---
+  BD: --x-----x-x---x-
+
+groove b41:
+  CR: x-------x-----x-
+  HH: ----x-------x---
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b42:
+  HH: ----x---x-x-x---
+  SD: ----x-------x---
+  BD: --x-----x-x-----
+
+groove b43:
+  RD: x-x-x---x-x-x-x-
+  HH: ----x-x---------
+  SD: ----x-----------
+  BD: x-x-----x-x-x-x-
+
+groove b44:
+  RD: x-xxx-x-xx-x----
+  SD: x--x--x--x-xxxx-
+  BD: -xx--x-xx-x----x
+
+groove b45:
+  RD: x-x-x---x-x-x-x-
+  HH: ----x-----------
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b46:
+  CR: --x-x---------x-
+  HH: ----x-------x---
+  SD: ----x-------x---
+  BD: --x-----x-x---x-
+
+groove b47:
+  RD: x-x-x---x-----x-
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b48:
+  CR: --x-x-----------
+  HH: ----x----x--x-x-
+  SD: ----x----x--x-xx
+  BD: --x-----x--x----
+
+groove b49:
+  RD: x-x-x---x-x-x-x-
+  HH: ----x-x---------
+  SD: ----x-------x---
+  BD: x-x-----x-x---x-
+
+groove b50:
+  CR: x---------------
+  BD: x---------------
+
+[Tacet]
+  12 tacet
+[A]
+  1 b0 p
+  1 b1
+  2 tacet
+[Tacet]
+  8 tacet
+[A]
+  2 tacet
+  1 b2 p
+  1 b3 cresc
+[B]
+  1 b4 f
+  1 b5
+  1 b6
+  1 b5
+  1 b7
+  1 b8 mf
+  1 b9
+  1 b8
+  1 b10
+  1 b11
+  1 b12
+  1 b13
+[C]
+  1 b14
+  1 b15
+  1 b16
+  1 b17
+  1 b16
+  1 b18
+  1 b19
+  1 b20 f
+  1 b21
+  1 b22
+  1 b23
+  1 b24
+  1 b25
+  2 b26
+  1 b27 ff
+  1 b28
+  1 b29
+  1 b30
+  1 b31
+[D]
+  1 b32 f
+  1 tacet
+  1 b33 f
+  1 b34
+[E]
+  1 b35
+  1 b36
+  1 b37
+  1 b38
+  1 b39
+  1 b40
+  1 b41
+  1 b42
+[C]
+  1 b43
+  1 b44
+  1 b45
+  1 b46
+  1 b47
+  1 b48
+  1 b49
+  1 b40
+[A]
+  1 b50
+  3 tacet
+[Tacet] einde
+  9 tacet

@@ -1,0 +1,37 @@
+# Omgezet uit archief/oud/fifty_ways.py
+
+titel: 50 Ways to Leave Your Lover
+artiest: Paul Simon
+ondertitel: Drum lead sheet
+tempo: 104
+maat: 4/4
+stijl: Gadd-groove in de coupletten, backbeat in het refrein
+
+groove gadd:
+  HH: x-x-x-x-x-x---x-
+  SD: -g-g-g-g-g-gXg-g
+  BD: x-------x-------
+
+groove chorus:
+  HH: x-x-x-x-x-x-x-x-
+  SD: ----x-------x---
+  BD: x-------x-x-----
+
+fill short:
+  SD: ------------XgXX
+  BD: x-------x-------
+
+fill tom:
+  SD: --------xx------
+  T1: ----------xx----
+  T2: ------------xx--
+  FT: --------------xx
+  BD: x-------x-------
+
+[Intro] 2 gadd
+[Couplet 1] 16 gadd fill short
+[Refrein] 16 chorus fill tom
+[Couplet 2] 16 gadd fill short
+[Refrein] 16 chorus fill tom
+[Couplet 3] 16 gadd fill short
+[Outro] 16 chorus einde "herhalen tot fade"

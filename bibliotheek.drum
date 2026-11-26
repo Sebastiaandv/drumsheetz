@@ -1,0 +1,21 @@
+# Eigen bibliotheek: grooves en fills die je in ÁLLE nummers bij naam kunt gebruiken.
+# Ze komen bovenop de ingebouwde bibliotheek (python3 drums.py bibliotheek toont alles).
+# Een patroon met dezelfde naam als een ingebouwd patroon vervangt dat ingebouwde patroon.
+
+groove purdie:
+  info: Purdie shuffle (half-time shuffle met ghost notes)
+  HH: *4 *l
+  SD: 3 1t:g 1l:g 2t:g 2l:g 3l:g 4t:g 4l:g
+  BD: 1 2l 3l
+
+groove gadd:
+  info: Gadd-achtig: lineaire 16den tussen hi-hat en snare (zoals 50 Ways)
+  HH: 1 1& 2 2& 3 3& 4 4&
+  SD: 1e:g 1a 2e:g 2a:g 3e:g 3a 4:X 4e:g 4a:g
+  BD: 1 2& 3
+
+fill dalend6:
+  info: Sextolen van hoog naar laag over tel 4
+  T1: 4 4+1/6
+  T2: 4+2/6 4+3/6
+  FT: 4+4/6 4+5/6

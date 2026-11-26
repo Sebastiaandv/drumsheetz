@@ -1,0 +1,449 @@
+# Omgezet uit archief/songs/annihilator.py
+
+titel: Sounds Good to Me
+artiest: Annihilator
+ondertitel: Drum sheet
+tempo: 81
+maat: 4/4
+stijl: Getranscribeerd uit de opname
+
+groove b0:
+  SD: --------------x-
+  BD: -------------x--
+
+groove b1:
+  CR: x-------------x-
+  HH: -xxxxxxxxxxxxx--
+  SD: --x---x---x---x-
+  BD: x--x----x--x-xx-
+
+groove b2:
+  CR: x-------------x-
+  HH: --xxxxxxxxxxxx--
+  SD: --x---x---x---x-
+  BD: x--x----x--xxxx-
+
+groove b3:
+  CR: x---------------
+  HH: --xxxxxxxxxxxxxx
+  SD: --x---x---x---x-
+  BD: x--x----x--x-xx-
+
+groove b4:
+  CR: x---------------
+  HH: --xxxxxxx-x-x-x-
+  SD: --x---x-----x---
+  BD: x--x----x-----xx
+
+groove b5:
+  RD: ------x-x-x-x-x-
+  HH: xx--------------
+  SD: -x--xx----x---x-
+  BD: --xx--x-x--x-x-x
+
+groove b6:
+  RD: x-x-x-x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x-x
+
+groove b7:
+  RD: x-x-x-x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b8:
+  CR: ---x--x---------
+  HH: --------x-x-x-x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b9:
+  HH: x-x-x-x-x-x---x-
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b10:
+  CR: ------x---------
+  HH: x-x-x---x-x---x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b11:
+  HH: x-x-x-x-x-x---x-
+  SD: --x---x---x-g-x-
+  BD: x--x-x--x--x-x-x
+
+groove b12:
+  HH: x-x-x-x-x-x---x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b13:
+  HH: --x-x-x-x-x---x-
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b14:
+  HH: --x---x-x-x---x-
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b15:
+  CR: --------x-------
+  HH: --x---x---x-----
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b16:
+  CR: --------x-------
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x-x
+
+groove b17:
+  CR: --x-x-x---------
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b18:
+  RD: --x---x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x-x
+
+groove b19:
+  CR: ---x--x---------
+  HH: ----------x---x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b20:
+  HH: x-x---x---x-----
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b21:
+  HH: --x-x---x-x---x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b22:
+  HH: ------x---x---x-
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b23:
+  HH: --x---x-x-x---x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b24:
+  CR: ------x---------
+  HH: --x-x---x-x-x-x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b25:
+  HH: x-x-x-x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b26:
+  RD: ------x-x-x-x---
+  HH: x-x-x---------x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b27:
+  RD: x-x---x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b28:
+  RD: x-x-x-x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: xx-x-xx-x--x-x-x
+
+groove b29:
+  CR: --x---x---------
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x--
+
+groove b30:
+  CR: x-------x-------
+  SD: ------x---x---x-
+  BD: x----x--x--x-x-x
+
+groove b31:
+  RD: --x---x---x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x-x
+
+groove b32:
+  CR: ---x--x---------
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b33:
+  CR: --------------x-
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x-x
+
+groove b34:
+  RD: x-x-x-x-x-x---x-
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b35:
+  RD: x--xx-x-x-x-x-x-
+  SD: x--x--x---x---x-
+  BD: -xx-xx--xx-x-x-x
+
+groove b36:
+  RD: x-x-x-x-x-x-----
+  HH: ----------x-x--x
+  SD: --x---x---x---x-
+  BD: xx-x-x-xxx-x-x-x
+
+groove b37:
+  RD: ------x-x-xxx-x-
+  HH: x-x-x-----------
+  SD: --x---x---x---x-
+  BD: -x-xxx--xx-x-x-x
+
+groove b38:
+  RD: x-x-x-x-x-x-----
+  HH: ----------x----x
+  SD: --x---x---x---x-
+  BD: xx-x-x-xxx-x-x-x
+
+groove b39:
+  CR: ------x-------x-
+  HH: --x-------------
+  SD: --x---x---x---x-
+  BD: -x-xxx--x--x-x--
+
+groove b40:
+  RD: ------x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x--
+
+groove b41:
+  RD: --x-x-x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x--
+
+groove b42:
+  RD: --x-x-x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x-x
+
+groove b43:
+  RD: x--x--xxx-x-x-x-
+  SD: --x---xx--x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b44:
+  RD: x-x---x---x---x-
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b45:
+  CR: x-x-------------
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x--
+
+groove b46:
+  CR: x---------------
+  BD: x---------------
+
+groove b47:
+  CR: --------x-------
+  HH: --------x-------
+  SD: ------x---------
+  BD: -----x--x-------
+
+groove b48:
+  CR: --------x-------
+  SD: --------x-------
+  BD: -------xx-------
+
+groove b49:
+  CR: --------x-------
+  HH: ----------x-----
+  T1: ---x------------
+  SD: ------x---x---x-
+  FT: xxx-x-----------
+  BD: --------x--x-x-x
+
+groove b50:
+  CR: ----------x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x-x
+
+groove b51:
+  RD: x-x-x-x---x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x--x--x-x-x
+
+groove b52:
+  RD: x-x---x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x-x
+
+groove b53:
+  CR: ---x--x---------
+  HH: --------------x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--x--x-x-x
+
+groove b54:
+  HH: --x---x---x-----
+  SD: --x---x---x---x-
+  BD: x--x-x-xx--x-x-x
+
+groove b55:
+  RD: x-x-x-x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: xx-x-x-xxx-x-x-x
+
+groove b56:
+  RD: x-x---x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--xx-x-x-x
+
+groove b57:
+  RD: xx-xx-x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--xx-x-x-x
+
+groove b58:
+  RD: x-x---x---x---x-
+  SD: --x---x---x---x-
+  BD: xx-x-x-xxx-x-x-x
+
+groove b59:
+  RD: x-x---x-x-x---x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--xx-x-x-x
+
+groove b60:
+  RD: --x-x-x-x-x---x-
+  SD: --x---x---x---x-
+  BD: xx-x-x-xxx-x-x-x
+
+groove b61:
+  RD: ---x--x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--xx-x-x-x
+
+groove b62:
+  RD: x-x-x-x-x-x-x-x-
+  SD: --x---x---x---x-
+  BD: xx-x-x--xx-x-x-x
+
+groove b63:
+  RD: x-x-x-x-x-x-x-x-
+  SD: --x---g---g---g-
+  BD: xx-x-x-xxx-x-x-x
+
+groove b64:
+  CR: --x-x-x---------
+  SD: --g---g---g---g-
+  BD: xx-x-x--xx-x-x-x
+
+groove b65:
+  SD: --g---g-------g-
+  BD: xx-x-x-x-x-x-x-x
+
+groove b66:
+  BD: xx-x-x---x-x----
+
+[A]
+  1 b0 f
+  1 b1
+  1 b2
+  1 b3
+[B]
+  1 b4
+  1 b5
+  1 b6
+  1 b7
+[C]
+  1 b6
+  1 b8
+  1 b9
+  1 b10
+  1 b11
+  1 b12
+  1 b13
+  1 b12
+  1 b14
+  1 b15
+  1 b16
+  1 b17
+  1 b18
+  1 b19
+  1 b20
+  1 b21
+  1 b22
+  1 b23
+  1 b13
+  1 b24
+  1 b25
+  1 b26
+  1 b27
+  1 b28
+[B]
+  1 b29
+  1 b30
+  1 b31
+  1 b7
+  1 b6
+  1 b32
+  1 b33
+  1 b34
+  1 b6
+  1 b35
+  1 b36
+  1 b37
+  1 b38
+  1 b39
+  1 b40
+  1 b41
+  1 b42
+  1 b43
+  1 b44
+  1 b28
+[D]
+  1 b45
+  1 b46
+  1 tacet
+  1 b47 f
+[E]
+  1 b48
+  1 b49
+  1 b50
+  1 b51
+  1 b52
+  1 b53
+  1 b54
+  1 b51
+  1 b52
+  1 b35
+  1 b55
+  1 b56
+  1 b55
+  1 b57
+  1 b58
+  1 b59
+  1 b60
+  1 b61
+  1 b55
+  1 b62
+  1 b55
+  1 b61
+  1 b63
+  1 b64
+[F] einde
+  1 b65
+  1 b66
+  2 tacet

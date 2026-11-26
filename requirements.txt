@@ -1,0 +1,3 @@
+# Optioneel: alleen nodig voor setlists (compleet boek, voorblad, podiumlijst).
+pypdf>=3
+reportlab>=3.6

@@ -1,0 +1,28 @@
+# Voorbeeld-setlist: dezelfde volgorde als de oude map archief/set/
+# Maken:   python3 drums.py setlist maak voorbeeld
+# Bekijken: python3 drums.py setlist toon voorbeeld
+titel: Voorbeeldset
+datum: 2026
+plaats: 
+notitie: Dezelfde volgorde als de oude set-map
+
+[Set 1]
+always                    | rustig beginnen
+crime
+scene
+archief/pdf-gekocht/50-Ways-To-Leave-Your-Lover_Paul-Simon.pdf = Paul Simon - 50 Ways to Leave Your Lover [3:37]
+fields
+froukje
+friend
+watch
+
+[Pauze]
+
+[Set 2]
+letlove
+oml
+lean
+houme
+archief/pdf-gekocht/one-love-people-get-ready.pdf = Bob Marley & The Wailers - One Love [2:52]
+archief/pdf-gekocht/Somebody-To-Love_Queen.pdf = Queen - Somebody To Love [4:56]
+annihilator               | knallen tot het eind
