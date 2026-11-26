@@ -114,6 +114,9 @@ def main(argv=None, root=None):
     p.add_argument("nummers", nargs="*", help="leeg = alle nummers")
     p.add_argument("-a", "--alles", action="store_true", help="ook ongewijzigde opnieuw sturen")
     p.add_argument("--geen-open", action="store_true", help="alleen klaarzetten in uitvoer/forscore/")
+    p.add_argument("--gegevens", action="store_true",
+                   help="ook bestaande stukken opnieuw met alle gegevens sturen (.4sc; vervangt annotaties!)")
+    p.add_argument("--setlist", action="append", default=[], help="stuur ook deze setlist (.4ss)")
 
     p = sub.add_parser("studio", aliases=["interface", "ui", "app"], help="open de Studio (editor in je browser)")
     p.add_argument("--poort", type=int, default=8765)
@@ -167,7 +170,7 @@ def cmd_build(project, args):
     auto = str(project.config.get("forscore", "")).lower() in ("ja", "automatisch", "auto", "aan")
     if (args.forscore or auto) and not args.xml:
         from .forscore import send
-        send(project, [(sc.song, project.out("pdf", f"{p.stem}.pdf")) for p, sc, err in res if sc])
+        send(project, [(sc.song, project.out("pdf", f"{p.stem}.pdf"), sc) for p, sc, err in res if sc])
     if args.open and not bad:
         for path, _, _ in res:
             _open(project.out("pdf", f"{path.stem}.pdf"))
@@ -487,9 +490,27 @@ def cmd_forscore(project, args):
     from .build import build
     from .forscore import send
     paths = select(project, args.nummers)
+    from . import setlist as sl
+    if args.setlist and not args.nummers:
+        paths = []
     res = build(project, paths)            # eerst zorgen dat de PDF's bijgewerkt zijn
-    send(project, [(sc.song, project.out("pdf", f"{p.stem}.pdf")) for p, sc, err in res if sc],
-         force=args.alles, open_app=not args.geen_open)
+    if res:
+        send(project, [(sc.song, project.out("pdf", f"{p.stem}.pdf"), sc) for p, sc, err in res if sc],
+             force=args.alles, open_app=not args.geen_open, force_meta=args.gegevens)
+    for name in args.setlist:
+        f = project.setlists_dir / (name if name.endswith(".txt") else f"{name}.txt")
+        if not f.exists():
+            raise NotationError(f"setlist '{name}' niet gevonden")
+        meta, entries = sl.parse_setlist(f.read_text(encoding="utf-8"), f.stem)
+        errs = sl.resolve(project, entries, f)
+        for e in errs:
+            print(f"✗ {e}")
+        songs = [e.path for e in entries if e.kind == "song" and e.path]
+        r2 = build(project, songs)
+        send(project, [(sc.song, project.out("pdf", f"{p.stem}.pdf"), sc) for p, sc, err in r2 if sc],
+             open_app=not args.geen_open)
+        from .forscore import send_setlist
+        send_setlist(project, f.stem, meta, entries, open_app=not args.geen_open)
 
 
 def cmd_studio(project, args):

@@ -1024,6 +1024,47 @@ Wat er gebeurt:
 
 ---
 
+### forScore-beheer in de Studio
+
+In de Studio staat links naast **Bestanden** het tabblad **forScore**: een overzicht om je
+forScore-bibliotheek vanuit Drumsheetz op orde te houden.
+
+| Onderdeel | Wat |
+|---|---|
+| **Gewijzigd sinds versturen** | Nummers die al in forScore staan maar sindsdien zijn aangepast. **Werk forScore bij** stuurt ze allemaal opnieuw. |
+| **Nog niet in forScore** | Nummers die je nog nooit hebt verstuurd. |
+| **Mappen, Genres, Labels, Tags** | Je indeling. **Sleep een nummer** op een groep om het erin te zetten; ✕ haalt het eruit. **＋ Groep** maakt een nieuwe lege groep. → stuurt alles in die groep naar forScore. |
+| **Setlists** | Je setlists met hun nummers. → stuurt de setlist als forScore-setlist (`.4ss`), met de nummers die er nog niet in staan. ✎ opent het setlistbestand. |
+| **Alle stukken** | Alles, met een bolletje: groen = actueel in forScore, blauw = nieuw, oranje = gewijzigd, open = nog geen PDF. Klik om het nummer te openen. |
+
+De indeling wordt gewoon in de kop van het nummer bewaard, dus je kunt hem ook typen of in het
+Document-paneel invullen:
+
+```
+genre: Gospel, Pop
+labels: koor, akoestisch
+tags: rustig
+map: Hatikwa
+waardering: 4
+moeilijkheid: 2
+referentie: Map 3, blz 12
+```
+
+Bij het **eerste** versturen gaat een nummer als `.4sc` naar forScore, met de gegevens erin: titel,
+componist (= `componist`, anders de artiest), genre, tags, labels, referentie, waardering,
+moeilijkheid, duur, tempo en toonsoort. Daarna gaat alleen nog de PDF (overschrijven houdt je
+annotaties). Gewijzigde *gegevens* van een nummer dat al in forScore staat, pas je in forScore aan,
+of stuur je met `python3 drums.py forscore <nummer> --gegevens` opnieuw. Let op: dat vervangt het
+stuk, inclusief annotaties.
+
+Setlists versturen kan ook vanaf de opdrachtregel:
+
+```bash
+python3 drums.py forscore --setlist bruiloft
+```
+
+---
+
 ## 8. MIDI: oefenen met een meespeelbestand
 
 ```bash

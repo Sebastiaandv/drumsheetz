@@ -65,6 +65,31 @@ aside,section{min-height:0;min-width:0}
 .node .tw{width:12px;color:var(--muted);font-size:10px;text-align:center}
 .node .ic{width:14px;text-align:center;color:var(--muted)}
 .kids{margin-left:12px}
+#left .tabs{padding:0 4px;align-items:center}
+.fs-bar{display:flex;gap:4px;padding:6px 8px 0}
+#fsFilter{margin:6px 8px;padding:4px 7px;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
+#fsTree{overflow:auto;flex:1;padding-bottom:10px}
+.fs-sec{display:flex;align-items:center;gap:5px;padding:6px 8px 3px;font-size:11px;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--muted);cursor:pointer;user-select:none}
+.fs-sec .n{margin-left:auto;font-size:10px}
+.fs-grp{display:flex;align-items:center;gap:5px;padding:2px 8px 2px 14px;cursor:pointer;user-select:none;font-weight:600}
+.fs-grp .n{margin-left:auto;color:var(--muted);font-weight:400;font-size:11px}
+.fs-grp .act,.fs-song .act{display:none;border:0;background:none;color:var(--muted);cursor:pointer;padding:0 3px}
+.fs-grp:hover .act,.fs-song:hover .act{display:inline}
+.fs-grp .act:hover,.fs-song .act:hover{color:var(--accent)}
+.fs-song{display:flex;align-items:center;gap:6px;padding:2px 8px 2px 26px;cursor:pointer;white-space:nowrap;user-select:none}
+.fs-song.top{padding-left:14px}
+.fs-song:hover,.fs-grp:hover{background:var(--panel2)}
+.fs-song.active{background:var(--sel);color:var(--accent)}
+.fs-song .t{overflow:hidden;text-overflow:ellipsis}
+.fs-song .a{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.fs-song .grow{flex:1}
+.drop-ok{outline:2px dashed var(--accent);outline-offset:-2px;background:var(--sel)!important}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none;background:var(--muted)}
+.dot.actueel{background:var(--ok)}.dot.nieuw{background:#3b82f6}.dot.pdf,.dot.gegevens,.dot.verouderd{background:var(--warn)}
+.dot.geen-pdf{background:transparent;border:1px solid var(--muted)}.dot.fout{background:var(--err)}
+.fs-legend{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 8px;border-top:1px solid var(--line);
+  font-size:11px;color:var(--muted)}
 .kids.closed{display:none}
 #treeFilter{margin:6px 8px;padding:4px 7px;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
 /* ---------- editor ---------- */
@@ -227,10 +252,22 @@ dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
 
 <main id="main">
   <aside class="panel" id="left">
-    <div class="panel-title"><span class="grow">Bestanden</span>
-      <button class="icon-btn" id="bRefresh" title="Vernieuwen">⟳</button></div>
-    <input id="treeFilter" placeholder="Zoek bestand…">
-    <div id="tree"></div>
+    <div class="tabs" id="ltabs"><div class="tab active" data-t="files">Bestanden</div><div class="tab" data-t="fs">forScore</div>
+      <span style="flex:1"></span><button class="icon-btn" id="bRefresh" title="Vernieuwen">⟳</button></div>
+    <div class="ltab active" id="l-files" style="display:flex;flex-direction:column;min-height:0;flex:1">
+      <input id="treeFilter" placeholder="Zoek bestand…">
+      <div id="tree"></div>
+    </div>
+    <div class="ltab" id="l-fs" style="display:none;flex-direction:column;min-height:0;flex:1">
+      <div class="fs-bar">
+        <button class="btn small primary" id="fsSendChanged" title="Nummers die al in forScore staan en sindsdien gewijzigd zijn opnieuw versturen">Werk forScore bij</button>
+        <button class="btn small" id="fsNewGroup" title="Nieuwe map, genre, label of tag">＋ Groep</button>
+      </div>
+      <input id="fsFilter" placeholder="Zoek in forScore-overzicht…">
+      <div id="fsTree"></div>
+      <div class="fs-legend"><span class="dot actueel"></span>actueel <span class="dot nieuw"></span>nieuw
+        <span class="dot pdf"></span>gewijzigd <span class="dot geen-pdf"></span>geen PDF</div>
+    </div>
   </aside>
   <div class="split" data-side="left"></div>
 
@@ -537,6 +574,129 @@ document.addEventListener("keydown", e=>{
 });
 window.addEventListener("beforeunload", e=>{ if(dirty()){ e.preventDefault(); e.returnValue=""; } });
 
+/* ------------------------------------------------------------ linker tabbladen */
+$("#ltabs").addEventListener("click", e=>{
+  const t=e.target.closest(".tab"); if(!t) return;
+  $$("#ltabs .tab").forEach(x=>x.classList.toggle("active", x===t));
+  $("#l-files").style.display = t.dataset.t==="files"?"flex":"none";
+  $("#l-fs").style.display = t.dataset.t==="fs"?"flex":"none";
+  if(t.dataset.t==="fs") loadFs();
+});
+
+/* ------------------------------------------------------------ forScore-beheer */
+const FS = { data:null, open:new Set(["all","map","setlists"]), extra:{map:[],genre:[],labels:[],tags:[]} };
+const FS_GROUPS = [["map","Mappen","map","library"],["genre","Genres","genre","genre"],["labels","Labels","labels","labels"],["tags","Tags","tags","tags"]];
+const STATUS_TXT = {actueel:"staat actueel in forScore", nieuw:"nog niet in forScore", pdf:"PDF gewijzigd: opnieuw versturen",
+  gegevens:"gegevens gewijzigd", verouderd:"nummer gewijzigd sinds de laatste PDF", "geen-pdf":"nog geen PDF gemaakt", fout:"fout in het nummer"};
+async function loadFs(){
+  try{ FS.data = await api("/api/forscore/catalog"); drawFs(); }catch(err){ $("#fsTree").innerHTML='<div class="hint">'+esc(err.message)+'</div>'; }
+}
+function fsSongRow(s, top, group){
+  const st = s.status==="nieuw" && s.sent ? "pdf" : s.status;
+  return `<div class="fs-song${top?" top":""}${s.path===state.path?" active":""}" draggable="true" data-id="${esc(s.id)}" data-path="${esc(s.path)}" title="${esc(s.name||"")} · ${esc(STATUS_TXT[st]||st)}${s.error?": "+esc(s.error):""}">
+    <span class="dot ${st}"></span><span class="t">${esc(s.title)}</span><span class="a">${esc(s.artist||"")}</span><span class="grow"></span>
+    ${group?`<button class="act" data-rm="${esc(group[0])}|${esc(group[1])}" title="uit '${esc(group[1])}' halen">✕</button>`:""}
+    <button class="act" data-send="${esc(s.path)}" title="naar forScore sturen">→</button></div>`;
+}
+function drawFs(){
+  const d=FS.data; if(!d) return;
+  const q=$("#fsFilter").value.toLowerCase().trim();
+  const match = s => !q || (s.title+" "+s.artist+" "+(s.genre||[]).join(" ")+" "+(s.tags||[]).join(" ")+" "+(s.labels||[]).join(" ")+" "+(s.library||[]).join(" ")).toLowerCase().includes(q);
+  const songs = d.songs.filter(match);
+  const sec = (key, title, n, body, drop) => `<div class="fs-sec" data-sec="${key}" ${drop?`data-drop="${drop}"`:""}>${FS.open.has(key)?"▾":"▸"} ${title}<span class="n">${n}</span></div>`+(FS.open.has(key)?body:"");
+  let html="";
+  const todo = songs.filter(s=>s.sent && ["pdf","gegevens","verouderd"].includes(s.status));
+  const notyet = songs.filter(s=>!s.sent);
+  html += sec("todo","Gewijzigd sinds versturen", todo.length, todo.map(s=>fsSongRow(s,true)).join("") || '<div class="hint" style="padding:4px 14px">Alles in forScore is bijgewerkt.</div>');
+  html += sec("notyet","Nog niet in forScore", notyet.length, notyet.map(s=>fsSongRow(s,true)).join(""));
+  for(const [key,title,hkey,field] of FS_GROUPS){
+    const groups={};
+    for(const g of FS.extra[key]) groups[g]=[];
+    for(const s of songs) for(const g of (s[field]||[])) (groups[g]=groups[g]||[]).push(s);
+    const names=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"nl"));
+    const none = key==="map" ? songs.filter(s=>!(s.library||[]).length) : [];
+    let body = names.map(g=>{
+      const gk=key+":"+g, open=FS.open.has(gk);
+      return `<div class="fs-grp" data-grp="${esc(gk)}" data-drop="${esc(hkey)}|${esc(g)}">${open?"▾":"▸"} ${key==="map"?"📁":"#"} ${esc(g)}<span class="n">${groups[g].length}</span>
+        <button class="act" data-sendgrp="${esc(gk)}" title="alle stukken in deze groep naar forScore">→</button></div>`+
+        (open?groups[g].map(s=>fsSongRow(s,false,[hkey,g])).join(""):"");
+    }).join("");
+    if(key==="map" && none.length){ const open=FS.open.has("map:-"); body += `<div class="fs-grp" data-grp="map:-">${open?"▾":"▸"} <i>zonder map</i><span class="n">${none.length}</span></div>`+(open?none.map(s=>fsSongRow(s)).join(""):""); }
+    html += sec(key, title, names.length, body || `<div class="hint" style="padding:4px 14px">Sleep een nummer hierheen of maak een groep met ＋ Groep.</div>`, hkey+"|");
+  }
+  html += sec("setlists","Setlists", d.setlists.length, d.setlists.map(sl=>{
+    const gk="set:"+sl.name, open=FS.open.has(gk);
+    return `<div class="fs-grp" data-grp="${esc(gk)}" data-setlist="${esc(sl.path)}" title="${sl.sent?"al eens naar forScore gestuurd":"nog niet in forScore"}">${open?"▾":"▸"} ☰ ${esc(sl.title)}<span class="n">${sl.items.filter(i=>i.kind!=="break").length}</span>
+      <button class="act" data-opensl="${esc(sl.path)}" title="setlist openen">✎</button>
+      <button class="act" data-sendsl="${esc(sl.name)}" title="setlist naar forScore (.4ss)">→</button></div>`+
+      (open?sl.items.map(i=>i.kind==="break"?`<div class="fs-song" style="color:var(--muted);font-style:italic">— ${esc(i.title)} —</div>`:
+        (()=>{ const s=d.songs.find(x=>x.id===i.id); return s?fsSongRow(s):`<div class="fs-song"><span class="dot geen-pdf"></span><span class="t">${esc(i.title)}</span><span class="a">extern</span></div>`; })()).join(""):"");
+  }).join("") || '<div class="hint" style="padding:4px 14px">Nog geen setlists.</div>');
+  html += sec("all","Alle stukken", songs.length, songs.map(s=>fsSongRow(s,true)).join(""));
+  $("#fsTree").innerHTML = html;
+}
+$("#fsFilter").addEventListener("input", drawFs);
+$("#fsTree").addEventListener("click", async e=>{
+  const b=e.target.closest("button");
+  if(b){
+    e.stopPropagation();
+    if(b.dataset.send) return fsSend({paths:[b.dataset.send]});
+    if(b.dataset.sendsl) return fsSend({setlists:[b.dataset.sendsl]});
+    if(b.dataset.opensl) return openFile(b.dataset.opensl);
+    if(b.dataset.sendgrp){ const [key,g]=b.dataset.sendgrp.split(/:(.*)/s); const field=FS_GROUPS.find(x=>x[0]===key)[3];
+      return fsSend({paths: FS.data.songs.filter(s=>(s[field]||[]).includes(g)).map(s=>s.path)}); }
+    if(b.dataset.rm){ const row=b.closest(".fs-song"); const [hkey,g]=b.dataset.rm.split(/\|(.*)/s);
+      return fsSetHeader(row.dataset.path, hkey, g, "remove"); }
+    return;
+  }
+  const s=e.target.closest(".fs-sec"); if(s){ const k=s.dataset.sec; FS.open.has(k)?FS.open.delete(k):FS.open.add(k); drawFs(); return; }
+  const g=e.target.closest(".fs-grp"); if(g){ const k=g.dataset.grp; FS.open.has(k)?FS.open.delete(k):FS.open.add(k); drawFs(); return; }
+  const r=e.target.closest(".fs-song[data-path]"); if(r){ await openFile(r.dataset.path); drawFs(); showTab("rtabs","doc"); drawDoc(); }
+});
+/* slepen: nummer op een map/genre/label/tag zetten */
+$("#fsTree").addEventListener("dragstart", e=>{ const r=e.target.closest(".fs-song[data-path]"); if(r){ e.dataTransfer.setData("text/x-ds-path", r.dataset.path); e.dataTransfer.effectAllowed="copy"; } });
+$("#fsTree").addEventListener("dragover", e=>{ const t=e.target.closest("[data-drop]"); if(t && e.dataTransfer.types.includes("text/x-ds-path")){ e.preventDefault(); $$(".drop-ok").forEach(x=>x.classList.remove("drop-ok")); t.classList.add("drop-ok"); } });
+$("#fsTree").addEventListener("dragleave", e=>{ const t=e.target.closest("[data-drop]"); if(t) t.classList.remove("drop-ok"); });
+$("#fsTree").addEventListener("drop", async e=>{
+  const t=e.target.closest("[data-drop]"); if(!t) return; e.preventDefault(); t.classList.remove("drop-ok");
+  const path=e.dataTransfer.getData("text/x-ds-path"); let [hkey,g]=t.dataset.drop.split(/\|(.*)/s);
+  if(!g){ g=prompt(`Naam voor de nieuwe ${hkey==="map"?"map":hkey}:`); if(!g) return; }
+  await fsSetHeader(path, hkey, g.trim(), "add");
+});
+async function fsSetHeader(path, key, value, mode){
+  if(!path.endsWith(".drum")){ toast("Alleen .drum-nummers kunnen zo worden ingedeeld"); return; }
+  if(path===state.path && dirty()){         // open en niet opgeslagen: in de editor aanpassen
+    const f=(PROPS||[]).find(p=>p.key===key) || {key, id:key, default:""};
+    const cur=(readHeader().vals[f.id]||"").split(",").map(x=>x.trim()).filter(Boolean);
+    const next = mode==="remove" ? cur.filter(x=>x!==value) : (cur.includes(value)?cur:[...cur,value]);
+    setHeader(f, next.join(", ")); toast("Aangepast in de editor (nog opslaan)"); return;
+  }
+  try{
+    const j=await api("/api/set-header",{path,key,value,mode});
+    toast(mode==="remove"?`Uit '${value}' gehaald`:`In '${value}' gezet`);
+    if(path===state.path){ const f=await api("/api/file?path="+encodeURIComponent(path)); histRecord(true); ed.value=f.content; state.saved=f.content; histRecord(true); render(); updateTitle(); drawDoc(); }
+    await loadFs();
+  }catch(err){ toast(err.message); }
+}
+async function fsSend(body){
+  if(dirty()) await save();
+  busy(true,"Naar forScore sturen…");
+  try{ const j=await api("/api/forscore", body); log(j.log); showTab("btabs","log"); toast(j.ok?"Naar forScore gestuurd":"Klaar, met meldingen (zie Log)"); await loadFs(); }
+  catch(err){ toast(err.message); } finally{ busy(false); }
+}
+$("#fsSendChanged").onclick = ()=>{
+  const paths=(FS.data?FS.data.songs:[]).filter(s=>s.sent && ["pdf","verouderd"].includes(s.status)).map(s=>s.path);
+  if(!paths.length){ toast("Alles in forScore is al bijgewerkt"); return; }
+  fsSend({paths});
+};
+$("#fsNewGroup").onclick = ()=>{
+  const kind = prompt("Wat voor groep? Typ: map, genre, label of tag", "map"); if(!kind) return;
+  const key = {map:"map",genre:"genre",label:"labels",labels:"labels",tag:"tags",tags:"tags"}[kind.trim().toLowerCase()];
+  if(!key){ toast("Kies map, genre, label of tag"); return; }
+  const name = prompt("Naam:"); if(!name) return;
+  FS.extra[key].push(name.trim()); FS.open.add(key); drawFs(); toast("Sleep nu nummers naar de nieuwe groep");
+};
+
 /* ------------------------------------------------------------ bestanden */
 let treeData=[];
 async function loadTree(){ treeData = (await api("/api/tree")).tree; drawTree(); }
@@ -563,7 +723,7 @@ $("#tree").addEventListener("click", e=>{
   else openFile(n.dataset.file);
 });
 $("#treeFilter").addEventListener("input", drawTree);
-$("#bRefresh").onclick = loadTree;
+$("#bRefresh").onclick = ()=>{ loadTree(); if(FS.data) loadFs(); };
 
 async function openFile(path){
   if(dirty() && !confirm(`${state.path} is niet opgeslagen. Toch een ander bestand openen?`)) return;
@@ -656,12 +816,10 @@ $("#bSave").onclick = save;
 $("#bCheck").onclick = ()=>{ check(); showTab("btabs", state.lastCheck && !state.lastCheck.ok ? "prob" : "tab"); };
 $("#bBuild").onclick = build;
 $("#bOpenPdf").onclick = ()=>{ if(state.pdf) window.open("/"+state.pdf.split("/").map(encodeURIComponent).join("/")+"?t="+Date.now(), "_blank"); };
-$("#bForscore").onclick = async ()=>{
-  if(dirty()) await save();
-  const one = state.kind==="song" && state.path && confirm(`Alleen dit nummer naar forScore sturen?\n(Annuleren = alle nieuwe en gewijzigde nummers)`);
-  busy(true,"Naar forScore sturen…");
-  try{ const j=await api("/api/forscore", one?{path:state.path}:{}); log(j.log); showTab("btabs","log"); toast(j.ok?"Naar forScore gestuurd":"Mislukt (zie Log)"); }
-  catch(err){ toast(err.message); } finally{ busy(false); }
+$("#bForscore").onclick = ()=>{
+  $$("#ltabs .tab").forEach(x=>x.classList.toggle("active", x.dataset.t==="fs"));
+  $("#l-files").style.display="none"; $("#l-fs").style.display="flex"; loadFs();
+  if(state.kind==="song" && state.path) fsSend({paths:[state.path]});
 };
 $("#bBuildAll").onclick = async ()=>{
   if(dirty()) await save();

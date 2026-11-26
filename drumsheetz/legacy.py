@@ -99,7 +99,9 @@ KEYS_OUT = [("title", "titel"), ("artist", "artiest"), ("subtitle", "ondertitel"
             ("key", "toonsoort"), ("duration", "duur"), ("status", "status"), ("tags", "tags"),
             ("source", "bron"), ("audio", "audio"), ("pdf", "pdf"), ("countin", "aftellen"),
             ("layout", "layout"), ("voices", "stemmen"), ("text_size", "tekstgrootte"),
-            ("feel_size", "stijlgrootte"), ("count_pos", "herhaalteller"), ("accent_pos", "accenten"), ("wedge_pos", "vorken"), ("dyn_pos", "dynamiek"), ("bars_per_line", "maten-per-regel"), ("swing", "swing"),
+            ("feel_size", "stijlgrootte"), ("count_pos", "herhaalteller"), ("accent_pos", "accenten"), ("genre", "genre"), ("labels", "labels"),
+            ("fs_library", "map"), ("rating", "waardering"), ("difficulty", "moeilijkheid"), ("reference", "referentie"),
+            ("fs_name", "forscore-naam"), ("wedge_pos", "vorken"), ("dyn_pos", "dynamiek"), ("bars_per_line", "maten-per-regel"), ("swing", "swing"),
             ("composer", "componist"), ("year", "jaar"), ("album", "album")]
 MARK_OUT = {"segno": "segno", "coda": "coda", "fine": "fine", "tocoda": "naar-coda", "ds": "ds",
             "dsalcoda": "ds-al-coda", "dsalfine": "ds-al-fine", "dc": "dc", "dcalcoda": "dc-al-coda",

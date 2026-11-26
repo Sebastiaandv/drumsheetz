@@ -59,6 +59,15 @@ PROPS = [
      "Opmaak", "wedge_pos"),
     ("dynamiek", "dyn_pos", "Losse dynamiek", "select", ["", "boven", "onder"], "mf, p, ... boven of onder",
      "Opmaak", "dyn_pos"),
+    ("genre", "genre", "Genre", "text", None, "forScore: genres (meerdere met komma)", "forScore", None),
+    ("labels", "labels", "Labels", "text", None, "forScore: labels (meerdere met komma)", "forScore", None),
+    ("map", "fs_library", "Map", "text", None, "Map in de forScore-boom van de Studio (meerdere met komma)", "forScore", None),
+    ("waardering", "rating", "Waardering", "select", ["", "1", "2", "3", "4", "5"], "forScore: sterren", "forScore", None),
+    ("moeilijkheid", "difficulty", "Moeilijkheid", "select", ["", "1", "2", "3"], "forScore: moeilijkheid (1-3)",
+     "forScore", None),
+    ("referentie", "reference", "Referentie", "text", None, "forScore: referentie (bv. boeknummer)", "forScore", None),
+    ("forscore-naam", "fs_name", "Bestandsnaam", "text", None,
+     "Naam in forScore (standaard 'Titel - Artiest'); niet veranderen na het eerste versturen", "forScore", None),
     ("duur", "duration", "Duur", "text", None, "Niet op het blad: voor de lijst en setlists, bv. 4:32 (anders berekend)", "Lijsten en setlists", None),
     ("status", "status", "Status", "text", None, "Bv. klaar, concept. Linksboven op het blad en in de lijst", "Algemeen", None),
     ("tags", "tags", "Tags", "text", None, "Niet op het blad: trefwoorden om op te zoeken (lijst --zoek)", "Lijsten en setlists", None),
@@ -301,6 +310,52 @@ class Studio:
                         return {"results": out, "more": True}
         return {"results": out}
 
+    def fs_catalog(self):
+        from .forscore import catalog
+        with LOCK:
+            return catalog(self.project())
+
+    def set_header(self, data):
+        """Kopregel in een .drum-bestand zetten/aanvullen/weghalen (voor slepen in de forScore-boom).
+        mode: set (vervangen), add (aan lijst toevoegen), remove (uit lijst halen)."""
+        from .parser import HEADER_KEYS
+        rel, key, value, mode = data["path"], data["key"], str(data.get("value", "")).strip(), data.get("mode", "set")
+        if not rel.endswith(".drum"):
+            raise ValueError("alleen .drum-bestanden kunnen zo worden aangepast")
+        p = self.safe(rel)
+        lines = p.read_text(encoding="utf-8").split("\n")
+        target = HEADER_KEYS.get(key.lower(), key)
+        end = len(lines)
+        for i, ln in enumerate(lines):
+            c = ln.split("#", 1)[0]
+            if re.match(r"^(groove|fill|patroon|pattern|ritme|instrument|kit)\s", c, re.I) or re.match(r"^\s*(\[|\d)", c):
+                end = i
+                break
+        idx, cur = None, ""
+        for i in range(end):
+            m = re.match(r"^([A-Za-z][\w\-]*)\s*:\s*(.*?)\s*$", lines[i].split("#", 1)[0])
+            if m and HEADER_KEYS.get(m.group(1).lower()) == target:
+                idx, cur = i, m.group(2)
+        items = [x.strip() for x in cur.split(",") if x.strip()]
+        if mode == "add":
+            if value and value not in items:
+                items.append(value)
+            new = ", ".join(items)
+        elif mode == "remove":
+            new = ", ".join(x for x in items if x != value)
+        else:
+            new = value
+        if idx is not None:
+            if new:
+                lines[idx] = f"{key}: {new}"
+            else:
+                lines.pop(idx)
+        elif new:
+            last = max([i for i in range(end) if re.match(r"^[A-Za-z][\w\-]*\s*:", lines[i])] or [-1])
+            lines.insert(last + 1, f"{key}: {new}")
+        p.write_text("\n".join(lines), encoding="utf-8")
+        return {"ok": True, "value": new}
+
     def status(self):
         from .musescore import find_musescore
         p = self.project()
@@ -410,6 +465,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, s.kit())
             if u.path == "/api/help":
                 return self.send(200, s.help())
+            if u.path == "/api/forscore/catalog":
+                return self.send(200, s.fs_catalog())
             if u.path == "/api/search":
                 return self.send(200, s.search(q.get("q", ""), q.get("case") == "1"))
             if u.path == "/api/props":
@@ -444,8 +501,12 @@ class Handler(BaseHTTPRequestHandler):
             "/api/new-song": lambda: s.new_song(data),
             "/api/new-setlist": lambda: s.new_setlist(data),
             "/api/archive": lambda: s.run_cli(["archiveer", data["path"]]),
-            "/api/forscore": lambda: s.run_cli(["forscore"] + ([data["path"]] if data.get("path") else [])
-                                                 + (["-a"] if data.get("all") else [])),
+            "/api/forscore": lambda: s.run_cli(["forscore"] + list(data.get("paths") or ([data["path"]] if data.get("path") else []))
+                                                 + (["-a"] if data.get("all") else [])
+                                                 + (["--gegevens"] if data.get("meta") else [])
+                                                 + sum((["--setlist", n] for n in data.get("setlists") or []), [])),
+            "/api/forscore/catalog": lambda: s.fs_catalog(),
+            "/api/set-header": lambda: s.set_header(data),
         }
         fn = routes.get(urllib.parse.urlparse(self.path).path)
         if not fn:
