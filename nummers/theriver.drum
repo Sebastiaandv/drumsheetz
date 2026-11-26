@@ -1,0 +1,133 @@
+# The River — overgenomen uit "The River - Drums.pdf" (MuseScore).
+# Niet alles was 100% zeker te lezen; plekken met '?' even nakijken.
+# Leeswijze van het origineel: "% xN" = N maten extra.
+
+titel: The River
+ondertitel: Drum partituur t.b.v. begeleiding Hatikwa jongeren koor
+tempo: 121
+maat: 4/4
+
+# --- patronen ------------------------------------------------------------
+
+groove couplet:                 # maat 3: cross stick op 2, 2& en 4 (? schuine streep door de nootkop)
+  HH: *8
+  XS: 2 2& 4
+  BD: 1 3
+
+groove tide:                    # maat 5
+  HH: *8
+  SD: 1 2& 4
+  BD: *4
+
+fill tidefill:                  # maat 7: snare 1, flam met accent op 3, bassdrum 8sten
+  SD: 1 3:F
+  BD: 1 1& 2 2&
+
+groove hh16:                    # maat 8
+  HH: *16
+
+fill hh16bd:                    # maat 11
+  HH: *16
+  BD: 3& 4&
+
+groove hh16kwart:               # maat 12
+  HH: *16
+  BD: *4
+
+fill hh16bd2:                   # maat 15
+  HH: *16
+  BD: 1 2 3 3& 4 4&
+
+groove down:                    # maat 16 (? welke toms precies)
+  HH: *8
+  SD: 2
+  FT2: 2&
+  T3: 4
+  BD: 1 3&
+
+groove flams:                   # maat 18 (1e volta)
+  SD: 2:f 2&:f 4:f
+  BD: 1 3&
+
+groove hh8:                     # maat 19
+  HH: *8
+
+groove hh8bd2:                  # maat 21
+  HH: *8
+  BD: 1 3
+
+groove hh8bd4:                  # maat 23
+  HH: *8
+  BD: *4
+
+groove stomp:                   # maat 25
+  HH: *8
+  SD: *4
+  BD: *8
+
+fill stompfill:                 # maat 28 (? bovenste noot van de akkoorden: tom 1)
+  CR: 1
+  SD: 1:f 1& 2 2& 3:F
+  T1: 1& 2 2&
+  BD: 1 3
+
+groove river:                   # maat 29-30: twee maten
+  maten: 2
+  SD: 3:f || 3:f
+  BD: 1 2& 4& || 1 1+2/3 2+1/3
+
+groove drive:                   # maat 32
+  HH: *8
+  SD: *4
+  BD: *8
+
+fill drivefill:                 # maat 34
+  SD: 1:f
+  BD: 3 3& 4 4&
+
+groove break:                   # maat 36
+  SD: 1 1e 1& 1a 2:F
+
+groove downdown:                # maat 37
+  HH: 1 1& 2 2& 3 3& 4 4&
+  SD: 1a 4e
+  BD: 1 2& 3& 4&
+
+fill letsgo:                    # maat 39
+  HH: 1 1& 2 2&
+  SD: 1a 3 3e
+  T1: 3& 3a
+  FT: 4 4e 4& 4a
+  BD: 1 2&
+
+groove slot:                    # maat 40
+  SD: 1:f
+  BD: 1
+
+# --- opbouw --------------------------------------------------------------
+
+[Intro] 20 tacet "We're going down..."
+
+[Couplet]
+  8 couplet "1. I know a place... · 2. I've seen it move..."
+  8 tide "Like a tide..." fill tidefill
+  4 hh16 "We're going down to the river..." fill hh16bd
+  4 hh16kwart fill hh16bd2
+  8 down "We're going down down down..."
+  1 flams volta 1
+  4 hh8 volta 2 "Oehoe..."
+  4 hh8bd2
+  4 hh8bd4
+
+[Opbouw]
+  3 stomp
+  1 stompfill cresc
+
+[River]
+  4 river "We're going down to the river..."
+  3 drive fill drivefill
+  1 break
+
+[Slot]
+  8 downdown "We're going down down down..." fill letsgo
+  1 slot
