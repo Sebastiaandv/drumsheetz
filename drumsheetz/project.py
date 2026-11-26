@@ -29,6 +29,7 @@ CONFIG_KEYS = {"naam": "name", "name": "name", "ondertitel": "subtitle", "subtit
                "herhaalteller": "count_pos", "teller": "count_pos",
                "accenten": "accent_pos", "accent": "accent_pos",
                "vorken": "wedge_pos", "crescendo": "wedge_pos", "dynamiek": "dyn_pos",
+               "forscore": "forscore",
                "tekstgrootte": "text_size", "stijlgrootte": "feel_size"}
 
 

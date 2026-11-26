@@ -444,6 +444,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/new-song": lambda: s.new_song(data),
             "/api/new-setlist": lambda: s.new_setlist(data),
             "/api/archive": lambda: s.run_cli(["archiveer", data["path"]]),
+            "/api/forscore": lambda: s.run_cli(["forscore"] + ([data["path"]] if data.get("path") else [])
+                                                 + (["-a"] if data.get("all") else [])),
         }
         fn = routes.get(urllib.parse.urlparse(self.path).path)
         if not fn:

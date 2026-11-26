@@ -216,6 +216,7 @@ dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
   <button class="btn primary" id="bBuild" title="Maak PDF (⌘/Ctrl+Enter)">Maak PDF</button>
   <button class="btn" id="bOpenPdf" title="PDF in nieuw tabblad">Open PDF</button>
   <button class="btn" id="bMidi" title="MIDI-oefenbestand">MIDI…</button>
+  <button class="btn" id="bForscore" title="Naar forScore op de Mac (en via iCloud naar de iPad)">→ forScore</button>
   <div class="spacer"></div>
   <button class="btn" id="bBuildAll" title="Alle gewijzigde nummers maken">Alles maken</button>
   <button class="btn" id="bArchive" title="Nummer naar archief verplaatsen">Archiveer</button>
@@ -655,6 +656,13 @@ $("#bSave").onclick = save;
 $("#bCheck").onclick = ()=>{ check(); showTab("btabs", state.lastCheck && !state.lastCheck.ok ? "prob" : "tab"); };
 $("#bBuild").onclick = build;
 $("#bOpenPdf").onclick = ()=>{ if(state.pdf) window.open("/"+state.pdf.split("/").map(encodeURIComponent).join("/")+"?t="+Date.now(), "_blank"); };
+$("#bForscore").onclick = async ()=>{
+  if(dirty()) await save();
+  const one = state.kind==="song" && state.path && confirm(`Alleen dit nummer naar forScore sturen?\n(Annuleren = alle nieuwe en gewijzigde nummers)`);
+  busy(true,"Naar forScore sturen…");
+  try{ const j=await api("/api/forscore", one?{path:state.path}:{}); log(j.log); showTab("btabs","log"); toast(j.ok?"Naar forScore gestuurd":"Mislukt (zie Log)"); }
+  catch(err){ toast(err.message); } finally{ busy(false); }
+};
 $("#bBuildAll").onclick = async ()=>{
   if(dirty()) await save();
   busy(true,"Alle gewijzigde nummers maken…");

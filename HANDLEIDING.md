@@ -43,13 +43,14 @@ een bibliotheek met kant-en-klare grooves en fills, en een tekstweergave in de t
    23. [Commentaar](#423-commentaar)
 5. [De bibliotheek](#5-de-bibliotheek)
 6. [Setlists](#6-setlists)
-7. [MIDI: oefenen met een meespeelbestand](#7-midi-oefenen-met-een-meespeelbestand)
-8. [Archief](#8-archief)
-9. [Het geavanceerde Python-formaat](#9-het-geavanceerde-python-formaat)
-10. [Automatisch transcriberen uit een opname](#10-automatisch-transcriberen-uit-een-opname)
-11. [Instellingen](#11-instellingen)
-12. [Foutmeldingen en tips](#12-foutmeldingen-en-tips)
-13. [Spiekbrief](#13-spiekbrief)
+7. [forScore op de iPad](#7-forscore-op-de-ipad)
+8. [MIDI: oefenen met een meespeelbestand](#8-midi-oefenen-met-een-meespeelbestand)
+9. [Archief](#9-archief)
+10. [Het geavanceerde Python-formaat](#10-het-geavanceerde-python-formaat)
+11. [Automatisch transcriberen uit een opname](#11-automatisch-transcriberen-uit-een-opname)
+12. [Instellingen](#12-instellingen)
+13. [Foutmeldingen en tips](#13-foutmeldingen-en-tips)
+14. [Spiekbrief](#14-spiekbrief)
 
 ---
 
@@ -180,6 +181,7 @@ zonder extensie (`letlove`), de titel (`"Let Love Rule"`), een stuk ervan (`krav
 | `setlist nieuw bruiloft always crime scene` | Nieuwe setlist met deze nummers. |
 | `setlist toon bruiloft` | Overzicht met tempo, maatsoort, duur, subtotalen per set. |
 | `setlist maak bruiloft` | Alle PDF's, genummerde kopieën, compleet boek, voorblad, podiumlijst. |
+| `forscore [nummers]` | Nieuwe/gewijzigde PDF's naar forScore (Mac → iPad via iCloud). `-a` = alles. |
 | `studio` | Open de Studio: editor met bestanden, gereedschap en help in je browser. |
 | `help` | Overzicht van de opdrachten. `python3 drums.py maak -h` geeft de opties van één opdracht. |
 
@@ -988,7 +990,41 @@ Een voorbeeld staat in `setlists/voorbeeld.txt` (de volgorde van de oude map `ar
 
 ---
 
-## 7. MIDI: oefenen met een meespeelbestand
+## 7. forScore op de iPad
+
+Je maakt de nummers op de Mac; met één opdracht staan ze in **forScore**, en via de
+**iCloud-synchronisatie** van forScore ook op je iPad.
+
+**Eenmalig instellen**
+1. Installeer **forScore voor Mac** (zelfde Apple-ID als op de iPad).
+2. Zet in forScore op de Mac én op de iPad **Sync with iCloud** aan (menu → Sync with iCloud).
+3. Voor titels/artiesten in de PDF: `pip3 install pypdf`.
+
+**Gebruik**
+
+```bash
+python3 drums.py forscore                 # alle nieuwe en gewijzigde nummers naar forScore
+python3 drums.py forscore theriver        # alleen dit nummer
+python3 drums.py forscore -a              # alles opnieuw sturen
+python3 drums.py maak theriver --forscore # maken en meteen versturen
+```
+
+Of in de Studio met de knop **→ forScore**. Wil je dat het altijd gebeurt na `maak`, zet dan
+`forscore: automatisch` in `instellingen.txt`.
+
+Wat er gebeurt:
+- Alleen nummers die **nieuw of veranderd** zijn worden verstuurd (de rest wordt overgeslagen).
+- Elke PDF krijgt een vaste naam **"Titel - Artiest.pdf"**, en titel, artiest en trefwoorden staan in
+  de PDF zelf, zodat forScore ze kan overnemen.
+- De PDF's gaan naar `uitvoer/forscore/` en worden met forScore op de Mac geopend; forScore importeert ze.
+- Bestaat het stuk al in forScore, dan vraagt forScore wat hij moet doen: kies **Overschrijven**.
+  De nieuwe PDF komt dan in de plaats van de oude en je gegevens en annotaties blijven bewaard.
+  (Verander je de titel of artiest, dan krijgt het bestand een andere naam en komt het als nieuw stuk
+  binnen; het oude kun je dan in forScore verwijderen.)
+
+---
+
+## 8. MIDI: oefenen met een meespeelbestand
 
 ```bash
 python3 drums.py midi letlove                     # uitvoer/midi/letlove.mid
@@ -1004,7 +1040,7 @@ een DAW of een MIDI-speler op je telefoon. Sprongen (D.S./D.C.) worden niet gevo
 
 ---
 
-## 8. Archief
+## 9. Archief
 
 Alles van vóór deze versie staat in `archief/`, ongewijzigd:
 
@@ -1030,7 +1066,7 @@ python3 drums.py herstel letlove       # kopie terug naar nummers/
 
 ---
 
-## 9. Het geavanceerde Python-formaat
+## 10. Het geavanceerde Python-formaat
 
 Het oude formaat blijft volledig werken: zet een `.py`-bestand met `SONG`, `GROOVES` en `FILLS` in
 `nummers/` en het wordt gewoon gemaakt. Handig als je dingen wilt **berekenen** (lussen,
@@ -1096,7 +1132,7 @@ python3 drums.py converteer *.py --naar nummers --overschrijf
 
 ---
 
-## 10. Automatisch transcriberen uit een opname
+## 11. Automatisch transcriberen uit een opname
 
 `tools/auto.py` maakt van een transcriptie (`result.json` + `drums.wav` uit je eigen
 transcriptie-tool) een `.drum`-bestand met elke maat als eigen patroon, inclusief secties,
@@ -1111,7 +1147,7 @@ Daarna kun je het opschonen: geef terugkerende maten een duidelijke naam, voeg c
 
 ---
 
-## 11. Instellingen
+## 12. Instellingen
 
 `instellingen.txt` in de hoofdmap:
 
@@ -1135,7 +1171,7 @@ MuseScore wordt gezocht in (op volgorde): `musescore:` in de instellingen, de om
 
 ---
 
-## 12. Foutmeldingen en tips
+## 13. Foutmeldingen en tips
 
 Fouten noemen bestand, regelnummer en vaak een suggestie:
 
@@ -1161,7 +1197,7 @@ Fouten noemen bestand, regelnummer en vaak een suggestie:
 
 ---
 
-## 13. Spiekbrief
+## 14. Spiekbrief
 
 ```
 # ---------- kop ----------

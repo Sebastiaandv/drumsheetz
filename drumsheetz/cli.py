@@ -64,6 +64,7 @@ def main(argv=None, root=None):
     p.add_argument("--xml", action="store_true", help="alleen MusicXML maken (geen MuseScore nodig)")
     p.add_argument("--midi", action="store_true", help="ook een MIDI-oefenbestand maken")
     p.add_argument("--open", action="store_true", help="open de PDF na afloop")
+    p.add_argument("--forscore", action="store_true", help="gewijzigde PDF's daarna naar forScore sturen")
 
     p = sub.add_parser("toon", aliases=["show", "info"], help="laat een nummer als tekst-drumtab zien")
     p.add_argument("nummer")
@@ -109,6 +110,11 @@ def main(argv=None, root=None):
     p.add_argument("nummers", nargs="*")
     p.add_argument("--xml", action="store_true")
 
+    p = sub.add_parser("forscore", aliases=["fs"], help="stuur nieuwe/gewijzigde PDF's naar forScore (Mac → iPad)")
+    p.add_argument("nummers", nargs="*", help="leeg = alle nummers")
+    p.add_argument("-a", "--alles", action="store_true", help="ook ongewijzigde opnieuw sturen")
+    p.add_argument("--geen-open", action="store_true", help="alleen klaarzetten in uitvoer/forscore/")
+
     p = sub.add_parser("studio", aliases=["interface", "ui", "app"], help="open de Studio (editor in je browser)")
     p.add_argument("--poort", type=int, default=8765)
     p.add_argument("--geen-browser", action="store_true", help="browser niet automatisch openen")
@@ -133,7 +139,7 @@ def main(argv=None, root=None):
            "check": "controleer", "test": "controleer", "new": "nieuw", "library": "bibliotheek",
            "lib": "bibliotheek", "kit": "instrumenten", "instruments": "instrumenten", "archive": "archiveer",
            "restore": "herstel", "convert": "converteer", "watch": "kijk", "set": "setlist",
-           "interface": "studio", "ui": "studio", "app": "studio"}.get(args.cmd, args.cmd)
+           "interface": "studio", "ui": "studio", "app": "studio", "fs": "forscore"}.get(args.cmd, args.cmd)
     try:
         return COMMANDS[cmd](project, args) or 0
     except NotationError as e:
@@ -158,6 +164,10 @@ def cmd_build(project, args):
         return 1
     res = build(project, paths, force=args.alles, xml_only=args.xml, midi=args.midi)
     bad = [r for r in res if r[2]]
+    auto = str(project.config.get("forscore", "")).lower() in ("ja", "automatisch", "auto", "aan")
+    if (args.forscore or auto) and not args.xml:
+        from .forscore import send
+        send(project, [(sc.song, project.out("pdf", f"{p.stem}.pdf")) for p, sc, err in res if sc])
     if args.open and not bad:
         for path, _, _ in res:
             _open(project.out("pdf", f"{path.stem}.pdf"))
@@ -473,12 +483,21 @@ def cmd_setlist(project, args):
         sl.make_outputs(project, name, meta, entries)
 
 
+def cmd_forscore(project, args):
+    from .build import build
+    from .forscore import send
+    paths = select(project, args.nummers)
+    res = build(project, paths)            # eerst zorgen dat de PDF's bijgewerkt zijn
+    send(project, [(sc.song, project.out("pdf", f"{p.stem}.pdf")) for p, sc, err in res if sc],
+         force=args.alles, open_app=not args.geen_open)
+
+
 def cmd_studio(project, args):
     from .studio import serve
     serve(project.root, args.poort, not args.geen_browser)
 
 
-COMMANDS = {"studio": cmd_studio, "maak": cmd_build, "toon": cmd_show, "lijst": cmd_list, "controleer": cmd_check, "nieuw": cmd_new,
+COMMANDS = {"studio": cmd_studio, "forscore": cmd_forscore, "maak": cmd_build, "toon": cmd_show, "lijst": cmd_list, "controleer": cmd_check, "nieuw": cmd_new,
             "midi": cmd_midi, "bibliotheek": cmd_library, "instrumenten": cmd_kit, "archiveer": cmd_archive,
             "herstel": cmd_restore, "converteer": cmd_convert, "kijk": cmd_watch, "setlist": cmd_setlist}
 

@@ -29,3 +29,6 @@ vorken: onder
 
 # Losse dynamiektekens (mf, p, ...): boven of onder de balk.
 dynamiek: boven
+
+# forScore: 'automatisch' = na elke 'maak' nieuwe/gewijzigde PDF's naar forScore sturen. Leeg = alleen met 'drums.py forscore'.
+forscore:
