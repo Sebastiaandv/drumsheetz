@@ -109,6 +109,10 @@ def main(argv=None, root=None):
     p.add_argument("nummers", nargs="*")
     p.add_argument("--xml", action="store_true")
 
+    p = sub.add_parser("studio", aliases=["interface", "ui", "app"], help="open de Studio (editor in je browser)")
+    p.add_argument("--poort", type=int, default=8765)
+    p.add_argument("--geen-browser", action="store_true", help="browser niet automatisch openen")
+
     p = sub.add_parser("setlist", aliases=["set"], help="setlists maken en bekijken")
     ssub = p.add_subparsers(dest="scmd")
     q = ssub.add_parser("nieuw", aliases=["new"], help="nieuwe setlist")
@@ -128,7 +132,8 @@ def main(argv=None, root=None):
     cmd = {"build": "maak", "bouw": "maak", "show": "toon", "info": "toon", "list": "lijst", "ls": "lijst",
            "check": "controleer", "test": "controleer", "new": "nieuw", "library": "bibliotheek",
            "lib": "bibliotheek", "kit": "instrumenten", "instruments": "instrumenten", "archive": "archiveer",
-           "restore": "herstel", "convert": "converteer", "watch": "kijk", "set": "setlist"}.get(args.cmd, args.cmd)
+           "restore": "herstel", "convert": "converteer", "watch": "kijk", "set": "setlist",
+           "interface": "studio", "ui": "studio", "app": "studio"}.get(args.cmd, args.cmd)
     try:
         return COMMANDS[cmd](project, args) or 0
     except NotationError as e:
@@ -468,7 +473,12 @@ def cmd_setlist(project, args):
         sl.make_outputs(project, name, meta, entries)
 
 
-COMMANDS = {"maak": cmd_build, "toon": cmd_show, "lijst": cmd_list, "controleer": cmd_check, "nieuw": cmd_new,
+def cmd_studio(project, args):
+    from .studio import serve
+    serve(project.root, args.poort, not args.geen_browser)
+
+
+COMMANDS = {"studio": cmd_studio, "maak": cmd_build, "toon": cmd_show, "lijst": cmd_list, "controleer": cmd_check, "nieuw": cmd_new,
             "midi": cmd_midi, "bibliotheek": cmd_library, "instrumenten": cmd_kit, "archiveer": cmd_archive,
             "herstel": cmd_restore, "converteer": cmd_convert, "kijk": cmd_watch, "setlist": cmd_setlist}
 

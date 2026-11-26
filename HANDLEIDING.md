@@ -15,6 +15,7 @@ een bibliotheek met kant-en-klare grooves en fills, en een tekstweergave in de t
 
 1. [Snel beginnen](#1-snel-beginnen)
 2. [Mappen](#2-mappen)
+   - [De Studio (editor in je browser)](#de-studio-editor-in-je-browser)
 3. [Alle opdrachten](#3-alle-opdrachten)
 4. [Een nummer schrijven: het .drum-formaat](#4-een-nummer-schrijven-het-drum-formaat)
    1. [De kop](#41-de-kop)
@@ -96,6 +97,28 @@ tempo: 120
 
 Zie ook `voorbeelden/simpel.drum` en `voorbeelden/alles.drum` (dat laatste gebruikt bijna alle notatie).
 
+### De Studio (editor in je browser)
+
+Liever niet in de terminal werken? Start de Studio:
+
+```bash
+python3 drums.py studio
+```
+
+Je browser opent dan `http://127.0.0.1:8765` (alleen bereikbaar vanaf je eigen computer; stoppen met
+Ctrl+C in de terminal). Je typt nog steeds gewoon in de `.drum`-bestanden, maar met alles erbij:
+
+| Plek | Wat |
+|---|---|
+| **Links** | Bestanden: nummers, setlists, voorbeelden, `bibliotheek.drum`, `instellingen.txt`, de handleiding. Met zoekveld. |
+| **Midden** | De editor met kleuren (secties, patronen, instrumenten, accenten, ghost notes, teksten, opties) en regelnummers. Fouten worden **tijdens het typen** gevonden en de regel kleurt rood. |
+| **Onder** | *Drumtab* (het nummer als tekst, live bijgewerkt), *Problemen* (klik om naar de regel te gaan), *PDF* (de gemaakte PDF), *Log*. |
+| **Rechts** | *Gereedschap*: klik om in te voegen: blokken (groove, fill, sectie, volta's, segno/coda, …), opties (crash, fill, mf, cresc, …), tekens (accent, ghost, flam, …), tellen (`*8`, `2&`, …) en instrumenten. *Bibliotheek*: alle grooves en fills doorzoeken, met voorbeeld. *Help*: doorzoek deze handleiding. |
+| **Boven** | Nieuw nummer, nieuwe setlist, opslaan, controleren, **Maak PDF** (of setlist), PDF openen, MIDI (tempo %, aftellen, klik), alles maken, archiveren, instellingen, help. |
+
+Sneltoetsen: **⌘/Ctrl+S** opslaan, **⌘/Ctrl+Enter** PDF maken, **Tab** = 2 spaties, **Enter** houdt
+de inspringing aan. De panelen kun je breder/smaller slepen. Andere poort: `python3 drums.py studio --poort 9000`.
+
 ---
 
 ## 2. Mappen
@@ -152,6 +175,7 @@ zonder extensie (`letlove`), de titel (`"Let Love Rule"`), een stuk ervan (`krav
 | `setlist nieuw bruiloft always crime scene` | Nieuwe setlist met deze nummers. |
 | `setlist toon bruiloft` | Overzicht met tempo, maatsoort, duur, subtotalen per set. |
 | `setlist maak bruiloft` | Alle PDF's, genummerde kopieën, compleet boek, voorblad, podiumlijst. |
+| `studio` | Open de Studio: editor met bestanden, gereedschap en help in je browser. |
 | `help` | Overzicht van de opdrachten. `python3 drums.py maak -h` geeft de opties van één opdracht. |
 
 ---
@@ -1115,6 +1139,7 @@ opties: crash  crash=CR2  china  splash  fill x  fill x,y  ppp…fff sfz fp  cre
 rust: tacet  -  rust          slashes: tijd  vrij  time  /
 
 # ---------- opdrachten ----------
+python3 drums.py studio            (editor in je browser)
 python3 drums.py maak [-a] [--xml] [--midi] [nummers]   toon x   lijst   controleer
 nieuw "Titel" "Artiest"   midi x [--tempo 80 --klik --aftellen 1]   bibliotheek [--pdf]
 instrumenten   archiveer x   herstel x   converteer x.py   kijk

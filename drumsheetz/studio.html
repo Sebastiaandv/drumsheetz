@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drumsheetz Studio</title>
+<style>
+:root{
+  --bg:#f6f5f2; --panel:#ffffff; --panel2:#fbfaf8; --line:#e3e0da; --text:#22211f; --muted:#77736b;
+  --accent:#b4441c; --accent2:#e9d8cf; --sel:#f1e6df; --ok:#2f7d4f; --warn:#a8670a; --err:#b3261e;
+  --ed-bg:#fffdf9; --gutter:#f1eee8;
+  --hl-key:#7b3fa0; --hl-sec:#b4441c; --hl-kw:#1d5fa8; --hl-name:#0d7a6b; --hl-inst:#1d5fa8;
+  --hl-hit:#22211f; --hl-acc:#b3261e; --hl-ghost:#9a958c; --hl-mod:#0d7a6b; --hl-rest:#c9c4ba;
+  --hl-num:#a8670a; --hl-str:#2f7d4f; --hl-com:#9a958c; --hl-opt:#7b3fa0;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1b1a18; --panel:#23221f; --panel2:#272623; --line:#383631; --text:#ebe8e2; --muted:#a29d93;
+    --accent:#e07a4f; --accent2:#4a3027; --sel:#3a2c25; --ok:#6cc58f; --warn:#e3a443; --err:#f07167;
+    --ed-bg:#1f1e1b; --gutter:#23221f;
+    --hl-key:#c69cf0; --hl-sec:#f0956c; --hl-kw:#7fb3f0; --hl-name:#6fd3c1; --hl-inst:#7fb3f0;
+    --hl-hit:#ebe8e2; --hl-acc:#f07167; --hl-ghost:#7d786f; --hl-mod:#6fd3c1; --hl-rest:#55514a;
+    --hl-num:#e3a443; --hl-str:#8fd19e; --hl-com:#7d786f; --hl-opt:#c69cf0;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:13px/1.45 var(--sans);display:grid;
+  grid-template-rows:auto 1fr auto;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+/* ---------- bovenbalk ---------- */
+header{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--panel);
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{font-weight:700;letter-spacing:.2px;margin-right:8px;display:flex;align-items:center;gap:7px}
+.brand .logo{width:22px;height:22px;border:2px solid var(--text);border-radius:3px;display:grid;place-items:center;
+  font-size:11px;font-weight:800}
+.btn{border:1px solid var(--line);background:var(--panel2);border-radius:6px;padding:4px 10px;cursor:pointer;
+  white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.45;cursor:default}
+.sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+.spacer{flex:1}
+.filename{font-family:var(--mono);color:var(--muted);margin-right:6px}
+.filename .dirty{color:var(--accent)}
+/* ---------- hoofdindeling ---------- */
+main{display:grid;grid-template-columns:var(--left,220px) 5px 1fr 5px var(--right,330px);min-height:0}
+.split{cursor:col-resize;background:transparent}
+.split:hover{background:var(--line)}
+aside,section{min-height:0;min-width:0}
+.panel{background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.panel-title{display:flex;align-items:center;gap:6px;padding:7px 10px;font-size:11px;text-transform:uppercase;
+  letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--line)}
+.panel-title .grow{flex:1}
+.icon-btn{border:none;background:none;cursor:pointer;color:var(--muted);padding:2px 5px;border-radius:4px;font-size:14px}
+.icon-btn:hover{background:var(--panel2);color:var(--text)}
+/* ---------- boom ---------- */
+#tree{overflow:auto;padding:4px 0;flex:1}
+.node{display:flex;align-items:center;gap:5px;padding:2px 8px;cursor:pointer;white-space:nowrap;user-select:none}
+.node:hover{background:var(--panel2)}
+.node.active{background:var(--sel);color:var(--accent)}
+.node .tw{width:12px;color:var(--muted);font-size:10px;text-align:center}
+.node .ic{width:14px;text-align:center;color:var(--muted)}
+.kids{margin-left:12px}
+.kids.closed{display:none}
+#treeFilter{margin:6px 8px;padding:4px 7px;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
+/* ---------- editor ---------- */
+#center{display:grid;grid-template-rows:1fr 5px var(--bottom,36%);min-height:0;background:var(--ed-bg)}
+.ed-wrap{position:relative;overflow:hidden;min-height:0;border-bottom:1px solid var(--line)}
+.ed-gutter,.ed-hl,#editor{font:13px/20px var(--mono);tab-size:2}
+.ed-gutter{position:absolute;left:0;top:0;bottom:0;width:46px;background:var(--gutter);color:var(--muted);
+  text-align:right;padding:8px 8px 8px 0;overflow:hidden;border-right:1px solid var(--line);user-select:none}
+.ed-gutter div{height:20px}
+.ed-gutter::after{content:"";display:block;height:200px}
+.ed-gutter div.err{color:#fff;background:var(--err)}
+.ed-scroll{position:absolute;left:46px;right:0;top:0;bottom:0;overflow:hidden}
+.ed-hl{position:absolute;left:0;top:0;margin:0;padding:8px 12px;white-space:pre;pointer-events:none;color:var(--text);
+  min-width:100%}
+.ed-hl .l{display:block;min-height:20px}
+.ed-hl .l.err{background:color-mix(in srgb,var(--err) 14%,transparent)}
+#editor{position:absolute;inset:0;width:100%;height:100%;padding:8px 12px;border:0;outline:0;resize:none;
+  white-space:pre;overflow:auto;background:transparent;color:transparent;caret-color:var(--text)}
+#editor::selection{background:color-mix(in srgb,var(--accent) 28%,transparent);color:transparent}
+.empty-ed{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);text-align:center;padding:20px}
+.empty-ed b{color:var(--text)}
+.k-key{color:var(--hl-key);font-weight:600}.k-sec{color:var(--hl-sec);font-weight:700}
+.k-kw{color:var(--hl-kw);font-weight:700}.k-name{color:var(--hl-name);font-weight:600}
+.k-inst{color:var(--hl-inst);font-weight:700}.k-hit{color:var(--hl-hit);font-weight:700}
+.k-acc{color:var(--hl-acc);font-weight:700}.k-ghost{color:var(--hl-ghost)}
+.k-mod{color:var(--hl-mod);font-weight:700}.k-rest{color:var(--hl-rest)}.k-bar{color:var(--hl-sec)}
+.k-num{color:var(--hl-num)}.k-str{color:var(--hl-str)}.k-com{color:var(--hl-com);font-style:italic}
+.k-opt{color:var(--hl-opt)}
+/* ---------- onderpaneel ---------- */
+.hsplit{cursor:row-resize}
+.hsplit:hover{background:var(--line)}
+#bottom{display:flex;flex-direction:column;min-height:0;background:var(--panel)}
+.tabs{display:flex;gap:2px;padding:0 8px;border-bottom:1px solid var(--line);background:var(--panel)}
+.tab{padding:6px 10px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.tab .badge{display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:var(--err);color:#fff;
+  font-size:10px;margin-left:4px;text-align:center}
+.tab .badge.warn{background:var(--warn)}
+.tab .badge.zero{display:none}
+.tabbody{flex:1;min-height:0;overflow:auto;display:none}
+.tabbody.active{display:block}
+pre.out{margin:0;padding:10px 12px;font:12px/1.45 var(--mono);white-space:pre}
+#pdfFrame{width:100%;height:100%;border:0;background:#888}
+.problem{padding:6px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:8px}
+.problem:hover{background:var(--panel2)}
+.problem .lvl{font-weight:700}
+.problem.err .lvl{color:var(--err)}.problem.warn .lvl{color:var(--warn)}
+.okmsg{padding:12px;color:var(--ok)}
+.hint{padding:12px;color:var(--muted)}
+/* ---------- rechterpaneel ---------- */
+#right .tabs{padding:0 4px}
+#right .tabbody{padding:8px 10px}
+.group{margin-bottom:14px}
+.group h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{border:1px solid var(--line);background:var(--panel2);border-radius:5px;padding:2px 7px;cursor:pointer;
+  font-family:var(--mono);font-size:12px}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip small{font-family:var(--sans);color:var(--muted);margin-left:4px}
+.modrow{display:grid;grid-template-columns:28px 1fr;gap:6px;align-items:center;padding:2px 4px;border-radius:4px;
+  cursor:pointer}
+.modrow:hover{background:var(--panel2)}
+.modrow code{font:700 13px var(--mono);color:var(--accent);text-align:center}
+.search{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);margin-bottom:8px}
+.lib-item{border:1px solid var(--line);border-radius:6px;margin-bottom:6px;background:var(--panel2)}
+.lib-head{display:flex;align-items:baseline;gap:6px;padding:5px 8px;cursor:pointer}
+.lib-head b{font-family:var(--mono)}
+.lib-head .tag{font-size:10px;color:var(--muted);text-transform:uppercase}
+.lib-head .doc{color:var(--muted);font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib-body{display:none;padding:0 8px 8px}
+.lib-item.open .lib-body{display:block}
+.lib-body pre{margin:4px 0 6px;font:11px/1.35 var(--mono);overflow:auto;background:var(--ed-bg);padding:6px;
+  border-radius:4px;border:1px solid var(--line)}
+.lib-body .btn{font-size:12px;padding:2px 8px}
+.help-res{padding:6px 8px;border-radius:5px;cursor:pointer;margin-bottom:2px}
+.help-res:hover{background:var(--panel2)}
+.help-res .t{font-weight:600}
+.help-res .s{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical}
+mark{background:var(--accent2);color:inherit;border-radius:2px}
+.md{font-size:13px}
+.md h2,.md h3,.md h4{margin:6px 0 8px;font-size:15px}
+.md pre{background:var(--ed-bg);border:1px solid var(--line);border-radius:5px;padding:7px;overflow:auto;
+  font:12px/1.4 var(--mono)}
+.md code{font:12px var(--mono);background:var(--panel2);padding:0 3px;border-radius:3px}
+.md pre code{background:none;padding:0}
+.md table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0}
+.md th,.md td{border:1px solid var(--line);padding:3px 5px;text-align:left;vertical-align:top}
+.md blockquote{margin:6px 0;padding:4px 10px;border-left:3px solid var(--warn);color:var(--muted)}
+.back{color:var(--accent);cursor:pointer;margin-bottom:6px;display:inline-block}
+/* ---------- statusbalk ---------- */
+footer{display:flex;gap:14px;padding:3px 10px;font-size:12px;color:var(--muted);background:var(--panel);
+  border-top:1px solid var(--line);white-space:nowrap;overflow:hidden}
+footer .st-ok{color:var(--ok)}footer .st-err{color:var(--err)}footer .st-warn{color:var(--warn)}
+/* ---------- dialogen ---------- */
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);padding:0;
+  min-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(0,0,0,.25)}
+dialog form{padding:16px}
+dialog h3{margin:0 0 12px}
+dialog label{display:block;margin-bottom:9px;color:var(--muted);font-size:12px}
+dialog input,dialog select{display:block;width:100%;margin-top:3px;padding:6px 8px;border:1px solid var(--line);
+  border-radius:6px;background:var(--panel2)}
+dialog input[type=checkbox]{display:inline;width:auto;margin-right:6px}
+dialog .row{display:flex;gap:8px}
+dialog .row>*{flex:1}
+dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
+.toast{position:fixed;bottom:34px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);
+  padding:7px 14px;border-radius:7px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.show{opacity:.95}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.08);display:none;place-items:center;z-index:8;cursor:progress}
+.busy.show{display:grid}
+.busy div{background:var(--panel);border:1px solid var(--line);padding:12px 18px;border-radius:8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">D</div>Drumsheetz Studio</div>
+  <button class="btn" id="bNewSong" title="Nieuw nummer uit sjabloon">＋ Nummer</button>
+  <button class="btn" id="bNewSet" title="Nieuwe setlist">＋ Setlist</button>
+  <div class="sep"></div>
+  <span class="filename" id="fname">geen bestand</span>
+  <button class="btn" id="bSave" title="Opslaan (⌘/Ctrl+S)">Opslaan</button>
+  <button class="btn" id="bCheck" title="Controleren">Controleer</button>
+  <button class="btn primary" id="bBuild" title="Maak PDF (⌘/Ctrl+Enter)">Maak PDF</button>
+  <button class="btn" id="bOpenPdf" title="PDF in nieuw tabblad">Open PDF</button>
+  <button class="btn" id="bMidi" title="MIDI-oefenbestand">MIDI…</button>
+  <div class="spacer"></div>
+  <button class="btn" id="bBuildAll" title="Alle gewijzigde nummers maken">Alles maken</button>
+  <button class="btn" id="bArchive" title="Nummer naar archief verplaatsen">Archiveer</button>
+  <button class="btn" id="bSettings" title="instellingen.txt openen">⚙ Instellingen</button>
+  <button class="btn" id="bHelp" title="Handleiding doorzoeken">? Help</button>
+</header>
+
+<main id="main">
+  <aside class="panel" id="left">
+    <div class="panel-title"><span class="grow">Bestanden</span>
+      <button class="icon-btn" id="bRefresh" title="Vernieuwen">⟳</button></div>
+    <input id="treeFilter" placeholder="Zoek bestand…">
+    <div id="tree"></div>
+  </aside>
+  <div class="split" data-side="left"></div>
+
+  <section id="center">
+    <div class="ed-wrap" id="edWrap">
+      <div class="ed-gutter" id="gutter"></div>
+      <div class="ed-scroll"><pre class="ed-hl" id="hl"></pre>
+        <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea></div>
+      <div class="empty-ed" id="emptyEd"><div><b>Kies links een bestand</b><br>of maak een nieuw nummer met <b>＋ Nummer</b>.<br><br>
+        <span>⌘/Ctrl+S opslaan · ⌘/Ctrl+Enter PDF maken · Tab = 2 spaties</span></div></div>
+    </div>
+    <div class="hsplit" id="hsplit"></div>
+    <div id="bottom">
+      <div class="tabs" id="btabs">
+        <div class="tab active" data-t="tab">Drumtab</div>
+        <div class="tab" data-t="prob">Problemen<span class="badge zero" id="probBadge">0</span></div>
+        <div class="tab" data-t="pdf">PDF</div>
+        <div class="tab" data-t="log">Log</div>
+      </div>
+      <div class="tabbody active" id="t-tab"><pre class="out" id="tabOut"><span class="hint">Hier verschijnt het nummer als drumtab terwijl je typt.</span></pre></div>
+      <div class="tabbody" id="t-prob"></div>
+      <div class="tabbody" id="t-pdf" style="overflow:hidden"><div class="hint" id="pdfHint">Nog geen PDF. Klik op <b>Maak PDF</b>.</div>
+        <iframe id="pdfFrame" style="display:none"></iframe></div>
+      <div class="tabbody" id="t-log"><pre class="out" id="logOut"></pre></div>
+    </div>
+  </section>
+  <div class="split" data-side="right"></div>
+
+  <aside class="panel" id="right">
+    <div class="tabs" id="rtabs">
+      <div class="tab active" data-t="tools">Gereedschap</div>
+      <div class="tab" data-t="lib">Bibliotheek</div>
+      <div class="tab" data-t="help">Help</div>
+    </div>
+    <div class="tabbody active" id="r-tools">
+      <div class="group"><h4>Invoegen</h4><div class="chips" id="snips"></div></div>
+      <div class="group"><h4>Opties voor een regel</h4><div class="chips" id="opts"></div></div>
+      <div class="group"><h4>Tekens (raster of na ':')</h4><div id="mods"></div></div>
+      <div class="group"><h4>Tellen</h4><div class="chips" id="counts"></div></div>
+      <div class="group"><h4>Instrumenten</h4><div class="chips" id="insts"></div></div>
+    </div>
+    <div class="tabbody" id="r-lib">
+      <input class="search" id="libSearch" placeholder="Zoek groove of fill… (bv. funk, 6/8, tom)">
+      <div id="libList"></div>
+    </div>
+    <div class="tabbody" id="r-help">
+      <input class="search" id="helpSearch" placeholder="Zoek in de handleiding… (bv. flam, volta, setlist)">
+      <div id="helpList"></div>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <span id="stCheck">—</span>
+  <span id="stInfo"></span>
+  <span class="spacer" style="flex:1"></span>
+  <span id="stPos">r 1, k 1</span>
+  <span id="stMs"></span>
+</footer>
+
+<dialog id="dlgSong"><form method="dialog">
+  <h3>Nieuw nummer</h3>
+  <label>Titel<input name="title" required autofocus></label>
+  <label>Artiest<input name="artist"></label>
+  <div class="row"><label>Maatsoort<select name="meter"><option>4/4</option><option>3/4</option><option>6/8</option>
+    <option>12/8</option><option>5/4</option><option>7/8</option></select></label>
+    <label>Tempo<input name="tempo" type="number" value="100" min="20" max="400"></label></div>
+  <div class="actions"><button class="btn" value="cancel" formnovalidate>Annuleer</button><button class="btn primary" value="ok">Maak</button></div>
+</form></dialog>
+
+<dialog id="dlgSet"><form method="dialog">
+  <h3>Nieuwe setlist</h3>
+  <label>Naam (wordt de bestandsnaam)<input name="name" required placeholder="bv. bruiloft-juni"></label>
+  <div class="actions"><button class="btn" value="cancel" formnovalidate>Annuleer</button><button class="btn primary" value="ok">Maak</button></div>
+</form></dialog>
+
+<dialog id="dlgMidi"><form method="dialog">
+  <h3>MIDI-oefenbestand</h3>
+  <div class="row"><label>Tempo (%)<input name="tempo" type="number" value="100" min="25" max="200"></label>
+    <label>Maten aftellen<input name="countin" type="number" value="1" min="0" max="8"></label></div>
+  <label><input type="checkbox" name="click" checked>Metronoomklik</label>
+  <div class="actions"><button class="btn" value="cancel" formnovalidate>Annuleer</button><button class="btn primary" value="ok">Maak MIDI</button></div>
+</form></dialog>
+
+<div class="toast" id="toast"></div>
+<div class="busy" id="busy"><div id="busyMsg">Bezig…</div></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const ed = $("#editor"), hl = $("#hl"), gut = $("#gutter");
+const state = { path:null, kind:null, saved:"", errLine:null, lastCheck:null, pdf:null, help:[], lib:[] };
+
+/* ------------------------------------------------------------ api */
+async function api(url, body){
+  const opt = body===undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)};
+  const r = await fetch(url, opt);
+  const j = await r.json();
+  if(!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200); }
+function busy(on,msg){ $("#busyMsg").textContent=msg||"Bezig…"; $("#busy").classList.toggle("show",!!on); }
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ------------------------------------------------------------ syntax-kleuring */
+const OPTS = new Set(("crash china splash crash2 stack fill fills ppp pp p mp mf f ff fff sfz sf fp sfp rfz cresc dim decresc < > "+
+  "rit rall accel a-tempo tempo-primo halftime doubletime fermata uitgeschreven herhaal volta segno coda fine naar-coda ds "+
+  "ds-al-coda ds-al-fine dc dc-al-coda dc-al-fine nieuweregel nieuwepagina doorlopen einde klein groot normaal heelklein "+
+  "heelgroot tacet rust tijd vrij maten maat").split(" "));
+function splitComment(line){
+  let q=false;
+  for(let i=0;i<line.length;i++){ const c=line[i]; if(c==='"') q=!q; else if(c==="#"&&!q) return [line.slice(0,i), line.slice(i)]; }
+  return [line,""];
+}
+function hlGrid(s){
+  return s.replace(/[^\s]/g, c=>{
+    if(c==="x") return '<span class="k-hit">x</span>';
+    if("X^FDZTOBK".includes(c)) return '<span class="k-acc">'+esc(c)+'</span>';
+    if(c==="g") return '<span class="k-ghost">g</span>';
+    if("-._".includes(c)) return '<span class="k-rest">'+c+'</span>';
+    if(c==="|") return '<span class="k-bar">|</span>';
+    return '<span class="k-mod">'+esc(c)+'</span>';
+  });
+}
+function hlRowValue(v){
+  if(/[0-9*!]/.test(v.replace(/\|\|/g,""))){   // telnotatie
+    return v.split(/(\s+)/).map(t=>{
+      if(/^\s+$/.test(t)||!t) return t;
+      const m=t.match(/^(!?)([^:]*)(:?)(.*)$/);
+      return (m[1]?'<span class="k-acc">!</span>':"")+'<span class="k-num">'+esc(m[2])+'</span>'+
+        (m[3]?'<span class="k-rest">:</span>'+hlGrid(m[4]):"");
+    }).join("");
+  }
+  return hlGrid(v);
+}
+function hlLine(line, inPattern){
+  const [code, com] = splitComment(line);
+  let h;
+  let m;
+  if((m=code.match(/^(\s*)\[([^\]]*)\](.*)$/))) h = esc(m[1])+'<span class="k-sec">['+esc(m[2])+']</span>'+hlPhase(m[3]);
+  else if((m=code.match(/^(groove|fill|patroon|pattern|ritme)(\s+)([^\s=:]+)(.*)$/i)))
+    h = '<span class="k-kw">'+m[1]+'</span>'+m[2]+'<span class="k-name">'+esc(m[3])+'</span>'+esc(m[4]);
+  else if((m=code.match(/^(instrument|kit)(\s+)(.*)$/i))) h='<span class="k-kw">'+m[1]+'</span>'+m[2]+esc(m[3]);
+  else if(inPattern && (m=code.match(/^(\s*)([A-Za-z][\w\-]*)(\s*:\s*)(.*)$/))){
+    const isOpt = /^(info|maten|maat|basis|bars|meter|base|uitleg|doc)$/i.test(m[2]);
+    h = esc(m[1])+'<span class="'+(isOpt?"k-key":"k-inst")+'">'+esc(m[2])+'</span>'+esc(m[3])+(isOpt?esc(m[4]):hlRowValue(m[4]));
+  }
+  else if((m=code.match(/^([A-Za-z][\w\-]*)(\s*:)(.*)$/))) h='<span class="k-key">'+esc(m[1])+'</span>'+esc(m[2])+'<span class="k-str">'+esc(m[3])+'</span>';
+  else if(/^\s*\d/.test(code)) h = hlPhase(code);
+  else if(/^\s+\S/.test(code) && !inPattern) h = hlPhase(code);
+  else h = esc(code);
+  return h + (com?'<span class="k-com">'+esc(com)+'</span>':"");
+}
+function hlPhase(s){
+  let out="", i=0, first=true;
+  const toks = s.match(/("[^"]*"?|\{[^}]*\}?|\s+|[^\s"{]+)/g)||[];
+  for(const t of toks){
+    if(/^\s+$/.test(t)){ out+=t; continue; }
+    if(t[0]==='"') out+='<span class="k-str">'+esc(t)+'</span>';
+    else if(t[0]==="{") out+='<span class="k-name">'+esc(t)+'</span>';
+    else if(first && /^\d+x?$/i.test(t)) out+='<span class="k-num">'+esc(t)+'</span>';
+    else if(OPTS.has(t.toLowerCase()) || /=/.test(t) || /^\d+x$/i.test(t)) out+='<span class="k-opt">'+esc(t)+'</span>';
+    else out+='<span class="k-name">'+esc(t)+'</span>';
+    first=false;
+  }
+  return out;
+}
+function render(){
+  const lines = ed.value.split("\n");
+  let inPattern=false, html="", g="";
+  lines.forEach((ln,i)=>{
+    const code = splitComment(ln)[0];
+    if(/^(groove|fill|patroon|pattern|ritme)\s/i.test(code)) inPattern = true;
+    else if(code.trim() && !/^\s/.test(code) && !/^[A-Za-z][\w\-]*\s*:/.test(code)) inPattern = false;
+    const err = state.errLine===i+1;
+    html += '<span class="l'+(err?" err":"")+'">'+(hlLine(ln, inPattern && !/^(groove|fill|patroon|pattern|ritme)\s/i.test(code))||"​")+'</span>';
+    g += '<div'+(err?' class="err"':'')+'>'+(i+1)+'</div>';
+  });
+  if(state.kind==="text" || state.kind==="settings" || (state.path||"").endsWith(".py") || (state.path||"").endsWith(".md")){
+    html = lines.map((ln,i)=>'<span class="l'+(state.errLine===i+1?" err":"")+'">'+(esc(ln)||"​")+'</span>').join("");
+  }
+  hl.innerHTML = html; gut.innerHTML = g; syncScroll();
+}
+function syncScroll(){
+  hl.style.transform = `translate(${-ed.scrollLeft}px,${-ed.scrollTop}px)`;
+  gut.scrollTop = ed.scrollTop;
+}
+
+/* ------------------------------------------------------------ editor gedrag */
+function dirty(){ return state.path && ed.value !== state.saved; }
+function updateTitle(){
+  $("#fname").innerHTML = state.path ? esc(state.path)+(dirty()?' <span class="dirty">●</span>':"") : "geen bestand";
+  const k=state.kind, can = k==="song"||k==="setlist"||k==="library";
+  $("#bBuild").disabled = !can; $("#bMidi").disabled = k!=="song"; $("#bArchive").disabled = k!=="song" || !state.path.startsWith("nummers/");
+  $("#bOpenPdf").disabled = !state.pdf; $("#bSave").disabled = !state.path; $("#bCheck").disabled = !can;
+  $("#bBuild").textContent = k==="setlist" ? "Maak setlist" : (k==="library" ? "Maak catalogus" : "Maak PDF");
+}
+ed.addEventListener("scroll", syncScroll);
+ed.addEventListener("input", ()=>{ render(); updateTitle(); scheduleCheck(); });
+ed.addEventListener("keyup", cursorPos); ed.addEventListener("click", cursorPos);
+function cursorPos(){
+  const before = ed.value.slice(0, ed.selectionStart).split("\n");
+  $("#stPos").textContent = `r ${before.length}, k ${before[before.length-1].length+1}`;
+}
+ed.addEventListener("keydown", e=>{
+  if(e.key==="Tab"){ e.preventDefault(); insertText("  "); }
+  else if(e.key==="Enter" && !e.metaKey && !e.ctrlKey){
+    const before = ed.value.slice(0, ed.selectionStart); const line = before.split("\n").pop();
+    let ind = (line.match(/^\s*/)||[""])[0];
+    if(/^(groove|fill|patroon)\s.*:\s*$/i.test(line) || /^\[[^\]]*\]\s*$/.test(line)) ind = "  ";
+    e.preventDefault(); insertText("\n"+ind);
+  }
+});
+function insertText(t, selectInside){
+  if(!state.path){ toast("Open eerst een bestand"); return; }
+  ed.focus();
+  const a=ed.selectionStart, b=ed.selectionEnd;
+  ed.setRangeText(t, a, b, "end");
+  if(selectInside){ const i=t.indexOf(selectInside); if(i>=0){ ed.setSelectionRange(a+i, a+i+selectInside.length); } }
+  ed.dispatchEvent(new Event("input"));
+}
+function insertWord(w){
+  const a=ed.selectionStart, prev=ed.value[a-1];
+  insertText((prev && !/\s/.test(prev) ? " " : "")+w+" ");
+}
+function gotoLine(n){
+  const lines = ed.value.split("\n"); let pos=0;
+  for(let i=0;i<n-1 && i<lines.length;i++) pos+=lines[i].length+1;
+  ed.focus(); ed.setSelectionRange(pos, pos+(lines[n-1]||"").length);
+  ed.scrollTop = Math.max(0,(n-6)*20); syncScroll(); cursorPos();
+}
+document.addEventListener("keydown", e=>{
+  const mod = e.metaKey||e.ctrlKey;
+  if(mod && e.key.toLowerCase()==="s"){ e.preventDefault(); save(); }
+  if(mod && e.key==="Enter"){ e.preventDefault(); if(!$("#bBuild").disabled) build(); }
+});
+window.addEventListener("beforeunload", e=>{ if(dirty()){ e.preventDefault(); e.returnValue=""; } });
+
+/* ------------------------------------------------------------ bestanden */
+let treeData=[];
+async function loadTree(){ treeData = (await api("/api/tree")).tree; drawTree(); }
+const openDirs = new Set(["nummers","setlists"]);
+function drawTree(){
+  const f = $("#treeFilter").value.toLowerCase();
+  const draw = (nodes)=>nodes.map(n=>{
+    if(n.dir){
+      const kids = draw(n.children||[]);
+      if(f && !kids) return "";
+      const open = f || openDirs.has(n.path);
+      return `<div class="node" data-dir="${esc(n.path)}"><span class="tw">${open?"▾":"▸"}</span><span class="ic">▤</span>${esc(n.name)}</div>`+
+        `<div class="kids${open?"":" closed"}">${kids}</div>`;
+    }
+    if(f && !n.name.toLowerCase().includes(f)) return "";
+    const ic = n.name.endsWith(".drum")?"♩":n.name.endsWith(".txt")?(n.path.startsWith("setlists")?"☰":"⚙"):n.name.endsWith(".md")?"?":"⌘";
+    return `<div class="node${n.path===state.path?" active":""}" data-file="${esc(n.path)}"><span class="tw"></span><span class="ic">${ic}</span>${esc(n.name.replace(/\.drum$/,""))}</div>`;
+  }).join("");
+  $("#tree").innerHTML = draw(treeData);
+}
+$("#tree").addEventListener("click", e=>{
+  const n = e.target.closest(".node"); if(!n) return;
+  if(n.dataset.dir){ openDirs.has(n.dataset.dir)?openDirs.delete(n.dataset.dir):openDirs.add(n.dataset.dir); drawTree(); }
+  else openFile(n.dataset.file);
+});
+$("#treeFilter").addEventListener("input", drawTree);
+$("#bRefresh").onclick = loadTree;
+
+async function openFile(path){
+  if(dirty() && !confirm(`${state.path} is niet opgeslagen. Toch een ander bestand openen?`)) return;
+  try{
+    const j = await api("/api/file?path="+encodeURIComponent(path));
+    state.path=j.path; state.kind=j.kind; state.saved=j.content; state.errLine=null; state.pdf=null;
+    ed.value=j.content; ed.scrollTop=0; ed.scrollLeft=0; $("#emptyEd").style.display="none";
+    localStorage.setItem("ds-last", path);
+    render(); updateTitle(); drawTree(); cursorPos();
+    $("#pdfFrame").style.display="none"; $("#pdfHint").style.display="block";
+    $("#tabOut").innerHTML='<span class="hint">Controleren…</span>';
+    check();
+    ed.focus(); ed.setSelectionRange(0,0); ed.scrollTop=0; ed.scrollLeft=0; syncScroll();
+  }catch(err){ toast(err.message); }
+}
+async function save(){
+  if(!state.path) return;
+  try{ await api("/api/save",{path:state.path, content:ed.value}); state.saved=ed.value; updateTitle(); toast("Opgeslagen"); }
+  catch(err){ toast("Opslaan mislukt: "+err.message); }
+}
+
+/* ------------------------------------------------------------ controleren */
+let checkTimer=null;
+function scheduleCheck(){ clearTimeout(checkTimer); checkTimer=setTimeout(check, 450); }
+async function check(){
+  if(!state.path || !["song","setlist","library"].includes(state.kind)){
+    $("#stCheck").textContent="—"; $("#stInfo").textContent=""; $("#tabOut").innerHTML='<span class="hint">Geen controle voor dit bestand.</span>';
+    setProblems([]); return;
+  }
+  const path=state.path, content=ed.value;
+  let j; try{ j = await api("/api/check",{path, content}); }catch(err){ return; }
+  if(path!==state.path) return;
+  state.lastCheck=j;
+  const prev = state.errLine; state.errLine = j.ok ? null : j.line;
+  if(prev!==state.errLine) render();
+  const probs = [];
+  if(!j.ok) probs.push({lvl:"err", msg:j.error, line:j.line});
+  (j.warnings||[]).forEach(w=>probs.push({lvl:"warn", msg:w}));
+  setProblems(probs);
+  if(j.ok){
+    $("#stCheck").innerHTML = (j.warnings||[]).length ? `<span class="st-warn">✓ in orde · ${j.warnings.length} waarschuwing(en)</span>` : '<span class="st-ok">✓ in orde</span>';
+    $("#tabOut").textContent = j.tab || "";
+  } else {
+    $("#stCheck").innerHTML = `<span class="st-err">✗ ${j.line?"regel "+j.line+": ":""}${esc(j.error)}</span>`;
+  }
+  $("#stInfo").textContent = j.info || "";
+  if(j.kind==="song" && j.pdf && !state.pdf){ state.pdf = "uitvoer/pdf/"+j.id+".pdf"; updateTitle(); }
+}
+function setProblems(list){
+  const b=$("#probBadge"); b.textContent=list.length;
+  b.className = "badge" + (list.length? (list.some(p=>p.lvl==="err")?"":" warn") : " zero");
+  $("#t-prob").innerHTML = list.length ? list.map(p=>
+    `<div class="problem ${p.lvl}" ${p.line?`data-line="${p.line}"`:""}><span class="lvl">${p.lvl==="err"?"✗ fout":"! let op"}</span>`+
+    `<span>${p.line?`<b>regel ${p.line}</b> · `:""}${esc(p.msg)}</span></div>`).join("") : '<div class="okmsg">Geen problemen gevonden.</div>';
+}
+$("#t-prob").addEventListener("click", e=>{ const p=e.target.closest(".problem"); if(p&&p.dataset.line) gotoLine(+p.dataset.line); });
+
+/* ------------------------------------------------------------ acties */
+function showTab(group, t){
+  $$(`#${group} .tab`).forEach(x=>x.classList.toggle("active", x.dataset.t===t));
+  const prefix = group==="btabs"?"t-":"r-";
+  $$(`#${group==="btabs"?"bottom":"right"} > .tabbody`).forEach(x=>x.classList.toggle("active", x.id===prefix+t));
+}
+$("#btabs").addEventListener("click", e=>{ const t=e.target.closest(".tab"); if(t) showTab("btabs", t.dataset.t); });
+$("#rtabs").addEventListener("click", e=>{ const t=e.target.closest(".tab"); if(t) showTab("rtabs", t.dataset.t); });
+
+function log(text){ $("#logOut").textContent = text; }
+async function build(){
+  if(!state.path) return;
+  busy(true, state.kind==="setlist" ? "Setlist maken (nummers, boek, voorblad)…" : "MuseScore maakt de PDF…");
+  try{
+    const j = await api("/api/build",{path:state.path, content:ed.value});
+    state.saved = ed.value; updateTitle();
+    log(j.log||"");
+    if(j.pdf){ state.pdf=j.pdf; showPdf(); toast(j.ok?"PDF gemaakt":"Klaar, met meldingen (zie Log)"); }
+    else { showTab("btabs","log"); toast(j.ok?"Klaar":"Mislukt, zie Log"); }
+    updateTitle(); check();
+  }catch(err){ log(err.message); showTab("btabs","log"); toast("Mislukt: "+err.message); }
+  finally{ busy(false); }
+}
+function showPdf(){
+  if(!state.pdf) return;
+  const f=$("#pdfFrame"); f.src = "/"+state.pdf.split("/").map(encodeURIComponent).join("/")+"?t="+Date.now();
+  f.style.display="block"; $("#pdfHint").style.display="none"; showTab("btabs","pdf");
+}
+$("#bSave").onclick = save;
+$("#bCheck").onclick = ()=>{ check(); showTab("btabs", state.lastCheck && !state.lastCheck.ok ? "prob" : "tab"); };
+$("#bBuild").onclick = build;
+$("#bOpenPdf").onclick = ()=>{ if(state.pdf) window.open("/"+state.pdf.split("/").map(encodeURIComponent).join("/")+"?t="+Date.now(), "_blank"); };
+$("#bBuildAll").onclick = async ()=>{
+  if(dirty()) await save();
+  busy(true,"Alle gewijzigde nummers maken…");
+  try{ const j=await api("/api/build-all",{}); log(j.log); showTab("btabs","log"); toast(j.ok?"Alles gemaakt":"Klaar, met fouten (zie Log)"); }
+  catch(err){ toast(err.message); } finally{ busy(false); }
+};
+$("#bArchive").onclick = async ()=>{
+  if(!confirm(`${state.path} (en de PDF's) naar archief/ verplaatsen?`)) return;
+  const j = await api("/api/archive",{path:state.path}); log(j.log); toast(j.ok?"Gearchiveerd":"Mislukt");
+  if(j.ok){ state.path=null; state.kind=null; state.saved=""; ed.value=""; render(); $("#emptyEd").style.display="grid"; updateTitle(); loadTree(); }
+};
+$("#bSettings").onclick = ()=>openFile("instellingen.txt");
+$("#bHelp").onclick = ()=>{ showTab("rtabs","help"); $("#helpSearch").focus(); };
+
+function ask(dlg){ return new Promise(res=>{ const d=$(dlg); d.querySelector("form").reset?.(); d.showModal();
+  d.addEventListener("close", ()=>res(d.returnValue==="ok" ? Object.fromEntries(new FormData(d.querySelector("form"))) : null), {once:true}); }); }
+$("#bNewSong").onclick = async ()=>{
+  const v = await ask("#dlgSong"); if(!v) return;
+  try{ const j=await api("/api/new-song", v); log(j.log); if(!j.ok){ toast("Bestaat al of mislukt (zie Log)"); showTab("btabs","log"); }
+    await loadTree(); if(j.ok) openFile(j.path); }catch(err){ toast(err.message); }
+};
+$("#bNewSet").onclick = async ()=>{
+  const v = await ask("#dlgSet"); if(!v) return;
+  try{ const j=await api("/api/new-setlist", v); log(j.log); await loadTree(); if(j.ok) openFile(j.path); else toast("Mislukt (zie Log)"); }catch(err){ toast(err.message); }
+};
+$("#bMidi").onclick = async ()=>{
+  const v = await ask("#dlgMidi"); if(!v) return;
+  if(dirty()) await save();
+  busy(true,"MIDI maken…");
+  try{ const j=await api("/api/midi",{path:state.path, tempo:v.tempo, countin:v.countin, click:!!v.click});
+    log(j.log); if(j.ok){ const a=document.createElement("a"); a.href="/"+j.midi.split("/").map(encodeURIComponent).join("/"); a.download=""; a.click(); toast("MIDI gemaakt"); }
+    else { showTab("btabs","log"); toast("Mislukt (zie Log)"); } }
+  catch(err){ toast(err.message); } finally{ busy(false); }
+};
+
+/* ------------------------------------------------------------ gereedschap */
+const SNIPS = [
+  ["groove", "groove naam:\n  HH: *8\n  SD: 2 4\n  BD: 1 3\n", "naam"],
+  ["fill", "fill naam:\n  SD: 4 4e 4& 4a\n", "naam"],
+  ["variant", "groove nieuw = basis:\n  HH: -\n  RD: *8\n", "nieuw"],
+  ["2 maten", "groove naam:\n  maten: 2\n  HH: *8\n  SD: 2 4 || 2 4 4&\n  BD: 1 3 || 1 2& 3\n", "naam"],
+  ["sectie", "[Naam] 8 rock\n", "Naam"],
+  ["sectie+regels", "[Naam]\n  8 rock mf\n  7 rock\n  1 rock fill sd4\n", "Naam"],
+  ["herhaling", "[Naam] herhaal 2\n  8 rock\n", "Naam"],
+  ["volta's", "[Naam]\n  6 rock\n  2 rock volta 1 fill sd4\n  2 rock volta 2 fill tomfull\n", "Naam"],
+  ["segno/coda", "[Couplet] segno\n  8 rock\n[Brug] 8 halftime ds-al-coda\n[Coda] coda\n  4 rock\n  1 hit fermata\n", "Couplet"],
+  ["inline maat", "1 {SD: *16 4:X; BD: 1}\n", "SD: *16 4:X; BD: 1"],
+  ["sticking", "  ST: RLRLRLRLRLRLRLRL\n", "RLRLRLRLRLRLRLRL"],
+  ["slot", "[Outro]\n  4 rock crash\n  1 hit fermata\n", "Outro"],
+];
+const OPTCHIPS = ["crash","fill ","\"tekst\"","mf","p","f","ff","cresc","dim","tempo=","rit","fermata","maat=","herhaal 2",
+  "volta 1","volta 2","segno","coda","ds-al-coda","naar-coda","uitgeschreven","nieuweregel","klein","groot","tacet","tijd"];
+const COUNTS = [["*4","kwarten"],["*8","8sten"],["*16","16den"],["*8t","triolen"],["*&","de &-en"],["1 3",""],["2 4",""],
+  ["1e",""],["1&",""],["1a",""],["1t",""],["1l",""],["3-4*16",""],["!3&","weghalen"],[":X","accent"],[":g","ghost"],[":o","open"]];
+function chip(label, small){ return `<span class="chip">${esc(label)}${small?`<small>${esc(small)}</small>`:""}</span>`; }
+async function initTools(){
+  $("#snips").innerHTML = SNIPS.map(s=>chip(s[0])).join("");
+  $$("#snips .chip").forEach((c,i)=>c.onclick=()=>{ const s=SNIPS[i]; const a=ed.selectionStart;
+    const atLineStart = a===0 || ed.value[a-1]==="\n"; insertText((atLineStart?"":"\n")+s[1], s[2]); });
+  $("#opts").innerHTML = OPTCHIPS.map(o=>chip(o)).join("");
+  $$("#opts .chip").forEach((c,i)=>c.onclick=()=>{ const o=OPTCHIPS[i];
+    if(o==="\"tekst\"") { insertWord('"tekst"'); const p=ed.selectionStart-7; ed.setSelectionRange(p,p+5); }
+    else if(o.endsWith("=")||o.endsWith(" ")) { const a=ed.selectionStart, prev=ed.value[a-1]; insertText((prev&&!/\s/.test(prev)?" ":"")+o); }
+    else insertWord(o); });
+  $("#counts").innerHTML = COUNTS.map(c=>chip(c[0], c[1])).join("");
+  $$("#counts .chip").forEach((c,i)=>c.onclick=()=>{ const t=COUNTS[i][0]; if(t[0]===":") insertText(t); else insertWord(t); });
+  try{
+    const k = await api("/api/kit");
+    $("#insts").innerHTML = k.instruments.map(i=>`<span class="chip" title="${esc(i.name)} · ${i.pos} · ${esc(i.head)}${i.aliases.length?" · ook: "+esc(i.aliases.join(", ")):""}">${i.code}<small>${esc(i.name.split(" (")[0].split(" /")[0])}</small></span>`).join("")+
+      `<span class="chip" title="sticking-rij">ST<small>sticking</small></span>`;
+    $$("#insts .chip").forEach(c=>c.onclick=()=>{ const code=c.firstChild.textContent;
+      const a=ed.selectionStart, lineStart = a===0||ed.value[a-1]==="\n";
+      insertText((lineStart?"  ":"\n  ")+code+": "); });
+    $("#mods").innerHTML = k.mods.map(m=>`<div class="modrow" title="klik om in te voegen"><code>${esc(m.ch)}</code><span>${esc(m.desc)}</span></div>`).join("")+
+      `<div class="modrow"><code>-</code><span>rust (ook . of _)</span></div><div class="modrow"><code>|</code><span>stukken binnen de maat (eigen verdeling)</span></div><div class="modrow"><code>||</code><span>volgende maat</span></div>`;
+    $$("#mods .modrow").forEach(r=>r.onclick=()=>insertText(r.querySelector("code").textContent));
+  }catch(e){}
+}
+
+/* ------------------------------------------------------------ bibliotheek */
+async function initLib(){ try{ state.lib=(await api("/api/library")).items; drawLib(); }catch(e){} }
+function drawLib(){
+  const q=$("#libSearch").value.toLowerCase().trim();
+  const items = state.lib.filter(i=>!q || (i.name+" "+i.doc+" "+i.meter+" "+i.kind).toLowerCase().includes(q));
+  $("#libList").innerHTML = items.map((i,n)=>`<div class="lib-item" data-n="${state.lib.indexOf(i)}">
+    <div class="lib-head"><b>${esc(i.name)}</b><span class="tag">${i.kind} · ${esc(i.meter)}</span><span class="doc">${esc(i.doc)}</span></div>
+    <div class="lib-body"><div style="color:var(--muted);font-size:12px">${esc(i.doc)}${i.src&&i.src!=="ingebouwd"?" · "+esc(i.src):""}</div>
+    <pre>${esc(i.grid)}</pre><button class="btn" data-a="ins">Naam invoegen</button></div></div>`).join("") || '<div class="hint">Niets gevonden.</div>';
+}
+$("#libSearch").addEventListener("input", drawLib);
+$("#libList").addEventListener("click", e=>{
+  const it=e.target.closest(".lib-item"); if(!it) return;
+  if(e.target.dataset.a==="ins"){ insertWord(state.lib[+it.dataset.n].name); return; }
+  if(e.target.closest(".lib-head")) it.classList.toggle("open");
+});
+
+/* ------------------------------------------------------------ help */
+function mdInline(s){
+  return esc(s).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>")
+    .replace(/(^|[^*])\*([^*]+)\*/g,"$1<i>$2</i>").replace(/\[([^\]]+)\]\(([^)]+)\)/g,(m,t,u)=>u.startsWith("#")?`<a href="#" data-sec="${esc(u.slice(1))}">${t}</a>`:`<a href="${u}" target="_blank">${t}</a>`);
+}
+function md(text){
+  const lines=text.split("\n"); let out="", i=0;
+  while(i<lines.length){
+    const l=lines[i];
+    if(l.startsWith("```")){ let code=[]; i++; while(i<lines.length && !lines[i].startsWith("```")) code.push(lines[i++]); i++;
+      out+=`<pre><code>${esc(code.join("\n"))}</code></pre>`; continue; }
+    if(/^\|/.test(l)){ const rows=[]; while(i<lines.length && /^\|/.test(lines[i])) rows.push(lines[i++]);
+      const cells=r=>r.replace(/^\||\|$/g,"").split(/(?<!\\)\|/).map(c=>c.trim().replace(/\\\|/g,"|"));
+      out+="<table>"+rows.filter((r,k)=>!(k===1&&/^[\s|:-]+$/.test(r))).map((r,k)=>"<tr>"+cells(r).map(c=>k===0?`<th>${mdInline(c)}</th>`:`<td>${mdInline(c)}</td>`).join("")+"</tr>").join("")+"</table>"; continue; }
+    if(/^#{2,4}\s/.test(l)){ out+=`<h4>${mdInline(l.replace(/^#+\s/,""))}</h4>`; i++; continue; }
+    if(/^>\s?/.test(l)){ let q=[]; while(i<lines.length && /^>/.test(lines[i])) q.push(lines[i++].replace(/^>\s?/,""));
+      out+=`<blockquote>${mdInline(q.join(" "))}</blockquote>`; continue; }
+    if(/^\s*[-*]\s/.test(l) || /^\s*\d+\.\s/.test(l)){ const ol=/^\s*\d+\./.test(l); let it=[];
+      while(i<lines.length && (/^\s*[-*]\s/.test(lines[i])||/^\s*\d+\.\s/.test(lines[i])||/^\s{2,}\S/.test(lines[i]))){
+        if(/^\s{2,}\S/.test(lines[i]) && !/^\s*([-*]|\d+\.)\s/.test(lines[i])) it[it.length-1]+=" "+lines[i].trim(); else it.push(lines[i].replace(/^\s*([-*]|\d+\.)\s/,"")); i++; }
+      out+=(ol?"<ol>":"<ul>")+it.map(x=>`<li>${mdInline(x)}</li>`).join("")+(ol?"</ol>":"</ul>"); continue; }
+    if(/^---+$/.test(l)||!l.trim()){ i++; continue; }
+    let p=[]; while(i<lines.length && lines[i].trim() && !/^(```|\||#|>|\s*[-*]\s|\s*\d+\.\s)/.test(lines[i])) p.push(lines[i++]);
+    out+=`<p>${mdInline(p.join(" "))}</p>`;
+  }
+  return out;
+}
+async function initHelp(){ try{ state.help=(await api("/api/help")).sections; drawHelp(); }catch(e){} }
+function drawHelp(){
+  const q=$("#helpSearch").value.toLowerCase().trim();
+  let list = state.help.map((s,n)=>({s,n,score: !q?0: (s.title.toLowerCase().includes(q)?10:0) + (s.body.toLowerCase().split(q).length-1)}));
+  if(q) list = list.filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  const hiq = t => q ? esc(t).replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"gi"), m=>`<mark>${m}</mark>`) : esc(t);
+  $("#helpList").innerHTML = list.slice(0,60).map(({s,n})=>{
+    let snip=""; if(q){ const b=s.body, k=b.toLowerCase().indexOf(q); if(k>=0) snip=b.slice(Math.max(0,k-50), k+90).replace(/\s+/g," "); }
+    else snip=s.body.replace(/[`*|#>]/g,"").replace(/\s+/g," ").slice(0,110);
+    return `<div class="help-res" data-n="${n}" style="${s.level>2&&!q?"margin-left:12px":""}"><div class="t">${hiq(s.title)}</div><div class="s">${hiq(snip)}</div></div>`;
+  }).join("") || '<div class="hint">Niets gevonden. Probeer een ander woord.</div>';
+}
+function showHelp(n){
+  const s=state.help[n]; if(!s) return;
+  $("#helpList").innerHTML = `<span class="back">← terug naar zoeken</span><div class="md"><h3>${mdInline(s.title)}</h3>${md(s.body)}</div>`;
+  $("#r-help").scrollTop=0;
+}
+$("#helpSearch").addEventListener("input", drawHelp);
+$("#helpList").addEventListener("click", e=>{
+  if(e.target.classList.contains("back")){ drawHelp(); return; }
+  const a=e.target.closest("a[data-sec]"); if(a){ e.preventDefault();
+    const slug=a.dataset.sec; const n=state.help.findIndex(s=>slugify(s.title)===slug); if(n>=0) showHelp(n); return; }
+  const r=e.target.closest(".help-res"); if(r) showHelp(+r.dataset.n);
+});
+function slugify(t){ return t.toLowerCase().replace(/[^\w\s-]/g,"").trim().replace(/\s/g,"-"); }
+
+/* ------------------------------------------------------------ panelen verslepen */
+$$(".split").forEach(sp=>sp.addEventListener("mousedown", e=>{
+  e.preventDefault(); const side=sp.dataset.side, main=$("#main");
+  const move = ev=>{ const r=main.getBoundingClientRect();
+    if(side==="left") main.style.setProperty("--left", Math.min(450,Math.max(140, ev.clientX-r.left))+"px");
+    else main.style.setProperty("--right", Math.min(600,Math.max(220, r.right-ev.clientX))+"px"); };
+  const up = ()=>{ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); };
+  document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
+}));
+$("#hsplit").addEventListener("mousedown", e=>{
+  e.preventDefault(); const c=$("#center");
+  const move = ev=>{ const r=c.getBoundingClientRect(); c.style.setProperty("--bottom", Math.min(r.height-80, Math.max(60, r.bottom-ev.clientY))+"px"); };
+  const up = ()=>{ document.removeEventListener("mousemove",move); document.removeEventListener("mouseup",up); $("#pdfFrame").style.pointerEvents=""; };
+  $("#pdfFrame").style.pointerEvents="none";
+  document.addEventListener("mousemove",move); document.addEventListener("mouseup",up);
+});
+
+/* ------------------------------------------------------------ start */
+(async function(){
+  await loadTree(); initTools(); initLib(); initHelp(); updateTitle(); render();
+  try{ const s=await api("/api/status");
+    $("#stMs").innerHTML = s.musescore ? `<span class="st-ok">MuseScore gevonden</span>` : `<span class="st-err">MuseScore niet gevonden (alleen MusicXML)</span>`;
+    $("#stMs").title = s.musescore || "Zet 'musescore: pad' in instellingen.txt";
+  }catch(e){}
+  let last=null; try{ last=localStorage.getItem("ds-last"); }catch(e){}
+  if(last) openFile(last).catch(()=>{});
+})();
+</script>
+</body>
+</html>

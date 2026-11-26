@@ -21,6 +21,7 @@ groove couplet:
 ```
 
 ```bash
+python3 drums.py studio            # editor in je browser, met bestanden, gereedschap en help
 python3 drums.py maak              # alle gewijzigde nummers -> uitvoer/pdf/
 python3 drums.py toon <nummer>     # als drumtab in de terminal
 python3 drums.py setlist maak <naam>

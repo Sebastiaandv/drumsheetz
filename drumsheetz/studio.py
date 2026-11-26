@@ -1,0 +1,397 @@
+"""Drumsheetz Studio: een lokale interface in je browser.
+
+    python3 drums.py studio            start op http://127.0.0.1:8765 en opent de browser
+
+Alles draait op je eigen computer (alleen bereikbaar vanaf deze computer). De .drum-bestanden
+blijven gewone tekstbestanden; de Studio is alleen een editor met hulpmiddelen eromheen.
+"""
+import contextlib
+import io
+import json
+import mimetypes
+import pathlib
+import re
+import threading
+import traceback
+import urllib.parse
+import webbrowser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+from .project import Project, simplify
+
+HERE = pathlib.Path(__file__).resolve().parent
+LOCK = threading.Lock()
+TEXT_EXT = {".drum", ".txt", ".py", ".md"}
+
+
+class Studio:
+    def __init__(self, root):
+        self.root = pathlib.Path(root).resolve()
+
+    # ------------------------------------------------------------------ hulp
+    def project(self):
+        return Project(self.root)
+
+    def safe(self, rel):
+        p = (self.root / rel).resolve()
+        if self.root not in p.parents and p != self.root:
+            raise ValueError("pad buiten de projectmap")
+        return p
+
+    def rel(self, p):
+        return str(pathlib.Path(p).resolve().relative_to(self.root)).replace("\\", "/")
+
+    def run_cli(self, argv):
+        """Voer een drums.py-opdracht uit en geef de uitvoer als tekst terug."""
+        from .cli import main
+        buf = io.StringIO()
+        with LOCK, contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            try:
+                code = main(argv, self.root)
+            except SystemExit as e:
+                code = e.code
+            except Exception:  # noqa: BLE001
+                traceback.print_exc()
+                code = 1
+        return {"ok": not code, "log": buf.getvalue()}
+
+    # ------------------------------------------------------------------ api
+    def tree(self):
+        def walk(d, exts):
+            out = []
+            if not d.exists():
+                return out
+            for p in sorted(d.iterdir(), key=lambda x: (x.is_file(), x.name.lower())):
+                if p.name.startswith(".") or p.name == "__pycache__":
+                    continue
+                if p.is_dir():
+                    kids = walk(p, exts)
+                    if kids:
+                        out.append({"name": p.name, "path": self.rel(p), "dir": True, "children": kids})
+                elif p.suffix in exts:
+                    out.append({"name": p.name, "path": self.rel(p), "dir": False})
+            return out
+
+        nodes = [
+            {"name": "nummers", "path": "nummers", "dir": True, "open": True,
+             "children": walk(self.root / "nummers", {".drum", ".py"})},
+            {"name": "setlists", "path": "setlists", "dir": True, "open": True,
+             "children": walk(self.root / "setlists", {".txt"})},
+            {"name": "voorbeelden", "path": "voorbeelden", "dir": True,
+             "children": walk(self.root / "voorbeelden", {".drum", ".py"})},
+        ]
+        for f in ("bibliotheek.drum", "instellingen.txt", "HANDLEIDING.md"):
+            if (self.root / f).exists():
+                nodes.append({"name": f, "path": f, "dir": False})
+        return {"tree": nodes}
+
+    def read(self, rel):
+        p = self.safe(rel)
+        return {"path": rel, "content": p.read_text(encoding="utf-8"), "kind": self.kind(rel)}
+
+    def write(self, rel, content):
+        p = self.safe(rel)
+        if p.suffix not in TEXT_EXT:
+            raise ValueError("alleen tekstbestanden (.drum, .txt, .py, .md) kunnen worden opgeslagen")
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(content, encoding="utf-8")
+        return {"ok": True, "path": rel}
+
+    def kind(self, rel):
+        rel = rel.replace("\\", "/")
+        if rel == "bibliotheek.drum":
+            return "library"
+        if rel == "instellingen.txt":
+            return "settings"
+        if rel.startswith("setlists/") and rel.endswith(".txt"):
+            return "setlist"
+        if rel.endswith(".drum") or rel.endswith(".py"):
+            return "song"
+        return "text"
+
+    def check(self, rel, content):
+        """Controleer (ook niet-opgeslagen) inhoud. Geeft fout/waarschuwingen en de drumtab."""
+        from .rows import NotationError
+        kind = self.kind(rel)
+        project = self.project()
+        out = {"ok": True, "kind": kind, "error": None, "line": None, "warnings": [], "tab": "", "info": ""}
+        try:
+            if kind == "song":
+                from .arrange import arrange
+                from .musicxml import to_musicxml
+                from .show import show_score
+                from .project import fmt_duration
+                if rel.endswith(".py"):
+                    song, book, warns = project.load(self.safe(rel))
+                else:
+                    from .parser import parse_text
+                    song, book, warns = parse_text(content, rel, project.library())
+                    song["_file"], song["_id"] = rel, pathlib.Path(rel).stem
+                score = arrange(song, book)
+                to_musicxml(score, project.config)
+                lines = []
+                show_score(score, print=lines.append)
+                out["tab"] = "\n".join(lines)
+                out["warnings"] = list(warns) + score.warnings
+                for name in list(book.items):
+                    if not name.startswith("~"):
+                        try:
+                            out["warnings"] += book.warnings(name, score.meter)
+                        except NotationError:
+                            pass
+                out["info"] = (f"{score.meter} · tempo {score.tempo[0]} · {score.total_bars} maten · "
+                               f"± {fmt_duration(score.seconds())}")
+                out["id"] = pathlib.Path(rel).stem
+                out["pdf"] = (self.root / "uitvoer" / "pdf" / f"{out['id']}.pdf").exists()
+            elif kind == "library":
+                from .library import builtin_book
+                from .parser import Parser
+                p = Parser(content, rel, builtin_book())
+                _, book = p.parse_patterns_only()
+                from .rows import Meter
+                from .show import bar_grid
+                lines = []
+                for name, pat in book.items.items():
+                    bars = book.compile(name, Meter(4, 4))
+                    lines.append(f"{name}  ({bars[0].meter})  {pat.doc}")
+                    for b in bars:
+                        lines += bar_grid(b)
+                    lines.append("")
+                out["tab"] = "\n".join(lines)
+                out["info"] = f"{len(book.items)} eigen patronen"
+            elif kind == "setlist":
+                from . import setlist as sl
+                from .build import load_and_arrange
+                meta, entries = sl.parse_setlist(content, pathlib.Path(rel).stem)
+                errors = sl.resolve(project, entries, self.safe(rel))
+                scores = {}
+                for e in entries:
+                    if e.kind == "song" and e.path:
+                        try:
+                            scores[str(e.path)] = load_and_arrange(project, e.path)
+                        except NotationError as err:
+                            errors.append(str(err))
+                sl.enrich(project, entries, scores)
+                out["tab"] = "\n".join(sl.overview_lines(meta, entries))
+                out["warnings"] = errors
+                n = sum(1 for e in entries if e.kind in ("song", "pdf"))
+                out["info"] = f"setlist · {n} nummers"
+                out["setlist"] = pathlib.Path(rel).stem
+        except NotationError as e:
+            out.update(ok=False, error=e.msg, line=e.line)
+        except Exception as e:  # noqa: BLE001
+            out.update(ok=False, error=f"{type(e).__name__}: {e}")
+        return out
+
+    def library(self):
+        from .rows import Meter, parse_meter
+        from .show import bar_grid
+        lib = self.project().library()
+        items = []
+        for n in sorted(lib.names(), key=lambda n: (lib.get(n).kind != "groove", n)):
+            pat = lib.get(n)
+            try:
+                bars = lib.compile(n, parse_meter(pat.meter) if pat.meter else Meter(4, 4))
+                grid = "\n".join(line for b in bars for line in bar_grid(b))
+                meter = str(bars[0].meter)
+            except Exception:  # noqa: BLE001
+                grid, meter = "", ""
+            src = "ingebouwd" if (pat.file or "").startswith("<") else (pat.file or "")
+            items.append({"name": n, "kind": pat.kind, "doc": pat.doc, "meter": meter, "grid": grid, "src": src})
+        return {"items": items}
+
+    def kit(self):
+        from .kit import ALIASES, KIT, MODS
+        inst = []
+        for code, i in KIT.items():
+            inst.append({"code": code, "name": i.name, "pos": f"{i.step}{i.octave}", "head": i.head,
+                         "aliases": sorted(a for a, c in ALIASES.items() if c == code)})
+        return {"instruments": inst, "mods": [{"ch": k, "desc": v} for k, v in MODS.items()]}
+
+    def help(self):
+        md = (self.root / "HANDLEIDING.md")
+        text = md.read_text(encoding="utf-8") if md.exists() else ""
+        sections, cur = [], None
+        in_code = False
+        for line in text.splitlines():
+            if line.startswith("```"):
+                in_code = not in_code
+            m = None if in_code else re.match(r"^(#{2,4})\s+(.*)$", line)
+            if m:
+                cur = {"level": len(m.group(1)), "title": m.group(2).strip(), "body": []}
+                sections.append(cur)
+            elif cur is not None:
+                cur["body"].append(line)
+        for s in sections:
+            s["body"] = "\n".join(s["body"]).strip()
+        return {"sections": [s for s in sections if s["body"] and s["title"] != "Inhoud"]}
+
+    def status(self):
+        from .musescore import find_musescore
+        p = self.project()
+        ms = find_musescore(p.config.get("musescore", ""))
+        return {"musescore": ms or "", "root": str(self.root), "name": p.config.get("name", "")}
+
+    def new_song(self, data):
+        title = (data.get("title") or "").strip()
+        if not title:
+            raise ValueError("geef een titel op")
+        argv = ["nieuw", title, data.get("artist") or ""]
+        if data.get("meter"):
+            argv += ["--maat", data["meter"]]
+        if data.get("tempo"):
+            argv += ["--tempo", str(data["tempo"])]
+        res = self.run_cli(argv)
+        sid = simplify(title)[:24] or "nummer"
+        res["path"] = f"nummers/{sid}.drum"
+        return res
+
+    def new_setlist(self, data):
+        name = re.sub(r"[^\w\-]+", "-", (data.get("name") or "").strip()).strip("-")
+        if not name:
+            raise ValueError("geef een naam op")
+        res = self.run_cli(["setlist", "nieuw", name] + list(data.get("songs") or []))
+        res["path"] = f"setlists/{name}.txt"
+        return res
+
+    def build(self, data):
+        rel = data["path"]
+        if data.get("content") is not None:
+            self.write(rel, data["content"])
+        kind = self.kind(rel)
+        if kind == "setlist":
+            name = pathlib.Path(rel).stem
+            res = self.run_cli(["setlist", "maak", name] + (["-a"] if data.get("all") else []))
+            pdf = f"uitvoer/setlists/{name} - compleet.pdf"
+            if not (self.root / pdf).exists():
+                pdf = None
+            res["pdf"] = pdf
+            return res
+        if kind == "song":
+            res = self.run_cli(["maak", "-a", rel])
+            pdf = f"uitvoer/pdf/{pathlib.Path(rel).stem}.pdf"
+            res["pdf"] = pdf if (self.root / pdf).exists() else None
+            return res
+        if kind == "library":
+            res = self.run_cli(["bibliotheek", "--pdf"])
+            res["pdf"] = "uitvoer/bibliotheek.pdf"
+            return res
+        raise ValueError("dit bestand kan niet gemaakt worden")
+
+    def midi(self, data):
+        argv = ["midi", data["path"], "--tempo", str(int(data.get("tempo") or 100))]
+        if data.get("click"):
+            argv.append("--klik")
+        if data.get("countin"):
+            argv += ["--aftellen", str(int(data["countin"]))]
+        res = self.run_cli(argv)
+        stem = pathlib.Path(data["path"]).stem
+        t = int(data.get("tempo") or 100)
+        res["midi"] = f"uitvoer/midi/{stem}{'' if t == 100 else f'-{t}pct'}.mid"
+        return res
+
+
+# ---------------------------------------------------------------------- http
+class Handler(BaseHTTPRequestHandler):
+    studio = None
+
+    def log_message(self, fmt, *args):  # stil
+        pass
+
+    def send(self, code, body, ctype="application/json; charset=utf-8", headers=None):
+        if isinstance(body, (dict, list)):
+            body = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        elif isinstance(body, str):
+            body = body.encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _local_only(self):
+        host = (self.headers.get("Host") or "").split(":")[0]
+        return host in ("127.0.0.1", "localhost", "[::1]", "::1")
+
+    def do_GET(self):
+        if not self._local_only():
+            return self.send(403, {"error": "alleen lokaal"})
+        u = urllib.parse.urlparse(self.path)
+        q = dict(urllib.parse.parse_qsl(u.query))
+        s = self.studio
+        try:
+            if u.path in ("/", "/index.html"):
+                return self.send(200, (HERE / "studio.html").read_text(encoding="utf-8"), "text/html; charset=utf-8")
+            if u.path == "/api/tree":
+                return self.send(200, s.tree())
+            if u.path == "/api/file":
+                return self.send(200, s.read(q["path"]))
+            if u.path == "/api/library":
+                return self.send(200, s.library())
+            if u.path == "/api/kit":
+                return self.send(200, s.kit())
+            if u.path == "/api/help":
+                return self.send(200, s.help())
+            if u.path == "/api/status":
+                return self.send(200, s.status())
+            if u.path.startswith("/uitvoer/") or u.path.startswith("/archief/"):
+                p = s.safe(urllib.parse.unquote(u.path.lstrip("/")))
+                if not p.is_file():
+                    return self.send(404, {"error": "niet gevonden"})
+                ctype = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+                extra = {"Content-Disposition": f'attachment; filename="{p.name}"'} if p.suffix == ".mid" else {}
+                return self.send(200, p.read_bytes(), ctype, extra)
+            return self.send(404, {"error": "onbekend"})
+        except Exception as e:  # noqa: BLE001
+            return self.send(400, {"error": f"{type(e).__name__}: {e}"})
+
+    def do_POST(self):
+        if not self._local_only():
+            return self.send(403, {"error": "alleen lokaal"})
+        if "application/json" not in (self.headers.get("Content-Type") or ""):
+            return self.send(415, {"error": "verwacht JSON"})
+        n = int(self.headers.get("Content-Length") or 0)
+        data = json.loads(self.rfile.read(n) or b"{}")
+        s = self.studio
+        routes = {
+            "/api/save": lambda: s.write(data["path"], data["content"]),
+            "/api/check": lambda: s.check(data["path"], data.get("content", "")),
+            "/api/build": lambda: s.build(data),
+            "/api/build-all": lambda: s.run_cli(["maak"] + (["-a"] if data.get("all") else [])),
+            "/api/midi": lambda: s.midi(data),
+            "/api/new-song": lambda: s.new_song(data),
+            "/api/new-setlist": lambda: s.new_setlist(data),
+            "/api/archive": lambda: s.run_cli(["archiveer", data["path"]]),
+        }
+        fn = routes.get(urllib.parse.urlparse(self.path).path)
+        if not fn:
+            return self.send(404, {"error": "onbekend"})
+        try:
+            return self.send(200, fn())
+        except Exception as e:  # noqa: BLE001
+            return self.send(400, {"error": f"{e}"})
+
+
+def serve(root, port=8765, open_browser=True):
+    Handler.studio = Studio(root)
+    for p in range(port, port + 20):
+        try:
+            httpd = ThreadingHTTPServer(("127.0.0.1", p), Handler)
+            break
+        except OSError:
+            continue
+    else:
+        raise SystemExit("geen vrije poort gevonden")
+    url = f"http://127.0.0.1:{p}/"
+    print(f"Drumsheetz Studio draait op {url}  (Ctrl+C om te stoppen)")
+    if open_browser:
+        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nGestopt.")
+    finally:
+        httpd.server_close()
