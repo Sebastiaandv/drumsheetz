@@ -26,7 +26,8 @@ CONFIG_KEYS = {"naam": "name", "name": "name", "ondertitel": "subtitle", "subtit
                "credit": "credit", "vermelding": "credit", "musescore": "musescore", "mscore": "musescore",
                "regelafstand": "minSystemDistance", "minsystemdistance": "minSystemDistance",
                "pdf-viewer": "viewer", "stemmen": "voices", "voices": "voices",
-               "herhaalteller": "count_pos", "teller": "count_pos"}
+               "herhaalteller": "count_pos", "teller": "count_pos",
+               "tekstgrootte": "text_size", "stijlgrootte": "feel_size"}
 
 
 class Project:

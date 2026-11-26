@@ -294,7 +294,7 @@ class Arranger:
                     if label:
                         st.append(("rehearsal", label))
                     if sec.get("text") and ph is not sec:
-                        st.append(("words", sec["text"]))
+                        st.append(("words", sec["text"], sec.get("text_size")))
                     for mk in sec.get("marks", []) if ph is not sec else []:
                         if mk in ("segno", "coda"):
                             st.append((mk,))
@@ -310,7 +310,7 @@ class Arranger:
                     if mk in ("segno", "coda"):
                         st.append((mk,))
                 if ph.get("text"):
-                    st.append(("words", ph["text"]))
+                    st.append(("words", ph["text"], ph.get("text_size") or sec.get("text_size")))
                 if ph.get("dyn"):
                     st.append(("dyn", ph["dyn"]))
                     self.dyn = ph["dyn"]

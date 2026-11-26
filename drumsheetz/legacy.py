@@ -98,7 +98,8 @@ KEYS_OUT = [("title", "titel"), ("artist", "artiest"), ("subtitle", "ondertitel"
             ("meter", "maat"), ("feel", "stijl"), ("notes", "notitie"), ("by", "door"),
             ("key", "toonsoort"), ("duration", "duur"), ("status", "status"), ("tags", "tags"),
             ("source", "bron"), ("audio", "audio"), ("pdf", "pdf"), ("countin", "aftellen"),
-            ("layout", "layout"), ("voices", "stemmen"), ("bars_per_line", "maten-per-regel"), ("swing", "swing"),
+            ("layout", "layout"), ("voices", "stemmen"), ("text_size", "tekstgrootte"),
+            ("feel_size", "stijlgrootte"), ("count_pos", "herhaalteller"), ("bars_per_line", "maten-per-regel"), ("swing", "swing"),
             ("composer", "componist"), ("year", "jaar"), ("album", "album")]
 MARK_OUT = {"segno": "segno", "coda": "coda", "fine": "fine", "tocoda": "naar-coda", "ds": "ds",
             "dsalcoda": "ds-al-coda", "dsalfine": "ds-al-fine", "dc": "dc", "dcalcoda": "dc-al-coda",
@@ -143,6 +144,8 @@ def _opts(ph, section=False):
         o.append("doorlopen")
     if ph.get("end") and section:
         o.append("einde")
+    if ph.get("text_size"):
+        o.append(f"grootte={ph['text_size']}")
     if ph.get("text"):
         o.append('"' + ph["text"].replace('"', "'") + '"')
     return o
@@ -201,7 +204,7 @@ def to_drum_text(song, book, header_comment=None):
     for sec in song.get("sections", []):
         label = sec.get("label", "")
         if sec.get("seq"):
-            sopts = {k: v for k, v in sec.items() if k in ("text", "repeat", "marks", "newpage", "newline",
+            sopts = {k: v for k, v in sec.items() if k in ("text", "text_size", "repeat", "marks", "newpage", "newline",
                                                            "end", "tempo", "meter", "written")}
             line = f"[{label}]"
             so = _opts(sopts, section=True)

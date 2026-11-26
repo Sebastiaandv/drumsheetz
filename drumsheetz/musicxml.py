@@ -120,8 +120,25 @@ class Writer:
     def direction(self, inner, placement="above", sound=""):
         return f'<direction placement="{placement}"><direction-type>{inner}</direction-type>{sound}</direction>'
 
-    def words(self, text, extra=""):
+    def words(self, text, extra="", size=None):
+        if size:
+            extra += f' font-size="{size}"'
         return self.direction(f'<words font-style="italic"{extra}>{esc(text)}</words>')
+
+    def size_of(self, value, key):
+        """Tekstgrootte in punten: getal, of klein/normaal/groot; anders uit nummer/instellingen."""
+        v = value or self.song.get(key) or self.cfg.get(key)
+        if not v:
+            return None
+        v = str(v).strip().lower().replace(",", ".")
+        named = {"klein": 8, "small": 8, "heelklein": 6.5, "normaal": 10, "normal": 10, "groot": 12, "big": 12,
+                 "large": 12, "heelgroot": 14}
+        if v in named:
+            return named[v]
+        try:
+            return float(v) if "." in v else int(v)
+        except ValueError:
+            return None
 
     def tempo_dir(self, tempo):
         bpm, unit = tempo
@@ -144,14 +161,16 @@ class Writer:
                 if sw and str(sw).lower() not in ("nee", "no", "0"):
                     feel = (feel + " · " if feel else "") + ("Swing" if str(sw).lower() in ("ja", "yes", "8", "1")
                                                             else f"Swing {sw}")
+                fs = self.size_of(None, "feel_size")
                 if feel:
-                    out.append(self.words(feel))
+                    out.append(self.words(feel, size=fs))
                 if self.song.get("notes"):
-                    out.append(self.words(self.song["notes"]))
+                    out.append(self.words(self.song["notes"], size=fs))
             elif k == "rehearsal":
                 out.append(self.direction(f'<rehearsal enclosure="rectangle">{esc(item[1])}</rehearsal>'))
             elif k == "words":
-                out.append(self.words(item[1]))
+                size = self.size_of(item[2], "text_size") if len(item) > 2 else None
+                out.append(self.words(item[1], size=size))
             elif k == "dyn":
                 out.append(self.direction(f"<dynamics><{esc(item[1])}/></dynamics>"))
             elif k == "wedge":

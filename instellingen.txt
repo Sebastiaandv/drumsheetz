@@ -4,3 +4,6 @@ naam: Sebastiaan Johan de Vries
 stemmen: 1
 # binnen = 'N×' bij een %-maat in de balk zelf (vóór het %-teken); boven = boven de maat zoals vroeger.
 herhaalteller: binnen
+# Grootte van de cursieve teksten bij de maten (lyrics, aanwijzingen): klein, normaal, groot of een getal in punten.
+# Per nummer in de kop ('tekstgrootte: 9') of per regel ('klein', 'groot', 'grootte=7') aan te passen.
+tekstgrootte: klein

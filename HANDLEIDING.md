@@ -196,6 +196,8 @@ Bovenaan, als `sleutel: waarde`. Alleen `titel` is eigenlijk nodig.
 | `aftellen` | Aantal maten aftellen met stokken (staat op het blad én in de MIDI) | `aftellen: 1` |
 | `stemmen` | `1` = alles (ook bassdrum en hi-hat-voet) in één stem met de stokken omhoog, zonder losse rusten; `2` = handen omhoog, voeten omlaag (de oude opmaak). Standaard uit `instellingen.txt` | `stemmen: 2` |
 | `herhaalteller` | Waar de `N×` bij een %-maat staat: `binnen` (in de balk, vóór het %-teken, met wit vlakje; standaard) of `boven` (boven de maat, zoals vroeger) | `herhaalteller: boven` |
+| `tekstgrootte` | Grootte van de cursieve teksten bij de maten (lyrics, aanwijzingen): `klein` (8), `normaal` (10), `groot` (12), `heelklein`, `heelgroot` of een getal in punten. Standaard uit `instellingen.txt` | `tekstgrootte: 9` |
+| `stijlgrootte` | Hetzelfde voor de `stijl`- en `notitie`-regel bovenaan | `stijlgrootte: klein` |
 | `layout` | `secties` (standaard: elke sectie op een nieuwe regel) of `doorlopend` | `layout: doorlopend` |
 | `maten-per-regel` | Forceer een vast aantal maten per regel | `maten-per-regel: 4` |
 | `herhaaltekens` | `nee` = nooit %-maten, alles uitschrijven | `herhaaltekens: nee` |
@@ -536,6 +538,7 @@ Alle **opties**, op een regel of achter de sectienaam:
 | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` `sfz` `sf` `fp` `sfp` `rfz` | dynamiek |
 | `cresc` (of `<`) / `dim` (of `>`, `decresc`) | vork over deze regel |
 | `"tekst"` | cursieve tekst boven de eerste maat |
+| `klein`, `normaal`, `groot`, `heelklein`, `heelgroot`, `grootte=7` | grootte van de tekst op deze regel (of sectie) |
 | `tempo=120`, `tempo 120`, `tempo=4.=60` | nieuw tempo (metronoomteken) |
 | `rit` `rall` `accel` `a-tempo` `tempo-primo` `halftime` `doubletime` | tempotekst |
 | `fermata` | fermate op het laatste slag van de laatste maat |
@@ -548,6 +551,18 @@ Alle **opties**, op een regel of achter de sectienaam:
 | `nieuweregel` / `nieuwepagina` | forceer een nieuwe regel / pagina |
 | `doorlopen` | (achter een sectienaam) deze sectie niet op een nieuwe regel beginnen |
 | `einde` | slotstreep na deze sectie |
+
+**Tekstgrootte.** Teksten tussen aanhalingstekens (korte lyrics, aanwijzingen) krijgen de grootte uit
+`tekstgrootte:` (kop van het nummer, anders `instellingen.txt`). Per regel kun je dat overrulen:
+
+```
+tekstgrootte: klein                      in de kop: alle teksten in dit nummer klein
+
+[Intro] 8 tacet "We're going down..." groot    deze tekst groot
+[Couplet]
+  8 rock "Like a tide..." grootte=7      7 punten
+  8 rock "1. I know a place..." normaal  normale grootte
+```
 
 Patroonnamen die ook een optie zijn (zoals `p`, `f`, `fill`, `coda`) kun je beter vermijden.
 
@@ -1027,6 +1042,8 @@ musescore: /Applications/MuseScore 4.app/Contents/MacOS/mscore   # alleen nodig 
 regelafstand: 12                       # ruimte tussen de regels op het blad
 stemmen: 1                             # 1 = alles stok omhoog in één stem, 2 = voeten apart omlaag
 herhaalteller: binnen                  # 'N×' bij een %-maat: binnen (in de balk) of boven (boven de maat)
+tekstgrootte: klein                    # teksten bij de maten: klein, normaal, groot of punten (bv. 9)
+stijlgrootte: normaal                  # de stijl/notitie-regel bovenaan
 ```
 
 MuseScore wordt gezocht in (op volgorde): `musescore:` in de instellingen, de omgevingsvariabele
@@ -1065,7 +1082,7 @@ Fouten noemen bestand, regelnummer en vaak een suggestie:
 ```
 # ---------- kop ----------
 titel: …   artiest: …   tempo: 92 (of 4.=60, 8=200)   maat: 4/4, 6/8, 7/8 (2+2+3)
-stemmen: 1|2   stijl: …   notitie: …   aftellen: 1   swing: ja   layout: doorlopend   maten-per-regel: 4
+stemmen: 1|2   tekstgrootte: klein|groot|9   stijl: …   notitie: …   aftellen: 1   swing: ja   layout: doorlopend   maten-per-regel: 4
 herhaaltekens: nee   duur: 4:32   pdf: pad.pdf   door: naam
 
 # ---------- patronen ----------
@@ -1090,7 +1107,7 @@ CB TAMB TRI SHK CLV WB WBL AGH AGL CGH CGL BGH BGL TBH TBL | CK SL | ST
                                 8 a mf           8 crash  (zelfde groove, met crash)
                                 8 b fill x       1 {SD: *16; BD: 1}  (inline)
 opties: crash  crash=CR2  china  splash  fill x  fill x,y  ppp…fff sfz fp  cresc dim
-        "tekst"  tempo=120  rit rall accel a-tempo  fermata  maat=7/8  uitgeschreven
+        "tekst"  klein groot grootte=7  tempo=120  rit rall accel a-tempo  fermata  maat=7/8  uitgeschreven
         herhaal 2  volta 1  volta 2  segno coda fine naar-coda ds ds-al-coda dc dc-al-fine
         nieuweregel nieuwepagina doorlopen einde
 rust: tacet  -  rust          slashes: tijd  vrij  time  /

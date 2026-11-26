@@ -45,6 +45,8 @@ HEADER_KEYS = {
     "herhaaltekens": "compress", "compress": "compress", "procent": "compress",
     "swing": "swing", "shuffle": "swing",
     "herhaalteller": "count_pos", "teller": "count_pos",
+    "tekstgrootte": "text_size", "tekst-grootte": "text_size", "textsize": "text_size",
+    "stijlgrootte": "feel_size", "stijl-grootte": "feel_size",
     "stemmen": "voices", "voices": "voices", "stem": "voices",
     "componist": "composer", "composer": "composer", "jaar": "year", "year": "year",
     "album": "album",
@@ -87,7 +89,10 @@ VALUE_OPTS = {
     "tempo": "tempo", "bpm": "tempo", "maat": "meter", "meter": "meter",
     "herhaal": "repeat", "repeat": "repeat", "volta": "volta", "dyn": "dyn",
     "tekst": "text", "text": "text",
+    "grootte": "text_size", "tekstgrootte": "text_size", "size": "text_size",
 }
+TEXT_SIZES = {"klein": "klein", "heelklein": "heelklein", "groot": "groot", "heelgroot": "heelgroot",
+              "normaal": "normaal"}
 
 
 def tokenize(s):
@@ -333,7 +338,7 @@ class Parser:
         if "=" in w:
             return True
         return (lw in DYNAMICS or lw in CRESC or lw in DIM or lw in MARKS or lw in TEMPO_TEXT
-                or lw in FLAGS or lw in VALUE_OPTS or lw in CRASHES)
+                or lw in FLAGS or lw in VALUE_OPTS or lw in CRASHES or lw in TEXT_SIZES)
 
     def options(self, target, toks, ln, section_level=False):
         i = 0
@@ -375,6 +380,8 @@ class Parser:
                 target.setdefault("marks", []).append(MARKS[lw])
             elif lw in TEMPO_TEXT:
                 target["tempo_text"] = TEMPO_TEXT[lw]
+            elif lw in TEXT_SIZES:
+                target["text_size"] = TEXT_SIZES[lw]
             elif lw in CRASHES:
                 target["crash"] = CRASHES[lw]
             elif lw in FLAGS and FLAGS[lw]:
@@ -385,7 +392,7 @@ class Parser:
             else:
                 import difflib
                 known = sorted(set(DYNAMICS) | CRESC | DIM | set(MARKS) | set(TEMPO_TEXT) | set(FLAGS)
-                               | set(VALUE_OPTS) | set(CRASHES))
+                               | set(VALUE_OPTS) | set(CRASHES) | set(TEXT_SIZES))
                 close = difflib.get_close_matches(lw, known, n=2)
                 hint = f" Bedoel je: {', '.join(close)}?" if close else ""
                 if self.book.get(w):
@@ -423,6 +430,8 @@ class Parser:
             target["dyn"] = val
         elif key == "text":
             target["text"] = val
+        elif key == "text_size":
+            target["text_size"] = val
         else:
             raise self.err(f"optie '{key}' onbekend", ln)
 
