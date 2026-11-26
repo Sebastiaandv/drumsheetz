@@ -220,6 +220,7 @@ Bovenaan, als `sleutel: waarde`. Alleen `titel` is eigenlijk nodig.
 | `aftellen` | Aantal maten aftellen met stokken (staat op het blad én in de MIDI) | `aftellen: 1` |
 | `stemmen` | `1` = alles (ook bassdrum en hi-hat-voet) in één stem met de stokken omhoog, zonder losse rusten; `2` = handen omhoog, voeten omlaag (de oude opmaak). Standaard uit `instellingen.txt` | `stemmen: 2` |
 | `herhaalteller` | Waar de `N×` bij een %-maat staat: `binnen` (in de balk, vóór het %-teken, met wit vlakje; standaard) of `boven` (boven de maat, zoals vroeger) | `herhaalteller: boven` |
+| `vorken` / `dynamiek` | Vorken (met hun letters) en losse dynamiektekens `onder` of `boven` de balk; standaard vorken onder, losse letters boven | `vorken: boven` |
 | `accenten` | Waar accenten (`>`, `^`) en open/dicht-tekens staan: `boven` (boven de noten, standaard), `onder`, of `auto` (MuseScore kiest, meestal bij de nootkop) | `accenten: auto` |
 | `tekstgrootte` | Grootte van de cursieve teksten bij de maten (lyrics, aanwijzingen): `klein` (8), `normaal` (10), `groot` (12), `heelklein`, `heelgroot` of een getal in punten. Standaard uit `instellingen.txt` | `tekstgrootte: 9` |
 | `stijlgrootte` | Hetzelfde voor de `stijl`- en `notitie`-regel bovenaan | `stijlgrootte: klein` |
@@ -562,6 +563,7 @@ Alle **opties**, op een regel of achter de sectienaam:
 | `fill a,b` | fills in de laatste twee maten |
 | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` `sfz` `sf` `fp` `sfp` `rfz` | dynamiek |
 | `cresc` (of `<`) / `dim` (of `>`, `decresc`) | vork over deze regel |
+| `p<f`, `f>p`, `cresc p-f`, `dim=f-pp` | vork van de ene naar de andere letter |
 | `"tekst"` | cursieve tekst boven de eerste maat |
 | `klein`, `normaal`, `groot`, `heelklein`, `heelgroot`, `grootte=7` | grootte van de tekst op deze regel (of sectie) |
 | `tempo=120`, `tempo 120`, `tempo=4.=60` | nieuw tempo (metronoomteken) |
@@ -625,6 +627,30 @@ Op het blad zie je dus: groove — % N× — fill. Precies zoals de oude sheets.
   4 halftime p cresc            vork over deze 4 maten
   4 halftime f
 [Outro] 8 rock ff dim
+```
+
+**Van welke letter naar welke letter.** Geef begin en eind van de vork aan; de beginletter komt
+aan het begin, de eindletter op de eerste tel ná de vork:
+
+```
+  4 rock p<f                    crescendo van p naar f
+  4 rock f>p                    diminuendo van f naar p
+  4 rock cresc p-ff             zelfde, andere schrijfwijze
+  4 rock cresc=mp-f
+  4 rock dim ff-pp
+  4 rock mp cresc -f            alleen de eindletter (begin = mp)
+```
+
+Heeft de regel ná de vork zelf een dynamiekteken, dan wint dat. Staat de vork aan het eind van het
+nummer, dan komt de eindletter aan het eind van de laatste maat. In de MIDI wordt het per maat
+geleidelijk harder of zachter.
+
+**Boven of onder de balk.** Vorken (en de letters die erbij horen) staan standaard **onder** de
+balk, losse dynamiektekens (`mf`) standaard boven. Aan te passen in `instellingen.txt` of in de kop:
+
+```
+vorken: onder        # of boven
+dynamiek: boven      # of onder (losse letters)
 ```
 
 Dynamiek telt ook mee in de MIDI (zachter/harder).
@@ -1068,6 +1094,8 @@ regelafstand: 12                       # ruimte tussen de regels op het blad
 stemmen: 1                             # 1 = alles stok omhoog in één stem, 2 = voeten apart omlaag
 herhaalteller: binnen                  # 'N×' bij een %-maat: binnen (in de balk) of boven (boven de maat)
 accenten: boven                        # accenten en open/dicht-tekens: boven, onder of auto
+vorken: onder                          # crescendo/diminuendo (met hun letters): onder of boven
+dynamiek: boven                        # losse dynamiektekens (mf, p, ...): boven of onder
 tekstgrootte: klein                    # teksten bij de maten: klein, normaal, groot of punten (bv. 9)
 stijlgrootte: normaal                  # de stijl/notitie-regel bovenaan
 ```
@@ -1132,7 +1160,7 @@ CB TAMB TRI SHK CLV WB WBL AGH AGL CGH CGL BGH BGL TBH TBL | CK SL | ST
 [Naam] 8 groove opties        [Naam]           [Naam] herhaal 2 / segno / coda / "tekst"
                                 8 a mf           8 crash  (zelfde groove, met crash)
                                 8 b fill x       1 {SD: *16; BD: 1}  (inline)
-opties: crash  crash=CR2  china  splash  fill x  fill x,y  ppp…fff sfz fp  cresc dim
+opties: crash  crash=CR2  china  splash  fill x  fill x,y  ppp…fff sfz fp  cresc dim  p<f  f>p  cresc p-f
         "tekst"  klein groot grootte=7  tempo=120  rit rall accel a-tempo  fermata  maat=7/8  uitgeschreven
         herhaal 2  volta 1  volta 2  segno coda fine naar-coda ds ds-al-coda dc dc-al-fine
         nieuweregel nieuwepagina doorlopen einde

@@ -99,7 +99,7 @@ KEYS_OUT = [("title", "titel"), ("artist", "artiest"), ("subtitle", "ondertitel"
             ("key", "toonsoort"), ("duration", "duur"), ("status", "status"), ("tags", "tags"),
             ("source", "bron"), ("audio", "audio"), ("pdf", "pdf"), ("countin", "aftellen"),
             ("layout", "layout"), ("voices", "stemmen"), ("text_size", "tekstgrootte"),
-            ("feel_size", "stijlgrootte"), ("count_pos", "herhaalteller"), ("accent_pos", "accenten"), ("bars_per_line", "maten-per-regel"), ("swing", "swing"),
+            ("feel_size", "stijlgrootte"), ("count_pos", "herhaalteller"), ("accent_pos", "accenten"), ("wedge_pos", "vorken"), ("dyn_pos", "dynamiek"), ("bars_per_line", "maten-per-regel"), ("swing", "swing"),
             ("composer", "componist"), ("year", "jaar"), ("album", "album")]
 MARK_OUT = {"segno": "segno", "coda": "coda", "fine": "fine", "tocoda": "naar-coda", "ds": "ds",
             "dsalcoda": "ds-al-coda", "dsalfine": "ds-al-fine", "dc": "dc", "dcalcoda": "dc-al-coda",
@@ -117,7 +117,9 @@ def _opts(ph, section=False):
         o.append("fill " + (",".join(f) if isinstance(f, (list, tuple)) else f))
     if ph.get("dyn"):
         o.append(ph["dyn"])
-    if ph.get("wedge"):
+    if ph.get("wedge") and ph.get("dyn_end"):
+        o.append(f"{'cresc' if ph['wedge'].startswith('cresc') else 'dim'} -{ph['dyn_end']}")
+    elif ph.get("wedge"):
         o.append("cresc" if ph["wedge"].startswith("cresc") else "dim")
     if ph.get("tempo"):
         o.append(f"tempo={ph['tempo']}")

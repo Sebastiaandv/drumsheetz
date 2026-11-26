@@ -125,6 +125,16 @@ class Writer:
             extra += f' font-size="{size}"'
         return self.direction(f'<words font-style="italic"{extra}>{esc(text)}</words>')
 
+    def place(self, key, default):
+        v = str(self.song.get(key) or self.cfg.get(key) or default).lower()
+        return "below" if v in ("onder", "below") else "above"
+
+    def dyn_dir(self, item):
+        """Dynamiekteken. Letters die bij een vork horen staan aan dezelfde kant als de vork."""
+        hairpin = len(item) > 2 and item[2] == "hairpin"
+        pl = self.place("wedge_pos", "onder") if hairpin else self.place("dyn_pos", "boven")
+        return self.direction(f"<dynamics><{esc(item[1])}/></dynamics>", pl)
+
     def size_of(self, value, key):
         """Tekstgrootte in punten: getal, of klein/normaal/groot; anders uit nummer/instellingen."""
         v = value or self.song.get(key) or self.cfg.get(key)
@@ -172,9 +182,9 @@ class Writer:
                 size = self.size_of(item[2], "text_size") if len(item) > 2 else None
                 out.append(self.words(item[1], size=size))
             elif k == "dyn":
-                out.append(self.direction(f"<dynamics><{esc(item[1])}/></dynamics>"))
+                out.append(self.dyn_dir(item))
             elif k == "wedge":
-                out.append(self.direction(f'<wedge type="{item[1]}"/>'))
+                out.append(self.direction(f'<wedge type="{item[1]}"/>', self.place("wedge_pos", "onder")))
             elif k == "segno":
                 out.append(self.direction("<segno/>", sound='<sound segno="segno"/>'))
             elif k == "coda":
@@ -185,7 +195,9 @@ class Writer:
         out = []
         for item in m.end:
             if item[0] == "wedge":
-                out.append(self.direction('<wedge type="stop"/>'))
+                out.append(self.direction('<wedge type="stop"/>', self.place("wedge_pos", "onder")))
+            elif item[0] == "dyn":
+                out.append(self.dyn_dir(item))
             elif item[0] == "jump":
                 txt = JUMPS.get(item[1], item[1])
                 if item[1] == "tocoda":

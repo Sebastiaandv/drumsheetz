@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction as Fr
 
 from .kit import KIT
+from .midi import DYN_VEL
 from .patterns import REST_NAMES, SLASH_NAMES, Bar, Hit, rest_bar
 from .rows import NotationError, parse_meter
 
@@ -134,6 +135,7 @@ class Arranger:
         self.bar_no = 1
         self.pending_offset = 0
         self.dyn = "mf"
+        self.pending_dyn = None      # eindletter van een vork: komt op de eerste tel na de vork
 
     def err(self, msg, obj):
         return NotationError(msg, obj.get("_line") if isinstance(obj, dict) else None,
@@ -311,12 +313,20 @@ class Arranger:
                         st.append((mk,))
                 if ph.get("text"):
                     st.append(("words", ph["text"], ph.get("text_size") or sec.get("text_size")))
+                if self.pending_dyn and not ph.get("dyn"):
+                    st.append(("dyn", self.pending_dyn, "hairpin"))
+                    self.dyn = self.pending_dyn
+                self.pending_dyn = None
+                start_vel = DYN_VEL.get(self.dyn, 85) if isinstance(self.dyn, str) else self.dyn
                 if ph.get("dyn"):
-                    st.append(("dyn", ph["dyn"]))
+                    st.append(("dyn", ph["dyn"], "hairpin" if ph.get("wedge") else ""))
                     self.dyn = ph["dyn"]
+                    start_vel = DYN_VEL.get(self.dyn, 85)
                 if ph.get("wedge"):
                     st.append(("wedge", ph["wedge"]))
                     ms[-1].end.append(("wedge", "stop"))
+                    if ph.get("dyn_end"):
+                        self.pending_dyn = ph["dyn_end"]
                 if ph.get("newline") and pi > 0:
                     ms[0].new_system = True
                 if ph.get("newpage") and pi > 0:
@@ -333,7 +343,16 @@ class Arranger:
                 if volta:
                     ms[0].ending_start = tuple(volta)
                     ms[-1].ending_stop = tuple(volta)
-                pl = [Played(b, qpm(tempo), self.dyn, label) for b in bars]
+                if ph.get("wedge"):     # MIDI: geleidelijk harder/zachter over de vork
+                    up = ph["wedge"] == "crescendo"
+                    end_vel = DYN_VEL.get(ph.get("dyn_end"), start_vel + (18 if up else -18))
+                    nb = len(bars)
+                    pl = [Played(b, qpm(tempo), int(start_vel + (end_vel - start_vel) * k / max(1, nb - 1 if nb > 1 else 1)),
+                                 label) for k, b in enumerate(bars)]
+                    if not ph.get("dyn_end"):
+                        self.dyn = max(20, min(127, end_vel))
+                else:
+                    pl = [Played(b, qpm(tempo), self.dyn, label) for b in bars]
                 sec_played.append((ph, pl))
                 sec_ms += ms
                 first = False
@@ -348,6 +367,8 @@ class Arranger:
                 sec_ms[-1].barline = "light-heavy" if is_end and si < len(sections) - 1 else "light-light"
             self.measures += sec_ms
 
+        if self.pending_dyn and self.measures:
+            self.measures[-1].end.append(("dyn", self.pending_dyn, "hairpin"))
         if self.measures:
             last = self.measures[-1]
             if not last.right_repeat:

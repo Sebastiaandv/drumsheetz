@@ -46,6 +46,7 @@ HEADER_KEYS = {
     "swing": "swing", "shuffle": "swing",
     "herhaalteller": "count_pos", "teller": "count_pos",
     "accenten": "accent_pos", "accent": "accent_pos",
+    "vorken": "wedge_pos", "crescendo": "wedge_pos", "dynamiek": "dyn_pos",
     "tekstgrootte": "text_size", "tekst-grootte": "text_size", "textsize": "text_size",
     "stijlgrootte": "feel_size", "stijl-grootte": "feel_size",
     "stemmen": "voices", "voices": "voices", "stem": "voices",
@@ -336,7 +337,7 @@ class Parser:
 
     def is_option(self, w):
         lw = w.lower()
-        if "=" in w:
+        if "=" in w or re.fullmatch(r"[a-z]+[<>][a-z]+", lw):
             return True
         return (lw in DYNAMICS or lw in CRESC or lw in DIM or lw in MARKS or lw in TEMPO_TEXT
                 or lw in FLAGS or lw in VALUE_OPTS or lw in CRASHES or lw in TEXT_SIZES)
@@ -359,6 +360,15 @@ class Parser:
                 key = key.lower()
             elif lw.endswith(":"):
                 key = lw[:-1]
+            if key in ("cresc", "crescendo", "dim", "decresc", "diminuendo", "<", ">") and val:
+                target["wedge"] = "crescendo" if key in ("cresc", "crescendo", "<") else "diminuendo"
+                rng = re.fullmatch(r"([a-z]+)?\s*(?:-|\.\.|–|naar)\s*([a-z]+)", val.lower())
+                if not rng or rng.group(2) not in DYNAMICS or (rng.group(1) and rng.group(1) not in DYNAMICS):
+                    raise self.err(f"'{w}' niet begrepen: gebruik bv. cresc=p-f of dim=f-p", ln)
+                if rng.group(1):
+                    target["dyn"] = rng.group(1)
+                target["dyn_end"] = rng.group(2)
+                continue
             if key is None and lw in VALUE_OPTS and lw not in ("crash",):
                 key = lw
             if key is not None:
@@ -371,12 +381,21 @@ class Parser:
                         i += 1
                 self.set_value(target, key, val, ln)
                 continue
-            if lw in DYNAMICS:
+            m = re.fullmatch(r"([a-z]+)\s*([<>])\s*([a-z]+)", lw)
+            if m and m.group(1) in DYNAMICS and m.group(3) in DYNAMICS:     # p<f  of  f>p
+                target["dyn"], target["dyn_end"] = m.group(1), m.group(3)
+                target["wedge"] = "crescendo" if m.group(2) == "<" else "diminuendo"
+            elif lw in DYNAMICS:
                 target["dyn"] = lw
-            elif lw in CRESC:
-                target["wedge"] = "crescendo"
-            elif lw in DIM:
-                target["wedge"] = "diminuendo"
+            elif lw in CRESC or lw in DIM:
+                target["wedge"] = "crescendo" if lw in CRESC else "diminuendo"
+                if i < len(toks) and toks[i][0] == "word":                 # cresc p-f  /  dim f-p
+                    rng = re.fullmatch(r"([a-z]+)?\s*(?:-|\.\.|–|naar)\s*([a-z]+)", toks[i][1].lower())
+                    if rng and rng.group(2) in DYNAMICS and (rng.group(1) or "p") in DYNAMICS:
+                        if rng.group(1):
+                            target["dyn"] = rng.group(1)
+                        target["dyn_end"] = rng.group(2)
+                        i += 1
             elif lw in MARKS:
                 target.setdefault("marks", []).append(MARKS[lw])
             elif lw in TEMPO_TEXT:

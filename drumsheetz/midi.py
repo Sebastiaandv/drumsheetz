@@ -59,7 +59,7 @@ def build_midi(score, tempo_pct=100, countin=0, click=False):
             dd = {1: 0, 2: 1, 4: 2, 8: 3, 16: 4, 32: 5}[m.den]
             events.append((tick0, 0, bytes([0xFF, 0x58, 0x04, m.num, dd, 24, 8])))
             last_meter = m
-        base = DYN_VEL.get(p.dyn, 85)
+        base = p.dyn if isinstance(p.dyn, int) else DYN_VEL.get(p.dyn, 85)
         beats = m.beats()
         hits = sorted(p.bar.hits, key=lambda h: h.pos)
         hand_onsets = sorted({h.pos for h in hits if not h.is_foot})

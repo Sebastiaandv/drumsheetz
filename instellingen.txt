@@ -9,3 +9,7 @@ herhaalteller: binnen
 tekstgrootte: klein
 # Accenten (> en ^) en open/dicht-tekens: boven (boven de noten), onder, of auto (MuseScore kiest).
 accenten: boven
+# Crescendo/diminuendo-vorken (met hun begin- en eindletter): onder of boven de balk.
+vorken: onder
+# Losse dynamiektekens (mf, p, ...): boven of onder de balk.
+dynamiek: boven

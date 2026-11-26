@@ -28,6 +28,7 @@ CONFIG_KEYS = {"naam": "name", "name": "name", "ondertitel": "subtitle", "subtit
                "pdf-viewer": "viewer", "stemmen": "voices", "voices": "voices",
                "herhaalteller": "count_pos", "teller": "count_pos",
                "accenten": "accent_pos", "accent": "accent_pos",
+               "vorken": "wedge_pos", "crescendo": "wedge_pos", "dynamiek": "dyn_pos",
                "tekstgrootte": "text_size", "stijlgrootte": "feel_size"}
 
 
