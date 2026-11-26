@@ -114,13 +114,40 @@ def write_pdf(src, dst, song):
     return True
 
 
-def build_4sc(name, pdf_bytes, meta):
-    """Experimenteel: forScore-container (gzip + binaire plist). Sleutels: '<naam>.pdf|<veld>'."""
+LIST_FIELDS = ("composer", "labels", "genre", "keywords")
+
+
+def build_4sc(name, pdf_bytes, meta, style="text"):
+    """forScore-container (gzip + binaire plist): de PDF onder 'pdfData', gegevens onder '<naam>.pdf|<veld>'.
+    style 'list': namen-velden (componist, labels, genre, trefwoorden) als lijst i.p.v. tekst."""
     plist = {"pdfData": pdf_bytes}
     for k, v in meta.items():
-        if v not in (None, ""):
-            plist[f"{name}|{k}"] = v
+        if v in (None, ""):
+            continue
+        if style == "list" and k in LIST_FIELDS:
+            v = split_list(v)
+        plist[f"{name}|{k}"] = v
     return gzip.compress(plistlib.dumps(plist, fmt=plistlib.FMT_BINARY))
+
+
+def caps(project):
+    """Wat de zelftest heeft vastgesteld (uitvoer/.forscore-caps.json)."""
+    try:
+        return json.loads(project.out(".forscore-caps.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def use_4sc(project):
+    """(gebruik .4sc?, stijl) volgens 'forscore-formaat' (pdf | 4sc | auto) en de zelftest."""
+    fmt = str(project.config.get("forscore_format", "auto") or "auto").lower()
+    c = caps(project)
+    style = c.get("style", "text")
+    if fmt == "4sc":
+        return True, style
+    if fmt == "pdf":
+        return False, style
+    return bool(c.get("4sc") and any(v for k, v in c.get("fields", {}).items() if k != "title")), style
 
 
 def build_4ss(title, items):
@@ -257,7 +284,7 @@ def send(project, items, force=False, open_app=True, log=print, force_meta=False
     out.mkdir(parents=True, exist_ok=True)
     state = State(project)
     lib = lib or library()
-    fmt = str(project.config.get("forscore_format", "pdf")).lower()
+    four, style = use_4sc(project)
     todo, present = [], []
     for it in items:
         song, pdf = it[0], it[1]
@@ -271,9 +298,9 @@ def send(project, items, force=False, open_app=True, log=print, force_meta=False
             present.append(name)
             continue
         new = st == "niet"
-        if fmt == "4sc" and (new or force_meta):
+        if four and (new or force_meta):
             dst = out / (name[:-4] + ".4sc")
-            dst.write_bytes(build_4sc(name, pdf.read_bytes(), metadata(song, score)))
+            dst.write_bytes(build_4sc(name, pdf.read_bytes(), metadata(song, score), style))
         else:
             dst = out / name
             write_pdf(pdf, dst, song)
@@ -518,21 +545,41 @@ def selftest(project, log=print):
     else:
         rec = lib2.get(a.name)
         say(f"   ✓ verschenen als '{rec['file']}', titel '{rec['title']}'")
-    say("\n2. .4sc met gegevens (experimenteel)")
-    b_name = "Drumsheetz zelftest - 4SC.pdf"
-    b = out / (b_name[:-4] + ".4sc")
-    b.write_bytes(build_4sc(b_name, pdf.read_bytes(), {"title": "Drumsheetz zelftest 4SC", "composer": "Zelftest",
-                                                       "labels": "Drumsheetz test", "keywords": "drumsheetz-test",
-                                                       "genre": "Test", "bpm": 100, "rating": 3}))
-    open_files([b], say)
-    lib3, missing = wait_for([b_name], log=say)
+    say("\n2. .4sc met gegevens: welke manier neemt forScore over?")
+    stamp = time.strftime("%H%M")
+    meta = {"composer": "Zelftest Componist", "labels": "Drumsheetz test", "genre": "Testgenre",
+            "keywords": "drumsheetz-test", "bpm": 100, "rating": 3}
+    results = {}
+    files = {}
+    for style in ("text", "list"):
+        nm = f"Drumsheetz zelftest {stamp} - {style}.pdf"
+        f4 = out / (nm[:-4] + ".4sc")
+        f4.write_bytes(build_4sc(nm, pdf.read_bytes(), dict(meta, title=f"Zelftest {style}"), style))
+        files[style] = (nm, f4)
+    open_files([f for _, f in files.values()], say)
+    lib3, missing = wait_for([n for n, _ in files.values()], log=say)
     if missing is None:
         say("   (niet te controleren)")
-    elif missing:
-        say("   ✗ .4sc niet verschenen: dit formaat wordt niet geaccepteerd (PDF blijft de standaard)")
+    for style, (nm, _) in files.items():
+        rec = lib3.get(nm) if lib3 is not None and lib3.ok else None
+        if rec is None:
+            say(f"   ✗ {style}: niet verschenen")
+            continue
+        got = {"title": rec["title"] == f"Zelftest {style}", "composer": "Zelftest Componist" in rec.get("composers", ()),
+               "labels": "Drumsheetz test" in rec["labels"], "genre": "Testgenre" in rec.get("genres", ()),
+               "keywords": "drumsheetz-test" in rec.get("keywords", ())}
+        results[style] = got
+        say(f"   {style}: " + ", ".join(f"{k} {'✓' if v else '✗'}" for k, v in got.items()))
+    if results:
+        best = max(results, key=lambda s_: sum(results[s_].values()))
+        found = {"4sc": True, "style": best, "fields": results[best], "tested": int(time.time())}
+        project.out(".forscore-caps.json").write_text(json.dumps(found, indent=1), encoding="utf-8")
+        say(f"   → onthouden: .4sc met '{best}'-velden ({', '.join(k for k, v in results[best].items() if v)})")
     else:
-        rec = lib3.get(b_name)
-        say(f"   ✓ verschenen als '{rec['file']}', titel '{rec['title']}', labels {sorted(rec['labels'])}")
+        project.out(".forscore-caps.json").write_text(json.dumps({"4sc": False, "tested": int(time.time())}),
+                                                       encoding="utf-8")
+        say("   → onthouden: geen .4sc, alleen PDF")
+
     say("\n3. setlist (Open Setlist .4ss)")
     s = out / "Drumsheetz zelftest.4ss"
     s.write_text(build_4ss("Drumsheetz zelftest", [("Pauze", None), ("Drumsheetz zelftest", a.name)]),

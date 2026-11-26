@@ -1020,7 +1020,7 @@ Je maakt de nummers op de Mac; Drumsheetz zet ze in **forScore voor Mac**, en de
 | **Controle** | Na het versturen kijkt Drumsheetz in de forScore-bibliotheek op je Mac of het stuk er écht in staat. Alleen dan geldt het als "in forScore". Lukt het lezen niet, dan zie je dat bovenin het forScore-tabblad en wordt het bijgehouden op basis van wat er verstuurd is. |
 | **Setlists** | Eerst gaan de stukken die er nog niet (actueel) in staan, dan de setlist in het officiële **Open Setlist**-formaat. Een stuk dat (nog) niet in forScore staat, komt als plaatshouder in de setlist, net als pauzes en set-koppen. Daarna wordt gecontroleerd of de setlist er staat. |
 | **Mappen** | Een map in Drumsheetz is een **label** in forScore. **↻ Labels** haalt de labels uit forScore op en zet ze als mappen in je nummers. |
-| **Extra gegevens** (genre, waardering, …) | Gaan alleen mee met het experimentele `.4sc`-formaat: zet `forscore-formaat: 4sc` in `instellingen.txt` **als de zelftest laat zien dat het werkt**. |
+| **Gegevens** (titel, componist, labels/mappen, genre, …) | Nieuwe stukken gaan als `.4sc` (PDF + gegevens in één), **zodra de zelftest heeft vastgesteld** dat forScore die gegevens overneemt; de zelftest onthoudt ook welke schrijfwijze werkt. Daarvóór gaan ze als PDF. Forceren kan met `forscore-formaat: pdf` of `forscore-formaat: 4sc` in `instellingen.txt` (standaard `auto`). |
 
 ### Opdrachten
 

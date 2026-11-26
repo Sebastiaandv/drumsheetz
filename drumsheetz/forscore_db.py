@@ -182,9 +182,9 @@ def _pkset(con, t, pk):
 
 def _read_forscore_schema(con, tables, lib):
     """De echte opbouw van forScore (library.4sl, Core Data):
-         ZITEM          stukken (ZPATH = bestandsnaam, ZTITLE), ook bladwijzers/plaatshouders
-         ZMETA          componisten, genres, trefwoorden en labels (ZVALUE), soort via Z_ENT
-         Z_4LABELS      koppeling stuk ↔ label (Z_4ITEMS2 ↔ Z_14LABELS), idem Z_4COMPOSERS, ...
+         ZITEM          stukken (ZPATH = bestandsnaam, ZTITLE), ook bladwijzers (ZSCORE = stuk) en plaatshouders
+         ZMETA          componisten, genres, trefwoorden en labels (tekst), soort via Z_ENT
+         Z_4LABELS      koppeling stuk ↔ label, idem Z_4COMPOSERS, Z_4GENRES, Z_4KEYWORDS
          ZSETLIST       setlists (ZTITLE); ZCYLON = setlist-regels (ZITEM, ZSETLIST, volgorde Z_FOK_SETLIST)"""
     if not {"ZITEM", "ZMETA", "ZSETLIST"} <= set(tables):
         return False
@@ -192,43 +192,55 @@ def _read_forscore_schema(con, tables, lib):
     if "Z_PRIMARYKEY" in tables:
         ents = {r["Z_ENT"]: str(r["Z_NAME"]) for r in con.execute("select Z_ENT, Z_NAME from Z_PRIMARYKEY")}
     icols = [c for c, _ in tables["ZITEM"]]
-    has_score_ref = "ZSCORE" in icols
-    q = "select Z_PK, Z_ENT, ZPATH, ZTITLE" + (", ZSCORE" if has_score_ref else "") + \
-        (", ZPLACEHOLDER" if "ZPLACEHOLDER" in icols else "") + " from ZITEM"
-    by_pk = {}
-    for r in con.execute(q):
+    sel = ["Z_PK", "Z_ENT", "ZPATH", "ZTITLE"] + [c for c in ("ZSCORE", "ZPLACEHOLDER") if c in icols]
+    allitems = {r["Z_PK"]: dict(r) for r in con.execute("select " + ", ".join(sel) + " from ZITEM")}
+    by_pk, owner = {}, {}
+    for pk, r in allitems.items():
         ent = ents.get(r["Z_ENT"], "").lower()
-        path = r["ZPATH"]
+        path = r.get("ZPATH")
+        if ent in ("bookmark", "placeholder") or r.get("ZSCORE") or r.get("ZPLACEHOLDER"):
+            continue
         if not path or not str(path).lower().endswith(".pdf"):
             continue
-        if ent in ("bookmark", "placeholder") or (has_score_ref and r["ZSCORE"]):
-            continue                                   # bladwijzer of plaatshouder, geen eigen stuk
         fname = pathlib.Path(str(path)).name
-        rec = {"file": fname, "title": r["ZTITLE"] or fname[:-4], "labels": set(), "pk": r["Z_PK"],
-               "composers": set()}
+        rec = {"file": fname, "title": r["ZTITLE"] or fname[:-4], "pk": pk,
+               "labels": set(), "composers": set(), "genres": set(), "keywords": set()}
         lib.scores[fname.lower()] = rec
-        by_pk[r["Z_PK"]] = rec
-    mcols = [c for c, _ in tables["ZMETA"]]
-    vcol = "ZVALUE" if "ZVALUE" in mcols else next((c for c in mcols if c.startswith("ZVALUE")), None)
-    meta = {r["Z_PK"]: str(r["v"]) for r in con.execute(f'select Z_PK, "{vcol}" as v from ZMETA') if r["v"]} \
-        if vcol else {}
+        by_pk[pk] = rec
+    for pk, r in allitems.items():           # bladwijzers horen bij hun stuk
+        owner[pk] = by_pk.get(pk) or by_pk.get(r.get("ZSCORE"))
+    mcols = [c for c, t in tables["ZMETA"]]
+    textcols = [c for c in ("ZVALUE", "ZVALUE2", "ZVALUE3", "ZVALUE4", "ZLAST") if c in mcols]
+    meta = {}
+    if textcols:
+        for r in con.execute("select Z_PK, " + ", ".join(textcols) + " from ZMETA"):
+            v = next((r[c] for c in textcols if isinstance(r[c], str) and r[c].strip()), None)
+            if v:
+                meta[r["Z_PK"]] = v.strip()
 
     def join(kind, field):
         jt = next((t for t in tables if t.upper().startswith("Z_") and t.upper().endswith(kind)), None)
         if not jt:
             return None
-        cols = [c for c, _ in tables[jt]]
-        ci = next((c for c in cols if "ITEMS" in c.upper()), None)
-        cm = next((c for c in cols if c != ci), None)
-        if not (ci and cm):
+        cols = [c for c, _ in tables[jt]][:2]
+        if len(cols) < 2:
             return None
-        for r in con.execute(f'select "{ci}" as i, "{cm}" as m from "{jt}"'):
-            if r["i"] in by_pk and r["m"] in meta:
-                by_pk[r["i"]][field].add(meta[r["m"]])
-        return jt
+        rows = [tuple(r) for r in con.execute(f'select "{cols[0]}", "{cols[1]}" from "{jt}"')]
+        best, n_best = None, -1
+        for a, b in ((0, 1), (1, 0)):          # welke kolom is het stuk, welke de waarde?
+            n = sum(1 for r in rows if owner.get(r[a]) and r[b] in meta)
+            if n > n_best:
+                best, n_best = (a, b), n
+        a, b = best
+        for r in rows:
+            if owner.get(r[a]) and r[b] in meta:
+                owner[r[a]][field].add(meta[r[b]])
+        return f"{jt} ({n_best} van {len(rows)} gekoppeld)"
 
     jl = join("LABELS", "labels")
     join("COMPOSERS", "composers")
+    join("GENRES", "genres")
+    join("KEYWORDS", "keywords")
     lib.labels = {l for v in by_pk.values() for l in v["labels"]}
     titles = {r["Z_PK"]: str(r["ZTITLE"]) for r in con.execute("select Z_PK, ZTITLE from ZSETLIST") if r["ZTITLE"]}
     for t in titles.values():
@@ -236,18 +248,45 @@ def _read_forscore_schema(con, tables, lib):
     if "ZCYLON" in tables:
         ccols = [c for c, _ in tables["ZCYLON"]]
         order = "Z_FOK_SETLIST" if "Z_FOK_SETLIST" in ccols else "Z_PK"
-        allitems = {r["Z_PK"]: r for r in con.execute("select Z_PK, ZPATH, ZTITLE from ZITEM")}
         for r in con.execute(f'select ZITEM, ZSETLIST from ZCYLON order by ZSETLIST, "{order}"'):
             if r["ZSETLIST"] in titles:
                 it = allitems.get(r["ZITEM"])
-                if it is not None and it["ZPATH"]:
-                    lib.setlists[titles[r["ZSETLIST"]]].append(pathlib.Path(str(it["ZPATH"])).name)
-                elif it is not None:
-                    lib.setlists[titles[r["ZSETLIST"]]].append(f"[{it['ZTITLE'] or 'plaatshouder'}]")
+                if it is None:
+                    continue
+                path = it.get("ZPATH")
+                if path and str(path).lower().endswith(".pdf") and not it.get("ZPLACEHOLDER"):
+                    lib.setlists[titles[r["ZSETLIST"]]].append(pathlib.Path(str(path)).name)
+                else:
+                    lib.setlists[titles[r["ZSETLIST"]]].append(f"[{it.get('ZTITLE') or 'plaatshouder'}]")
     lib.ok = True
-    lib.notes.append(f"forScore-bibliotheek: {len(by_pk)} stukken (ZITEM), {len(lib.labels)} labels "
-                     f"({jl or 'geen koppeltabel'}), {len(titles)} setlists (ZSETLIST/ZCYLON)")
+    lib.notes.append(f"forScore-bibliotheek: {len(by_pk)} stukken, {len(lib.labels)} labels "
+                     f"(via {jl or 'geen koppeltabel'}), {len(titles)} setlists")
     return True
+
+
+def dump_samples(db, log):
+    """Voorbeeldregels uit de belangrijkste forScore-tabellen (om de koppeling precies te maken)."""
+    con = _connect(db)
+    try:
+        tables = _tables(con)
+        if "ZMETA" not in tables:
+            return
+        ents = {r["Z_ENT"]: str(r["Z_NAME"]) for r in con.execute("select Z_ENT, Z_NAME from Z_PRIMARYKEY")} \
+            if "Z_PRIMARYKEY" in tables else {}
+        log("  -- ZMETA (soort, waarden):")
+        mcols = [c for c, _ in tables["ZMETA"]]
+        for r in con.execute("select * from ZMETA limit 25"):
+            vals = {c: r[c] for c in mcols if c not in ("Z_PK", "Z_ENT", "Z_OPT") and r[c] is not None}
+            log(f"     {r['Z_PK']:>3} {ents.get(r['Z_ENT'], r['Z_ENT'])}: {vals}")
+        for t in [t for t in tables if t.upper().startswith("Z_4")]:
+            rows = [tuple(r) for r in con.execute(f'select * from "{t}" limit 15')]
+            if rows:
+                log(f"  -- {t}: {rows}")
+        log("  -- ZITEM (pk, soort, ZPATH, ZTITLE, ZSCORE):")
+        for r in con.execute("select Z_PK, Z_ENT, ZPATH, ZTITLE, ZSCORE from ZITEM limit 30"):
+            log(f"     {r['Z_PK']:>3} {ents.get(r['Z_ENT'], r['Z_ENT'])}: {r['ZPATH']} | {r['ZTITLE']} | {r['ZSCORE']}")
+    finally:
+        con.close()
 
 
 def read_library(db=None):
@@ -418,11 +457,19 @@ def investigate(log=print):
         except (OSError, sqlite3.Error) as e:
             log(f"  (niet te lezen: {e})")
     lib = read_library()
+    if lib.db is not None:
+        log("\n=== voorbeelden uit de forScore-bibliotheek")
+        try:
+            dump_samples(lib.db, log)
+        except sqlite3.Error as e:
+            log(f"  (mislukt: {e})")
     log("\n=== herkend")
     for n in lib.notes:
         log("  " + n)
     log(f"  {len(lib.scores)} stukken, {len(lib.labels)} labels, {len(lib.setlists)} setlists")
-    for v in list(lib.scores.values())[:8]:
-        log(f"   · {v['file']}  [{', '.join(sorted(v['labels']))}]")
+    for v in list(lib.scores.values())[:12]:
+        extra = "; ".join(f"{k}: {', '.join(sorted(v[k]))}" for k in ("composers", "genres", "keywords")
+                          if v.get(k))
+        log(f"   · {v['file']}  labels [{', '.join(sorted(v['labels']))}]" + (f"  ({extra})" if extra else ""))
     for t, items in list(lib.setlists.items())[:5]:
         log(f"   ☰ {t}: {len(items)} stukken")
