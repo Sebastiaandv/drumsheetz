@@ -95,12 +95,26 @@ COUNT_STYLE = ('<autoplace>0</autoplace><offset x="0.3" y="2.55"/><frameType>1</
                '<frameFgColor r="255" g="255" b="255" a="0"/><frameBgColor r="255" g="255" b="255" a="255"/>')
 
 
+# MuseScore 4 zet extra regels in een StaffText (bv. <eid>, <linkedMain/>, eigen stijl); die mogen er
+# tussen staan. De tekst zelf kan cursief zijn of niet, en × kan als entiteit geschreven zijn.
+COUNT_RE = re.compile(r"(<StaffText(?: [^>]*)?>)((?:(?!</StaffText>).)*?)"
+                      r"(<text>(?:<[^>]+>)*\s*\d+\s*(?:×|&#215;|&#xd7;|&times;|x)\s*(?:<[^>]+>)*</text>)", re.S | re.I)
+_REMOVE = re.compile(r"\s*<(autoplace|offset|frameType|frameWidth|framePadding|frameFgColor|frameBgColor|placement)"
+                     r"\b[^>]*?(?:/>|>[^<]*</\1>)")
+
+
+def _count_style(m):
+    middle = _REMOVE.sub("", m.group(2))
+    return m.group(1) + middle + COUNT_STYLE + m.group(3)
+
+
 def patch_mscx(path, offsets, min_system_distance="12"):
     """Zet <noOffset> ('tel op bij maatnummer') op de maat na elke herhaalmaat,
     en geef de regels wat meer ruimte zodat dynamiek bij de juiste balk hoort."""
     text = pathlib.Path(path).read_text(encoding="utf-8")
     counts = set(getattr(offsets, "counts", []) or [])
     idx = [-1]
+    placed = [0]
 
     def repl(m):
         body = m.group(0)
@@ -111,8 +125,8 @@ def patch_mscx(path, offsets, min_system_distance="12"):
         if off:
             body = body.replace(">", f">\n          <noOffset>{off}</noOffset>", 1)
         if idx[0] in counts:
-            body = re.sub(r"<StaffText>(\s*)(<text><i>\d+×</i></text>)",
-                          lambda t: "<StaffText>" + t.group(1) + COUNT_STYLE + t.group(1) + t.group(2), body, count=1)
+            body, n = COUNT_RE.subn(_count_style, body, count=1)
+            placed[0] += n
         return body
 
     try:
@@ -131,6 +145,7 @@ def patch_mscx(path, offsets, min_system_distance="12"):
         else:
             text = text.replace("<Score>", "<Score>\n    <Style>\n      " + tag + "\n      </Style>", 1)
     pathlib.Path(path).write_text(text, encoding="utf-8")
+    return placed[0], len(counts)
 
 
 def render(ms, items, cfg, log=print):
@@ -144,7 +159,13 @@ def render(ms, items, cfg, log=print):
         run_job(ms, jobs1)
         jobs2 = []
         for it in items:
-            patch_mscx(it["mscx"], it["offsets"], cfg.get("minSystemDistance", "12"))
+            placed, wanted = patch_mscx(it["mscx"], it["offsets"], cfg.get("minSystemDistance", "12"))
+            if placed < wanted:
+                log(f"  ! {it.get('id', '')}: {wanted - placed} van {wanted} herhaaltellers niet in de balk gezet "
+                    "(stuur uitvoer/debug/*.mscx mee als je dit meldt)")
+                dbg = pathlib.Path(it["pdf"]).parent.parent / "debug"
+                dbg.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(it["mscx"], dbg / f"{it.get('id', 'nummer')}.mscx")
             outs = [it["pdf"]] + ([it["mscz"]] if it.get("mscz") else [])
             for o in outs:
                 pathlib.Path(o).parent.mkdir(parents=True, exist_ok=True)
