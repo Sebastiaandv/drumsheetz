@@ -46,6 +46,7 @@ class Pattern:
     file: str = None
     doc: str = ""
     kind: str = "groove"     # groove of fill (alleen informatief)
+    row_lines: dict = field(default_factory=dict)   # rijnaam -> regelnummer in het bestand
 
 
 class PatternBook:
@@ -130,7 +131,8 @@ class PatternBook:
             try:
                 parsed[key] = parse_row(text, m, sticking)
             except NotationError as e:
-                raise NotationError(f"patroon '{name}', rij {key}: {e.msg}", pat.line, pat.file)
+                line = next((ln for k, ln in pat.row_lines.items() if self._rowkey(k) == key), pat.line)
+                raise NotationError(f"patroon '{name}', rij {key}: {e.msg}", line, pat.file)
         nb = max([nbars or 1] + [len(v) for v in parsed.values()])
         out = []
         for bi in range(nb):

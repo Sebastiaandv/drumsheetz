@@ -220,6 +220,7 @@ class Parser:
                             setattr(pat, opt, val)
                     else:
                         pat.rows[key] = val
+                        pat.row_lines[key] = i + 1
                     i += 1
                 if not pat.rows and not pat.base:
                     raise self.err(f"patroon '{pat.name}' heeft geen rijen", ln)

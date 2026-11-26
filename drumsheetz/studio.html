@@ -93,6 +93,7 @@ aside,section{min-height:0;min-width:0}
 .k-mod{color:var(--hl-mod);font-weight:700}.k-rest{color:var(--hl-rest)}.k-bar{color:var(--hl-sec)}
 .k-num{color:var(--hl-num)}.k-str{color:var(--hl-str)}.k-com{color:var(--hl-com);font-style:italic}
 .k-opt{color:var(--hl-opt)}
+.k-bad{color:var(--err);text-decoration:wavy underline var(--err)}
 /* ---------- onderpaneel ---------- */
 .hsplit{cursor:row-resize}
 .hsplit:hover{background:var(--line)}
@@ -338,6 +339,7 @@ function hlGrid(s){
     if(c==="g") return '<span class="k-ghost">g</span>';
     if("-._".includes(c)) return '<span class="k-rest">'+c+'</span>';
     if(c==="|") return '<span class="k-bar">|</span>';
+    if(!"fdrzthoc@bk+".includes(c)) return '<span class="k-bad" title="dit teken bestaat niet in een raster">'+esc(c)+'</span>';
     return '<span class="k-mod">'+esc(c)+'</span>';
   });
 }

@@ -146,7 +146,10 @@ def parse_grid_bar(text, length, sticking=False):
             if ch in REST_CHARS:
                 continue
             if not sticking and ch not in GRID_OK:
-                raise NotationError(f"onbekend teken '{ch}' in raster '{text}'")
+                if ch == ":":
+                    raise NotationError(f"':' werkt alleen bij tellen (bv. '1:f'). In een raster is elk teken één "
+                                        f"slag: zet de letter zelf op die plek, bv. 'f' in plaats van 'x:f' ('{text}')")
+                raise NotationError(f"onbekend teken '{ch}' in raster '{text}' (zie 'python3 drums.py instrumenten')")
             out.append((si * seglen + i * step, ch))
     return out
 
