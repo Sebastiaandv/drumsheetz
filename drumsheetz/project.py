@@ -80,17 +80,39 @@ class Project:
         return self._library
 
     # nummers ------------------------------------------------------------
-    def song_files(self):
+    def song_files(self, include_parked=False):
+        """Alle nummers in nummers/ (ook in submappen). Mappen die met '_' beginnen zijn 'geparkeerd':
+        die worden niet meegenomen bij 'alles maken', lijsten en forScore-overzichten."""
         if not self.songs_dir.exists():
             return []
         out = []
-        for p in sorted(self.songs_dir.rglob("*")):
+        for p in sorted(self.songs_dir.rglob("*"), key=lambda x: str(x).lower()):
+            rel = p.relative_to(self.songs_dir).parts
+            if any(part.startswith(".") for part in rel):
+                continue
+            if not include_parked and any(part.startswith("_") for part in rel[:-1]):
+                continue
             if p.suffix == ".drum" or (p.suffix == ".py" and p.stem not in ("common", "__init__")):
                 out.append(p)
         return out
 
     def song_id(self, path):
-        return pathlib.Path(path).stem
+        """Uniek id van een nummer: pad binnen nummers/ zonder extensie (bv. 'Hatikwa/The River').
+        Ook de uitvoer (PDF, MuseScore, MIDI) krijgt die mappenstructuur."""
+        p = pathlib.Path(path)
+        if not p.is_absolute():
+            p = (self.root / p)
+        try:
+            rel = p.resolve().relative_to(self.songs_dir.resolve())
+            return rel.with_suffix("").as_posix()
+        except ValueError:
+            return p.stem
+
+    def out_file(self, kind, path, ext, suffix=""):
+        """uitvoer/<kind>/<id><suffix>.<ext>, met tussenliggende mappen aangemaakt."""
+        f = self.out(kind, f"{self.song_id(path)}{suffix}.{ext}")
+        f.parent.mkdir(parents=True, exist_ok=True)
+        return f
 
     def load(self, path):
         path = pathlib.Path(path)
@@ -103,19 +125,22 @@ class Project:
             song, book, warns = parse_text(path.read_text(encoding="utf-8"), rel, self.library())
         song["_file"] = rel
         song["_path"] = str(path)
-        song["_id"] = path.stem
+        song["_id"] = self.song_id(path)
         return song, book, warns
 
     def find(self, ref, files=None):
         """Zoek een nummer: bestandsnaam, id, titel of een stuk daarvan."""
-        files = files if files is not None else self.song_files()
+        files = files if files is not None else self.song_files(include_parked=True)
         p = pathlib.Path(ref)
         if p.suffix in (".drum", ".py") and (self.root / p).exists():
             return self.root / p
         if p.suffix in (".drum", ".py") and p.exists():
             return p.resolve()
         key = simplify(ref)
+        if (self.root / ref).is_file() and (self.root / ref).suffix in (".drum", ".py"):
+            return self.root / ref
         ids = {simplify(f.stem): f for f in files}
+        ids.update({simplify(self.song_id(f)): f for f in files})
         if key in ids:
             return ids[key]
         titles = {}

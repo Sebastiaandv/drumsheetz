@@ -119,19 +119,18 @@ class Studio:
                 if p.name.startswith(".") or p.name == "__pycache__":
                     continue
                 if p.is_dir():
-                    kids = walk(p, exts)
-                    if kids:
-                        out.append({"name": p.name, "path": self.rel(p), "dir": True, "children": kids})
+                    out.append({"name": p.name, "path": self.rel(p), "dir": True, "children": walk(p, exts),
+                                "parked": p.name.startswith("_")})
                 elif p.suffix in exts:
                     out.append({"name": p.name, "path": self.rel(p), "dir": False})
             return out
 
         nodes = [
-            {"name": "nummers", "path": "nummers", "dir": True, "open": True,
+            {"name": "nummers", "path": "nummers", "dir": True, "open": True, "root": True,
              "children": walk(self.root / "nummers", {".drum", ".py"})},
-            {"name": "setlists", "path": "setlists", "dir": True, "open": True,
+            {"name": "setlists", "path": "setlists", "dir": True, "open": True, "root": True,
              "children": walk(self.root / "setlists", {".txt"})},
-            {"name": "voorbeelden", "path": "voorbeelden", "dir": True,
+            {"name": "voorbeelden", "path": "voorbeelden", "dir": True, "root": True,
              "children": walk(self.root / "voorbeelden", {".drum", ".py"})},
         ]
         for f in ("bibliotheek.drum", "instellingen.txt", "HANDLEIDING.md"):
@@ -180,7 +179,7 @@ class Studio:
                 else:
                     from .parser import parse_text
                     song, book, warns = parse_text(content, rel, project.library())
-                    song["_file"], song["_id"] = rel, pathlib.Path(rel).stem
+                    song["_file"], song["_id"] = rel, project.song_id(rel)
                 score = arrange(song, book)
                 to_musicxml(score, project.config)
                 lines = []
@@ -195,8 +194,8 @@ class Studio:
                             pass
                 out["info"] = (f"{score.meter} · tempo {score.tempo[0]} · {score.total_bars} maten · "
                                f"± {fmt_duration(score.seconds())}")
-                out["id"] = pathlib.Path(rel).stem
-                out["pdf"] = (self.root / "uitvoer" / "pdf" / f"{out['id']}.pdf").exists()
+                out["id"] = project.song_id(rel)
+                out["pdf"] = project.out("pdf", f"{out['id']}.pdf").exists()
             elif kind == "library":
                 from .library import builtin_book
                 from .parser import Parser
@@ -363,18 +362,138 @@ class Studio:
         return {"musescore": ms or "", "root": str(self.root), "name": p.config.get("name", "")}
 
     def new_song(self, data):
+        from .project import safe_filename
         title = (data.get("title") or "").strip()
         if not title:
             raise ValueError("geef een titel op")
         argv = ["nieuw", title, data.get("artist") or ""]
+        folder = (data.get("folder") or "").strip().strip("/")
+        if folder.startswith("nummers"):
+            folder = folder[len("nummers"):].strip("/")
+        if folder:
+            argv += ["--map", folder]
         if data.get("meter"):
             argv += ["--maat", data["meter"]]
         if data.get("tempo"):
             argv += ["--tempo", str(data["tempo"])]
         res = self.run_cli(argv)
-        sid = simplify(title)[:24] or "nummer"
-        res["path"] = f"nummers/{sid}.drum"
+        name = safe_filename(title).strip(". ") or "nummer"
+        res["path"] = "/".join(x for x in ("nummers", folder, f"{name}.drum") if x)
         return res
+
+    # ------------------------------------------------------------ bestanden beheren
+    MANAGED = ("nummers", "setlists", "voorbeelden")
+
+    def _check_managed(self, rel):
+        parts = pathlib.PurePosixPath(rel).parts
+        if not parts or parts[0] not in self.MANAGED:
+            raise ValueError("alleen bestanden in nummers/, setlists/ en voorbeelden/ kunnen zo worden beheerd")
+        for part in parts:
+            if part in ("", ".", "..") or part.startswith(".") or any(c in part for c in '\\:*?"<>|'):
+                raise ValueError(f"ongeldige naam '{part}' (niet met een punt beginnen, geen / \\ : * ? \" < > |)")
+        return self.safe(rel)
+
+    def mkdir(self, data):
+        p = self._check_managed(data["path"])
+        if p.exists():
+            raise ValueError("die map bestaat al")
+        p.mkdir(parents=True)
+        return {"ok": True, "path": self.rel(p)}
+
+    def rmdir(self, data):
+        p = self._check_managed(data["path"])
+        if not p.is_dir():
+            raise ValueError("geen map")
+        if any(p.iterdir()):
+            raise ValueError("de map is niet leeg: verplaats of archiveer eerst de inhoud")
+        p.rmdir()
+        return {"ok": True}
+
+    def move(self, data):
+        """Hernoemen of verplaatsen van een bestand of map. Uitvoer, setlists en forScore-administratie gaan mee."""
+        src = self._check_managed(data["from"])
+        dst_rel = data["to"].strip().strip("/")
+        if src.is_file() and src.suffix and not pathlib.PurePosixPath(dst_rel).suffix:
+            dst_rel += src.suffix                       # extensie hoeft niet getypt te worden
+        dst = self._check_managed(dst_rel)
+        if not src.exists():
+            raise ValueError("bestand bestaat niet (meer)")
+        if dst.exists() and dst.resolve() != src.resolve():
+            raise ValueError(f"'{dst_rel}' bestaat al")
+        if src.is_dir() and (dst.resolve() == src.resolve() or src.resolve() in dst.resolve().parents):
+            raise ValueError("een map kan niet in zichzelf worden gezet")
+        if src.parts[len(self.root.parts)] != dst.parts[len(self.root.parts)]:
+            raise ValueError("verplaatsen kan alleen binnen dezelfde hoofdmap (nummers, setlists of voorbeelden)")
+        project = self.project()
+        songs = [src] if src.is_file() else [f for f in src.rglob("*") if f.suffix in (".drum", ".py")]
+        mapping = []                                    # (oud pad, nieuw pad) per nummer
+        for f in songs:
+            new = dst if src.is_file() else dst / f.relative_to(src)
+            mapping.append((f, new))
+        with LOCK:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            old_ids = [(project.song_id(a), a.stem) for a, _ in mapping]
+            src.rename(dst)
+            for (a, b), (oid, ostem) in zip(mapping, old_ids):
+                if b.suffix not in (".drum", ".py") or not str(b.resolve()).startswith(str(project.songs_dir.resolve())):
+                    continue
+                nid = project.song_id(b)
+                if nid != oid:
+                    self._move_outputs(project, oid, nid)
+                    self._rename_refs(project, oid, ostem, nid)
+            self._cleanup_empty(project)
+        return {"ok": True, "path": self.rel(dst)}
+
+    def _move_outputs(self, project, oid, nid):
+        import json as _json
+        oname = pathlib.PurePosixPath(oid).name
+        for kind, ext in (("pdf", "pdf"), ("mscz", "mscz"), ("xml", "musicxml"), ("midi", "mid")):
+            folder = project.out(kind, *pathlib.PurePosixPath(oid).parts[:-1])
+            if not folder.exists():
+                continue
+            for f in list(folder.iterdir()):
+                if f.is_file() and f.suffix == "." + ext and (f.name == f"{oname}.{ext}" or
+                                                                (f.name.startswith(oname + "-") and kind == "midi")):
+                    target = project.out(kind, nid + f.name[len(oname):])
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    f.rename(target)
+        for state_file, sub in ((project.out(".cache.json"), None), (project.out(".forscore.json"), "songs")):
+            try:
+                data = _json.loads(state_file.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            d = data.get(sub, {}) if sub else data
+            if oid in d:
+                d[nid] = d.pop(oid)
+                state_file.write_text(_json.dumps(data, indent=1, sort_keys=True), encoding="utf-8")
+
+    def _rename_refs(self, project, oid, ostem, nid):
+        """Setlistregels die naar het oude id/de oude naam verwijzen bijwerken."""
+        if not project.setlists_dir.exists():
+            return
+        keys = {simplify(oid), simplify(ostem)}
+        for f in project.setlists_dir.glob("*.txt"):
+            lines = f.read_text(encoding="utf-8").split("\n")
+            changed = False
+            for i, line in enumerate(lines):
+                body, sep, comment = line.partition("#")
+                ref_part = re.split(r"[|=\[]", body, 1)[0]
+                ref = ref_part.strip()
+                if ref and ":" not in ref and not ref.startswith("[") and simplify(ref) in keys:
+                    lead = ref_part[:len(ref_part) - len(ref_part.lstrip())]
+                    trail = ref_part[len(ref_part.rstrip()):]
+                    lines[i] = lead + nid + trail + body[len(ref_part):] + sep + comment
+                    changed = True
+            if changed:
+                f.write_text("\n".join(lines), encoding="utf-8")
+
+    def _cleanup_empty(self, project):
+        for kind in ("pdf", "mscz", "xml", "midi"):
+            base = project.out(kind)
+            if base.exists():
+                for d in sorted((p for p in base.rglob("*") if p.is_dir()), key=lambda x: -len(x.parts)):
+                    if not any(d.iterdir()):
+                        d.rmdir()
 
     def new_setlist(self, data):
         name = re.sub(r"[^\w\-]+", "-", (data.get("name") or "").strip()).strip("-")
@@ -399,8 +518,8 @@ class Studio:
             return res
         if kind == "song":
             res = self.run_cli(["maak", "-a", rel])
-            pdf = f"uitvoer/pdf/{pathlib.Path(rel).stem}.pdf"
-            res["pdf"] = pdf if (self.root / pdf).exists() else None
+            pf = self.project().out("pdf", f"{self.project().song_id(rel)}.pdf")
+            res["pdf"] = self.rel(pf) if pf.exists() else None
             return res
         if kind == "library":
             res = self.run_cli(["bibliotheek", "--pdf"])
@@ -415,9 +534,8 @@ class Studio:
         if data.get("countin"):
             argv += ["--aftellen", str(int(data["countin"]))]
         res = self.run_cli(argv)
-        stem = pathlib.Path(data["path"]).stem
         t = int(data.get("tempo") or 100)
-        res["midi"] = f"uitvoer/midi/{stem}{'' if t == 100 else f'-{t}pct'}.mid"
+        res["midi"] = self.rel(self.project().out_file("midi", data["path"], "mid", "" if t == 100 else f"-{t}pct"))
         return res
 
 
@@ -501,6 +619,10 @@ class Handler(BaseHTTPRequestHandler):
             "/api/new-song": lambda: s.new_song(data),
             "/api/new-setlist": lambda: s.new_setlist(data),
             "/api/archive": lambda: s.run_cli(["archiveer", data["path"]]),
+            "/api/move": lambda: s.move(data),
+            "/api/mkdir": lambda: s.mkdir(data),
+            "/api/deldir": lambda: s.rmdir(data),
+            "/api/build-folder": lambda: s.run_cli(["maak", data["path"]] + (["-a"] if data.get("all") else [])),
             "/api/forscore": lambda: s.run_cli(["forscore"] + list(data.get("paths") or ([data["path"]] if data.get("path") else []))
                                                  + (["-a"] if data.get("all") else [])
                                                  + (["--gegevens"] if data.get("meta") else [])

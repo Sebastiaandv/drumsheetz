@@ -235,7 +235,7 @@ def render(ms, items, cfg, log=print):
                     "(stuur uitvoer/debug/*.mscx mee als je dit meldt)")
                 dbg = pathlib.Path(it["pdf"]).parent.parent / "debug"
                 dbg.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(it["mscx"], dbg / f"{it.get('id', 'nummer')}.mscx")
+                shutil.copyfile(it["mscx"], dbg / f"{it.get('id', 'nummer').replace('/', '_')}.mscx")
             outs = [it["pdf"]] + ([it["mscz"]] if it.get("mscz") else [])
             for o in outs:
                 pathlib.Path(o).parent.mkdir(parents=True, exist_ok=True)
@@ -282,8 +282,8 @@ def place_counts(ms, items, tmp, log=print):
                 dbg = pathlib.Path(it["pdf"]).parent.parent / "debug"
                 dbg.mkdir(parents=True, exist_ok=True)
                 for p in pages:
-                    shutil.copyfile(p, dbg / f"{it.get('id', 'nummer')}-{p.name}")
-                shutil.copyfile(it["mscx"], dbg / f"{it.get('id', 'nummer')}.mscx")
+                    shutil.copyfile(p, dbg / f"{it.get('id', 'nummer').replace('/', '_')}-{p.name}")
+                shutil.copyfile(it["mscx"], dbg / f"{it.get('id', 'nummer').replace('/', '_')}.mscx")
             continue
         k = [0]
 

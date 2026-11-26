@@ -41,15 +41,15 @@ def build(project, paths, force=False, xml_only=False, midi=False, midi_opts=Non
             results.append((path, None, e))
             log(f"✗ {sid}: {e}")
             continue
-        x = out_xml / f"{sid}.musicxml"
+        x = project.out_file("xml", path, "musicxml")
         x.write_text(xml, encoding="utf-8")
         if midi:
             from .midi import build_midi
             out_midi.mkdir(parents=True, exist_ok=True)
-            (out_midi / f"{sid}.mid").write_bytes(build_midi(score, **(midi_opts or {})))
+            project.out_file("midi", path, "mid").write_bytes(build_midi(score, **(midi_opts or {})))
         key = hashlib.sha1((ENGINE_VERSION + xml + json.dumps(offsets, sort_keys=True)
                             + json.dumps(project.config, sort_keys=True)).encode()).hexdigest()
-        pdf = out_pdf / f"{sid}.pdf"
+        pdf = project.out_file("pdf", path, "pdf")
         fresh = cache.get(sid) == key and pdf.exists()
         results.append((path, score, None))
         for w in score.warnings:
@@ -60,7 +60,7 @@ def build(project, paths, force=False, xml_only=False, midi=False, midi_opts=Non
         if fresh and not force:
             log(f"= {sid}: al bijgewerkt")
             continue
-        todo.append({"id": sid, "xml": x, "offsets": offsets, "pdf": pdf, "mscz": out_mscz / f"{sid}.mscz",
+        todo.append({"id": sid, "xml": x, "offsets": offsets, "pdf": pdf, "mscz": project.out_file("mscz", path, "mscz"),
                      "key": key, "score": score})
     if todo:
         ms = find_musescore(project.config.get("musescore", ""))

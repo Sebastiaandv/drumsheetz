@@ -303,15 +303,16 @@ def catalog(project):
         try:
             sc = load_and_arrange(project, f)
         except NotationError as e:
-            songs.append({"id": f.stem, "path": str(f.relative_to(project.root)), "title": f.stem,
+            songs.append({"id": project.song_id(f), "path": str(f.relative_to(project.root)).replace("\\", "/"),
+                          "title": f.stem,
                           "status": "fout", "error": e.msg})
             continue
         s = sc.song
         st, _, _ = song_status(project, s, sc, state)
-        if st != "geen-pdf" and project.out("pdf", f"{f.stem}.pdf").stat().st_mtime < f.stat().st_mtime:
+        if st != "geen-pdf" and project.out_file("pdf", f, "pdf").stat().st_mtime < f.stat().st_mtime:
             st = "verouderd"           # het nummer is veranderd sinds de laatste PDF
         m = metadata(s, sc)
-        songs.append({"id": f.stem, "path": str(f.relative_to(project.root)).replace("\\", "/"),
+        songs.append({"id": project.song_id(f), "path": str(f.relative_to(project.root)).replace("\\", "/"),
                       "title": s.get("title", f.stem), "artist": s.get("artist", ""), "name": forscore_name(s),
                       "composer": m.get("composer", ""), "genre": split_list(s.get("genre")),
                       "tags": split_list(s.get("tags")), "labels": split_list(s.get("labels")),
@@ -319,13 +320,13 @@ def catalog(project):
                       "difficulty": s.get("difficulty", ""), "key": s.get("key", ""),
                       "duration": fmt_duration(m["duration"]) if m.get("duration") else "",
                       "bpm": m.get("bpm", ""), "status": st,
-                      "sent": bool(state.song(f.stem))})
+                      "sent": bool(state.song(project.song_id(f)))})
     setlists = []
     if project.setlists_dir.exists():
         for f in sorted(project.setlists_dir.glob("*.txt")):
             meta, entries = sl.parse_setlist(f.read_text(encoding="utf-8"), f.stem)
             sl.resolve(project, entries, f)
-            items = [{"title": e.display if e.kind == "break" else (e.title or e.ref), "id": e.path.stem if e.path and e.kind == "song" else "",
+            items = [{"title": e.display if e.kind == "break" else (e.title or e.ref), "id": project.song_id(e.path) if e.path and e.kind == "song" else "",
                       "kind": e.kind} for e in entries if e.kind in ("song", "pdf", "break")]
             setlists.append({"name": f.stem, "path": f"setlists/{f.name}", "title": meta.get("title", f.stem),
                              "items": items, "sent": f.stem in state.data["setlists"]})

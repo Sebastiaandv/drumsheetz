@@ -91,6 +91,13 @@ aside,section{min-height:0;min-width:0}
 .fs-legend{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 8px;border-top:1px solid var(--line);
   font-size:11px;color:var(--muted)}
 .kids.closed{display:none}
+.node .nm{overflow:hidden;text-overflow:ellipsis}
+.node .acts{margin-left:auto;display:none;gap:1px}
+.node:hover .acts{display:flex}
+.node .act{border:0;background:none;color:var(--muted);cursor:pointer;padding:0 3px;font-size:12px}
+.node .act:hover{color:var(--accent)}
+.node.parked{color:var(--muted);font-style:italic}
+.node input.rename{flex:1;min-width:0;font:inherit;padding:0 4px;border:1px solid var(--accent);border-radius:3px;background:var(--panel)}
 #treeFilter{margin:6px 8px;padding:4px 7px;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
 /* ---------- editor ---------- */
 #center{display:grid;grid-template-rows:1fr 5px var(--bottom,36%);min-height:0;background:var(--ed-bg)}
@@ -701,6 +708,9 @@ $("#fsNewGroup").onclick = ()=>{
 let treeData=[];
 async function loadTree(){ treeData = (await api("/api/tree")).tree; drawTree(); }
 const openDirs = new Set(["nummers","setlists"]);
+const MANAGED = ["nummers","setlists","voorbeelden"];
+const parentOf = p => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
+const baseOf = p => p.slice(p.lastIndexOf("/")+1);
 function drawTree(){
   const f = $("#treeFilter").value.toLowerCase();
   const draw = (nodes)=>nodes.map(n=>{
@@ -708,19 +718,98 @@ function drawTree(){
       const kids = draw(n.children||[]);
       if(f && !kids) return "";
       const open = f || openDirs.has(n.path);
-      return `<div class="node" data-dir="${esc(n.path)}"><span class="tw">${open?"▾":"▸"}</span><span class="ic">▤</span>${esc(n.name)}</div>`+
+      const managed = MANAGED.includes(n.path.split("/")[0]);
+      const isSongs = n.path.split("/")[0]!=="setlists";
+      const acts = managed ? `<span class="acts">`+
+        (isSongs?`<button class="act" data-a="newsong" title="nieuw nummer in deze map">＋♩</button>`:"")+
+        `<button class="act" data-a="newdir" title="nieuwe map hierin">＋▤</button>`+
+        (isSongs?`<button class="act" data-a="buildall" title="alle nummers in deze map maken">▶</button>`:"")+
+        (!n.root?`<button class="act" data-a="rename" title="hernoemen (F2)">✎</button><button class="act" data-a="deldir" title="lege map weghalen">🗑</button>`:"")+
+        `</span>` : "";
+      return `<div class="node${n.parked?" parked":""}" data-dir="${esc(n.path)}" ${managed&&!n.root?'draggable="true"':""} ${managed?'data-drop="1"':""} title="${n.parked?"geparkeerd: wordt niet meegenomen bij 'alles maken'":""}"><span class="tw">${open?"▾":"▸"}</span><span class="ic">▤</span><span class="nm">${esc(n.name)}</span>${acts}</div>`+
         `<div class="kids${open?"":" closed"}">${kids}</div>`;
     }
     if(f && !n.name.toLowerCase().includes(f)) return "";
     const ic = n.name.endsWith(".drum")?"♩":n.name.endsWith(".txt")?(n.path.startsWith("setlists")?"☰":"⚙"):n.name.endsWith(".md")?"?":"⌘";
-    return `<div class="node${n.path===state.path?" active":""}" data-file="${esc(n.path)}"><span class="tw"></span><span class="ic">${ic}</span>${esc(n.name.replace(/\.drum$/,""))}</div>`;
+    const managed = MANAGED.includes(n.path.split("/")[0]);
+    const acts = managed ? `<span class="acts"><button class="act" data-a="rename" title="hernoemen (F2)">✎</button>`+
+      (n.path.startsWith("nummers/")?`<button class="act" data-a="archive" title="naar archief">🗑</button>`:"")+`</span>` : "";
+    return `<div class="node${n.path===state.path?" active":""}" data-file="${esc(n.path)}" ${managed?'draggable="true"':""}><span class="tw"></span><span class="ic">${ic}</span><span class="nm">${esc(n.name.replace(/\.(drum|txt)$/,""))}</span>${acts}</div>`;
   }).join("");
   $("#tree").innerHTML = draw(treeData);
 }
-$("#tree").addEventListener("click", e=>{
+$("#tree").addEventListener("click", async e=>{
   const n = e.target.closest(".node"); if(!n) return;
+  const a = e.target.closest(".act");
+  const path = n.dataset.dir || n.dataset.file;
+  if(a){ e.stopPropagation(); return treeAction(a.dataset.a, path, !!n.dataset.dir, n); }
+  if(e.target.closest("input")) return;
   if(n.dataset.dir){ openDirs.has(n.dataset.dir)?openDirs.delete(n.dataset.dir):openDirs.add(n.dataset.dir); drawTree(); }
   else openFile(n.dataset.file);
+});
+$("#tree").addEventListener("dblclick", e=>{ const n=e.target.closest(".node"); if(n && n.getAttribute("draggable")==="true"){ e.preventDefault(); startRename(n); } });
+document.addEventListener("keydown", e=>{
+  if(e.key==="F2" && state.path){ const n=[...$$("#tree .node[data-file]")].find(x=>x.dataset.file===state.path); if(n && n.getAttribute("draggable")==="true"){ e.preventDefault(); startRename(n); } }
+});
+async function treeAction(act, path, isDir, node){
+  try{
+    if(act==="rename") return startRename(node);
+    if(act==="newdir"){ const name=prompt("Naam van de nieuwe map:"); if(!name) return;
+      const j=await api("/api/mkdir",{path:path+"/"+name.trim()}); openDirs.add(path); openDirs.add(j.path); await loadTree(); return; }
+    if(act==="deldir"){ await api("/api/deldir",{path}); toast("Map weggehaald"); await loadTree(); return; }
+    if(act==="newsong"){ NEWSONG_FOLDER = path; $("#bNewSong").click(); return; }
+    if(act==="buildall"){ if(dirty()) await save(); busy(true,`Alle nummers in '${baseOf(path)}' maken…`);
+      try{ const j=await api("/api/build-folder",{path}); log(j.log); showTab("btabs","log"); toast(j.ok?"Klaar":"Klaar, met meldingen (zie Log)"); } finally{ busy(false); } return; }
+    if(act==="archive"){ if(!confirm(`'${baseOf(path)}' (en de PDF's) naar archief/ verplaatsen?`)) return;
+      const j=await api("/api/archive",{path}); log(j.log); toast(j.ok?"Gearchiveerd":"Mislukt");
+      if(path===state.path){ state.path=null; state.kind=null; state.saved=""; ed.value=""; render(); $("#emptyEd").style.display="grid"; updateTitle(); }
+      await loadTree(); return; }
+  }catch(err){ toast(err.message); }
+}
+function startRename(node){
+  const nm=node.querySelector(".nm"); if(!nm || node.querySelector("input")) return;
+  const path=node.dataset.dir||node.dataset.file, isFile=!!node.dataset.file;
+  const old = isFile ? baseOf(path).replace(/\.(drum|txt|py)$/,"") : baseOf(path);
+  const inp=document.createElement("input"); inp.value=old; inp.className="rename";
+  nm.replaceWith(inp); inp.focus(); inp.select(); node.setAttribute("draggable","false");
+  let done=false;
+  const finish = async ok=>{
+    if(done) return; done=true;
+    const name=inp.value.trim();
+    if(!ok || !name || name===old){ drawTree(); return; }
+    const ext = isFile ? (baseOf(path).match(/\.(drum|txt|py)$/)||[""])[0] : "";
+    await doMove(path, (parentOf(path)?parentOf(path)+"/":"")+name+ext);
+  };
+  inp.addEventListener("keydown", e=>{ e.stopPropagation(); if(e.key==="Enter") finish(true); if(e.key==="Escape") finish(false); });
+  inp.addEventListener("blur", ()=>finish(true));
+}
+async function doMove(from, to){
+  try{
+    if(state.path && (state.path===from || state.path.startsWith(from+"/")) && dirty()) await save();
+    const j=await api("/api/move",{from, to});
+    if(state.path===from) state.path=j.path;
+    else if(state.path && state.path.startsWith(from+"/")) state.path=j.path+state.path.slice(from.length);
+    if(state.path){ try{ localStorage.setItem("ds-last", state.path); }catch(e){} }
+    if(openDirs.has(from)){ openDirs.add(j.path); }
+    openDirs.add(parentOf(j.path));
+    updateTitle(); await loadTree(); if(FS.data) loadFs();
+    toast("Verplaatst naar "+j.path);
+  }catch(err){ toast(err.message); drawTree(); }
+}
+/* slepen in de bestandsboom */
+$("#tree").addEventListener("dragstart", e=>{ const n=e.target.closest('.node[draggable="true"]'); if(!n) return;
+  e.dataTransfer.setData("text/x-ds-move", n.dataset.dir||n.dataset.file); e.dataTransfer.effectAllowed="move"; });
+$("#tree").addEventListener("dragover", e=>{
+  if(!e.dataTransfer.types.includes("text/x-ds-move")) return;
+  const t=e.target.closest(".node[data-drop]"); if(!t) return;
+  e.preventDefault(); $$("#tree .drop-ok").forEach(x=>x.classList.remove("drop-ok")); t.classList.add("drop-ok"); });
+$("#tree").addEventListener("dragleave", e=>{ const t=e.target.closest(".node[data-drop]"); if(t) t.classList.remove("drop-ok"); });
+$("#tree").addEventListener("drop", e=>{
+  const t=e.target.closest(".node[data-drop]"); if(!t) return; e.preventDefault(); t.classList.remove("drop-ok");
+  const from=e.dataTransfer.getData("text/x-ds-move"), dir=t.dataset.dir;
+  if(!from || parentOf(from)===dir || from===dir) return;
+  if(from.split("/")[0]!==dir.split("/")[0]){ toast("Verplaatsen kan alleen binnen dezelfde hoofdmap"); return; }
+  openDirs.add(dir); doMove(from, dir+"/"+baseOf(from));
 });
 $("#treeFilter").addEventListener("input", drawTree);
 $("#bRefresh").onclick = ()=>{ loadTree(); if(FS.data) loadFs(); };
@@ -838,8 +927,12 @@ $("#bHelp").onclick = ()=>{ showTab("rtabs","help"); $("#helpSearch").focus(); }
 
 function ask(dlg){ return new Promise(res=>{ const d=$(dlg); d.querySelector("form").reset?.(); d.showModal();
   d.addEventListener("close", ()=>res(d.returnValue==="ok" ? Object.fromEntries(new FormData(d.querySelector("form"))) : null), {once:true}); }); }
+let NEWSONG_FOLDER = "";
 $("#bNewSong").onclick = async ()=>{
+  const folder = NEWSONG_FOLDER; NEWSONG_FOLDER = "";
+  $("#dlgSong h3").textContent = folder && folder!=="nummers" ? `Nieuw nummer in '${folder.replace(/^nummers\//,"")}'` : "Nieuw nummer";
   const v = await ask("#dlgSong"); if(!v) return;
+  if(folder) v.folder = folder;
   try{ const j=await api("/api/new-song", v); log(j.log); if(!j.ok){ toast("Bestaat al of mislukt (zie Log)"); showTab("btabs","log"); }
     await loadTree(); if(j.ok) openFile(j.path); }catch(err){ toast(err.message); }
 };

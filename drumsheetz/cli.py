@@ -81,7 +81,8 @@ def main(argv=None, root=None):
     p.add_argument("--maat", default="4/4")
     p.add_argument("--tempo", default="100")
     p.add_argument("--stijl", default="")
-    p.add_argument("--id", default="")
+    p.add_argument("--id", default="", help="bestandsnaam (standaard de titel)")
+    p.add_argument("--map", default="", help="submap in nummers/, bv. 'Hatikwa'")
 
     p = sub.add_parser("midi", help="maak een MIDI-oefenbestand")
     p.add_argument("nummers", nargs="+")
@@ -155,7 +156,14 @@ def main(argv=None, root=None):
 def select(project, refs):
     if not refs:
         return project.song_files()
-    return [project.find(r) for r in refs]
+    out = []
+    for r in refs:
+        d = project.root / r
+        if d.is_dir():                     # een map: alle nummers daarin (ook geparkeerde)
+            out += [f for f in project.song_files(include_parked=True) if d.resolve() in f.resolve().parents]
+        else:
+            out.append(project.find(r))
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -170,10 +178,10 @@ def cmd_build(project, args):
     auto = str(project.config.get("forscore", "")).lower() in ("ja", "automatisch", "auto", "aan")
     if (args.forscore or auto) and not args.xml:
         from .forscore import send
-        send(project, [(sc.song, project.out("pdf", f"{p.stem}.pdf"), sc) for p, sc, err in res if sc])
+        send(project, [(sc.song, project.out_file("pdf", p, "pdf"), sc) for p, sc, err in res if sc])
     if args.open and not bad:
         for path, _, _ in res:
-            _open(project.out("pdf", f"{path.stem}.pdf"))
+            _open(project.out_file("pdf", path, "pdf"))
     return 1 if bad else 0
 
 
@@ -211,11 +219,11 @@ def cmd_list(project, args):
         try:
             sc = load_and_arrange(project, f)
             dur = sc.song.get("duration") or fmt_duration(sc.seconds())
-            rows.append((f.stem, sc.song.get("title", ""), sc.song.get("artist", ""), str(sc.tempo[0]),
+            rows.append((project.song_id(f), sc.song.get("title", ""), sc.song.get("artist", ""), str(sc.tempo[0]),
                          str(sc.meter).split(" ")[0], str(sc.total_bars), dur, sc.song.get("status", ""),
-                         "✓" if project.out("pdf", f.stem + ".pdf").exists() else ""))
+                         "✓" if project.out_file("pdf", f, "pdf").exists() else ""))
         except NotationError as e:
-            rows.append((f.stem, meta.get("title", ""), meta.get("artist", ""), "", "", "", "", f"FOUT: {e.msg}", ""))
+            rows.append((project.song_id(f), meta.get("title", ""), meta.get("artist", ""), "", "", "", "", f"FOUT: {e.msg}", ""))
     if not rows:
         print("Geen nummers.")
         return
@@ -247,32 +255,35 @@ def cmd_check(project, args):
                         warns += book.warnings(name, sc.meter)
                     except NotationError:
                         pass
-            print(f"✓ {f.stem}: {sc.total_bars} maten, ± {fmt_duration(sc.seconds())}")
+            print(f"✓ {project.song_id(f)}: {sc.total_bars} maten, ± {fmt_duration(sc.seconds())}")
             for w in warns:
                 print(f"    ! {w}")
         except NotationError as e:
             bad += 1
-            print(f"✗ {f.stem}: {e}")
+            print(f"✗ {project.song_id(f)}: {e}")
     return 1 if bad else 0
 
 
 def cmd_new(project, args):
     from .rows import parse_meter
     m = parse_meter(args.maat)
-    sid = args.id or simplify(args.titel)[:24] or "nummer"
-    path = project.songs_dir / f"{sid}.drum"
+    from .project import safe_filename
+    name = safe_filename(args.id or args.titel).strip(". ") or "nummer"
+    folder = project.songs_dir / args.map if args.map else project.songs_dir
+    path = folder / f"{name}.drum"
+    sid = project.song_id(path)
     if path.exists():
         print(f"✗ {path.relative_to(project.root)} bestaat al (kies een ander --id)")
         return 1
     key = "6/8" if m.compound else ("3/4" if m.num == 3 else "4/4")
     grooves, sections = TEMPLATES[key]
     feel = args.stijl or ("Ballad in 6/8" if m.compound else "Rechte rock in 8sten")
-    project.songs_dir.mkdir(exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(TEMPLATE.format(title=args.titel, artist=args.artiest, tempo=args.tempo, meter=args.maat,
                                     feel=feel, grooves=grooves, sections=sections, sid=sid,
                                     date=datetime.date.today().isoformat()), encoding="utf-8")
     print(f"✓ {path.relative_to(project.root)} gemaakt. Pas het aan en maak de PDF met:")
-    print(f"    python3 drums.py maak {sid}")
+    print(f'    python3 drums.py maak "{sid}"')
 
 
 def cmd_midi(project, args):
@@ -283,7 +294,7 @@ def cmd_midi(project, args):
     for f in select(project, args.nummers):
         sc = load_and_arrange(project, f)
         suffix = f"-{args.tempo}pct" if args.tempo != 100 else ""
-        dst = out / f"{f.stem}{suffix}.mid"
+        dst = project.out_file("midi", f, "mid", suffix)
         dst.write_bytes(build_midi(sc, tempo_pct=args.tempo, countin=args.aftellen, click=args.klik))
         print(f"✓ {dst.relative_to(project.root)}  ({sc.total_bars} maten, ± "
               f"{fmt_duration(sc.seconds() * 100 / args.tempo)})")
@@ -363,7 +374,7 @@ def cmd_archive(project, args):
         moved = [f]
         shutil.move(str(f), dest / f.name)
         for d, ext in (("pdf", "pdf"), ("mscz", "mscz"), ("xml", "musicxml"), ("midi", "mid")):
-            p = project.out(d, f"{f.stem}.{ext}")
+            p = project.out(d, f"{project.song_id(f)}.{ext}")
             if p.exists():
                 (dest / d).mkdir(exist_ok=True)
                 shutil.move(str(p), dest / d / p.name)
@@ -449,10 +460,10 @@ def cmd_setlist(project, args):
         lines = [f"titel: {name}", f"datum: {datetime.date.today().isoformat()}", "plaats: ", "", "[Set 1]"]
         for r in args.nummers:
             f = project.find(r)
-            lines.append(f.stem)
+            lines.append(project.song_id(f))
         if not args.nummers:
             lines += ["# zet hier per regel een nummer (id of titel), eventueel met | notitie"]
-            lines += [f.stem for f in project.song_files()[:3]]
+            lines += [project.song_id(f) for f in project.song_files()[:3]]
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         print(f"✓ {path.relative_to(project.root)} gemaakt")
         return
@@ -495,7 +506,7 @@ def cmd_forscore(project, args):
         paths = []
     res = build(project, paths)            # eerst zorgen dat de PDF's bijgewerkt zijn
     if res:
-        send(project, [(sc.song, project.out("pdf", f"{p.stem}.pdf"), sc) for p, sc, err in res if sc],
+        send(project, [(sc.song, project.out_file("pdf", p, "pdf"), sc) for p, sc, err in res if sc],
              force=args.alles, open_app=not args.geen_open, force_meta=args.gegevens)
     for name in args.setlist:
         f = project.setlists_dir / (name if name.endswith(".txt") else f"{name}.txt")
@@ -507,7 +518,7 @@ def cmd_forscore(project, args):
             print(f"✗ {e}")
         songs = [e.path for e in entries if e.kind == "song" and e.path]
         r2 = build(project, songs)
-        send(project, [(sc.song, project.out("pdf", f"{p.stem}.pdf"), sc) for p, sc, err in r2 if sc],
+        send(project, [(sc.song, project.out_file("pdf", p, "pdf"), sc) for p, sc, err in r2 if sc],
              open_app=not args.geen_open)
         from .forscore import send_setlist
         send_setlist(project, f.stem, meta, entries, open_app=not args.geen_open)

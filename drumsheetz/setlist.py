@@ -128,7 +128,7 @@ def enrich(project, entries, scores):
             if p.exists():
                 e.pdf = p
                 continue
-        e.pdf = project.out("pdf", f"{e.path.stem}.pdf")
+        e.pdf = project.out_file("pdf", e.path, "pdf")
 
 
 def overview_lines(meta, entries):
