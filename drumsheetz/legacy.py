@@ -95,7 +95,7 @@ def _pat(name, rows, path, kind):
 # omzetten naar .drum
 
 KEYS_OUT = [("title", "titel"), ("artist", "artiest"), ("subtitle", "ondertitel"), ("bpm", "tempo"),
-            ("meter", "maat"), ("feel", "stijl"), ("notes", "notitie"), ("by", "door"),
+            ("meter", "maat"), ("feel", "stijl"), ("notes", "notitie"), ("by", "door"), ("credit", "vermelding"),
             ("key", "toonsoort"), ("duration", "duur"), ("status", "status"), ("tags", "tags"),
             ("source", "bron"), ("audio", "audio"), ("pdf", "pdf"), ("countin", "aftellen"),
             ("layout", "layout"), ("voices", "stemmen"), ("text_size", "tekstgrootte"),

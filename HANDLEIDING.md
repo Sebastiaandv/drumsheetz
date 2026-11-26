@@ -113,8 +113,8 @@ Ctrl+C in de terminal). Je typt nog steeds gewoon in de `.drum`-bestanden, maar 
 | **Links** | Bestanden: nummers, setlists, voorbeelden, `bibliotheek.drum`, `instellingen.txt`, de handleiding. Met zoekveld. |
 | **Midden** | De editor met kleuren (secties, patronen, instrumenten, accenten, ghost notes, teksten, opties) en regelnummers. Fouten worden **tijdens het typen** gevonden en de regel kleurt rood. |
 | **Onder** | *Drumtab* (het nummer als tekst, live bijgewerkt), *Problemen* (klik om naar de regel te gaan), *PDF* (de gemaakte PDF), *Log*. |
-| **Rechts** | *Gereedschap*: klik om in te voegen: blokken (groove, fill, sectie, volta's, segno/coda, …), opties (crash, fill, mf, cresc, …), tekens (accent, ghost, flam, …), tellen (`*8`, `2&`, …) en instrumenten. *Bibliotheek*: alle grooves en fills doorzoeken, met voorbeeld. *Help*: doorzoek deze handleiding. |
-| **Boven** | Nieuw nummer, nieuwe setlist, opslaan, controleren, **Maak PDF** (of setlist), PDF openen, MIDI (tempo %, aftellen, klik), alles maken, archiveren, instellingen, help. |
+| **Rechts** | *Document*: alle eigenschappen van het nummer (titel, ondertitel, vermelding, tempo, maat, stijl, aftellen, stemmen, tekstgrootte, accenten, vorken, duur, …) als invulvelden. Wat je invult komt direct bovenin het bestand; leeg = standaard uit `instellingen.txt` (staat er grijs bij). *Gereedschap*: klik om in te voegen: blokken (groove, fill, sectie, volta's, segno/coda, …), opties (crash, fill, mf, cresc, …), tekens (accent, ghost, flam, …), tellen (`*8`, `2&`, …) en instrumenten. *Bibliotheek*: alle grooves en fills doorzoeken, met voorbeeld. *Help*: doorzoek deze handleiding. |
+| **Boven** | Nieuw nummer, nieuwe setlist, Document (eigenschappen), opslaan, controleren, **Maak PDF** (of setlist), PDF openen, MIDI (tempo %, aftellen, klik), alles maken, archiveren, instellingen, help. |
 
 Sneltoetsen: **⌘/Ctrl+S** opslaan, **⌘/Ctrl+Enter** PDF maken, **Tab** = 2 spaties, **Enter** houdt
 de inspringing aan. De panelen kun je breder/smaller slepen. Andere poort: `python3 drums.py studio --poort 9000`.
@@ -209,13 +209,14 @@ Bovenaan, als `sleutel: waarde`. Alleen `titel` is eigenlijk nodig.
 |---|---|---|
 | `titel` | Titel bovenaan de PDF | `titel: Fields Of Gold` |
 | `artiest` | Rechtsboven | `artiest: Sting` |
-| `ondertitel` | Werktitel (standaard uit instellingen: "Drum sheet") | `ondertitel: Drum lead sheet` |
+| `ondertitel` | Kleinere regel onder de titel (leeg = geen) | `ondertitel: Drum partituur t.b.v. het koor` |
+| `vermelding` | Tekst rechtsboven onder de artiest; `{naam}` = je naam uit `instellingen.txt`; meerdere regels met `\n`. Leeg = niets | `vermelding: Drum sheet: {naam}` |
 | `tempo` | Tempo; in 6/8, 9/8, 12/8 is dat de gepunteerde kwart | `tempo: 92` |
 | | Met eenheid: `noot=getal` (4 = kwart, 4. = gepunteerde kwart, 8 = achtste, 2 = halve) | `tempo: 8=210` |
 | `maat` | Maatsoort (standaard 4/4), eventueel met groepering | `maat: 6/8`, `maat: 7/8 (2+2+3)` |
 | `stijl` | Cursieve regel onder het tempo (feel) | `stijl: Laid back shuffle` |
 | `notitie` | Extra cursieve regel | `notitie: Brushes in het eerste couplet` |
-| `door` | Wie het uitschreef (overschrijft je naam uit de instellingen) | `door: Jan Jansen` |
+| `door` | Naam die voor `{naam}` in de vermelding wordt ingevuld (in plaats van die uit de instellingen) | `door: Jan Jansen` |
 | `swing` | Zet "Swing" bij de stijl én laat de MIDI swingen. `ja` of `8` = 8sten, `16` = 16den | `swing: ja` |
 | `aftellen` | Aantal maten aftellen met stokken (staat op het blad én in de MIDI) | `aftellen: 1` |
 | `stemmen` | `1` = alles (ook bassdrum en hi-hat-voet) in één stem met de stokken omhoog, zonder losse rusten; `2` = handen omhoog, voeten omlaag (de oude opmaak). Standaard uit `instellingen.txt` | `stemmen: 2` |
@@ -1086,9 +1087,9 @@ Daarna kun je het opschonen: geef terugkerende maten een duidelijke naam, voeg c
 `instellingen.txt` in de hoofdmap:
 
 ```
-naam: Sebastiaan Johan de Vries        # komt als "Drum sheet: <naam>" rechtsboven
-ondertitel: Drum sheet                 # standaard-ondertitel
-vermelding: Drum sheet: {naam}         # de tekst rechtsboven; {naam} wordt je naam
+naam: Sebastiaan Johan de Vries        # wordt ingevuld waar {naam} staat
+vermelding:                            # standaard-tekst rechtsboven, bv. "Drum sheet: {naam}"; leeg = niets
+ondertitel:                            # standaard-ondertitel; leeg = geen
 musescore: /Applications/MuseScore 4.app/Contents/MacOS/mscore   # alleen nodig als hij niet gevonden wordt
 regelafstand: 12                       # ruimte tussen de regels op het blad
 stemmen: 1                             # 1 = alles stok omhoog in één stem, 2 = voeten apart omlaag

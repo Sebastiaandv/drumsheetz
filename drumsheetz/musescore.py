@@ -122,6 +122,20 @@ def _artic(m, up):
     return a.replace("</subtype>", f"</subtype>\n              <direction>{'up' if up else 'down'}</direction>", 1)
 
 
+def add_subtitle(text, sub):
+    """Ondertitel als eigen regel onder de titel (MuseScore neemt hem uit MusicXML niet over)."""
+    from xml.sax.saxutils import escape
+    m = re.search(r"(<Text>\s*(?:<eid>[^<]*</eid>\s*)?<style>([Tt])itle</style>.*?</Text>)", text, re.S)
+    if not m or re.search(r"<style>[Ss]ubtitle</style>", text):
+        return text
+    style = "Subtitle" if m.group(2) == "T" else "subtitle"
+    block = m.group(1)
+    new = re.sub(r"<eid>[^<]*</eid>\s*", "", block)
+    new = re.sub(r"<style>[Tt]itle</style>", f"<style>{style}</style>", new)
+    new = re.sub(r"<text>.*?</text>", lambda _: f"<text>{escape(sub)}</text>", new, flags=re.S)
+    return text.replace(block, block + "\n        " + new, 1)
+
+
 def patch_mscx(path, offsets, min_system_distance="12"):
     """Zet <noOffset> ('tel op bij maatnummer') op de maat na elke herhaalmaat,
     en geef de regels wat meer ruimte zodat dynamiek bij de juiste balk hoort."""
@@ -150,6 +164,9 @@ def patch_mscx(path, offsets, min_system_distance="12"):
         text = text[:start] + staff + text[end:]
     except ValueError:
         pass
+    sub = getattr(offsets, "subtitle", "")
+    if sub:
+        text = add_subtitle(text, sub)
     acc = getattr(offsets, "accent", "")
     if acc in ("boven", "above", "onder", "below"):
         up = acc in ("boven", "above")

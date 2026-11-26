@@ -17,8 +17,8 @@ CONFIG_FILE = "instellingen.txt"
 
 DEFAULT_CONFIG = {
     "name": "",
-    "subtitle": "Drum sheet",
-    "credit": "Drum sheet: {naam}",
+    "subtitle": "",
+    "credit": "",
     "musescore": "",
     "minSystemDistance": "12",
 }

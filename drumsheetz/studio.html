@@ -31,12 +31,12 @@ body{background:var(--bg);color:var(--text);font:13px/1.45 var(--sans);display:g
   grid-template-rows:auto 1fr auto;overflow:hidden}
 button,input,select{font:inherit;color:inherit}
 /* ---------- bovenbalk ---------- */
-header{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--panel);
+header{display:flex;align-items:center;gap:5px;padding:6px 10px;background:var(--panel);
   border-bottom:1px solid var(--line);flex-wrap:wrap}
-.brand{font-weight:700;letter-spacing:.2px;margin-right:8px;display:flex;align-items:center;gap:7px}
+.brand{font-weight:700;letter-spacing:.2px;margin-right:4px;display:flex;align-items:center;gap:7px}
 .brand .logo{width:22px;height:22px;border:2px solid var(--text);border-radius:3px;display:grid;place-items:center;
   font-size:11px;font-weight:800}
-.btn{border:1px solid var(--line);background:var(--panel2);border-radius:6px;padding:4px 10px;cursor:pointer;
+.btn{border:1px solid var(--line);background:var(--panel2);border-radius:6px;padding:4px 8px;cursor:pointer;
   white-space:nowrap}
 .btn:hover{border-color:var(--muted)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -155,6 +155,13 @@ mark{background:var(--accent2);color:inherit;border-radius:2px}
 .md th,.md td{border:1px solid var(--line);padding:3px 5px;text-align:left;vertical-align:top}
 .md blockquote{margin:6px 0;padding:4px 10px;border-left:3px solid var(--warn);color:var(--muted)}
 .back{color:var(--accent);cursor:pointer;margin-bottom:6px;display:inline-block}
+.prop{margin-bottom:8px}
+.prop label{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--muted);margin-bottom:2px}
+.prop label .set{color:var(--accent);cursor:pointer;font-size:11px}
+.prop input,.prop select{width:100%;padding:4px 7px;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
+.prop input.has,.prop select.has{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));background:var(--panel)}
+.prop .help{font-size:11px;color:var(--muted);margin-top:2px}
+.doc-note{font-size:12px;color:var(--muted);margin:0 0 10px}
 /* ---------- statusbalk ---------- */
 footer{display:flex;gap:14px;padding:3px 10px;font-size:12px;color:var(--muted);background:var(--panel);
   border-top:1px solid var(--line);white-space:nowrap;overflow:hidden}
@@ -195,7 +202,8 @@ dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
   <div class="spacer"></div>
   <button class="btn" id="bBuildAll" title="Alle gewijzigde nummers maken">Alles maken</button>
   <button class="btn" id="bArchive" title="Nummer naar archief verplaatsen">Archiveer</button>
-  <button class="btn" id="bSettings" title="instellingen.txt openen">⚙ Instellingen</button>
+  <button class="btn" id="bProps" title="Documenteigenschappen van dit nummer">☰ Document</button>
+  <button class="btn" id="bSettings" title="instellingen.txt openen (voor alle nummers)">⚙ Instellingen</button>
   <button class="btn" id="bHelp" title="Handleiding doorzoeken">? Help</button>
 </header>
 
@@ -235,11 +243,13 @@ dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
 
   <aside class="panel" id="right">
     <div class="tabs" id="rtabs">
-      <div class="tab active" data-t="tools">Gereedschap</div>
+      <div class="tab active" data-t="doc">Document</div>
+      <div class="tab" data-t="tools">Gereedschap</div>
       <div class="tab" data-t="lib">Bibliotheek</div>
       <div class="tab" data-t="help">Help</div>
     </div>
-    <div class="tabbody active" id="r-tools">
+    <div class="tabbody active" id="r-doc"><div id="docForm"><div class="hint">Open een .drum-bestand om de eigenschappen te zien.</div></div></div>
+    <div class="tabbody" id="r-tools">
       <div class="group"><h4>Invoegen</h4><div class="chips" id="snips"></div></div>
       <div class="group"><h4>Opties voor een regel</h4><div class="chips" id="opts"></div></div>
       <div class="group"><h4>Tekens (raster of na ':')</h4><div id="mods"></div></div>
@@ -405,7 +415,7 @@ function updateTitle(){
   $("#bBuild").textContent = k==="setlist" ? "Maak setlist" : (k==="library" ? "Maak catalogus" : "Maak PDF");
 }
 ed.addEventListener("scroll", syncScroll);
-ed.addEventListener("input", ()=>{ render(); updateTitle(); scheduleCheck(); });
+ed.addEventListener("input", ()=>{ render(); updateTitle(); scheduleCheck(); clearTimeout(ed._d); ed._d=setTimeout(refreshDoc,400); });
 ed.addEventListener("keyup", cursorPos); ed.addEventListener("click", cursorPos);
 function cursorPos(){
   const before = ed.value.slice(0, ed.selectionStart).split("\n");
@@ -480,7 +490,7 @@ async function openFile(path){
     state.path=j.path; state.kind=j.kind; state.saved=j.content; state.errLine=null; state.pdf=null;
     ed.value=j.content; ed.scrollTop=0; ed.scrollLeft=0; $("#emptyEd").style.display="none";
     localStorage.setItem("ds-last", path);
-    render(); updateTitle(); drawTree(); cursorPos();
+    render(); updateTitle(); drawTree(); cursorPos(); drawDoc();
     $("#pdfFrame").style.display="none"; $("#pdfHint").style.display="block";
     $("#tabOut").innerHTML='<span class="hint">Controleren…</span>';
     check();
@@ -536,7 +546,7 @@ function showTab(group, t){
   $$(`#${group==="btabs"?"bottom":"right"} > .tabbody`).forEach(x=>x.classList.toggle("active", x.id===prefix+t));
 }
 $("#btabs").addEventListener("click", e=>{ const t=e.target.closest(".tab"); if(t) showTab("btabs", t.dataset.t); });
-$("#rtabs").addEventListener("click", e=>{ const t=e.target.closest(".tab"); if(t) showTab("rtabs", t.dataset.t); });
+$("#rtabs").addEventListener("click", e=>{ const t=e.target.closest(".tab"); if(t){ showTab("rtabs", t.dataset.t); if(t.dataset.t==="doc") drawDoc(); } });
 
 function log(text){ $("#logOut").textContent = text; }
 async function build(){
@@ -573,6 +583,7 @@ $("#bArchive").onclick = async ()=>{
   if(j.ok){ state.path=null; state.kind=null; state.saved=""; ed.value=""; render(); $("#emptyEd").style.display="grid"; updateTitle(); loadTree(); }
 };
 $("#bSettings").onclick = ()=>openFile("instellingen.txt");
+$("#bProps").onclick = ()=>{ showTab("rtabs","doc"); drawDoc(); };
 $("#bHelp").onclick = ()=>{ showTab("rtabs","help"); $("#helpSearch").focus(); };
 
 function ask(dlg){ return new Promise(res=>{ const d=$(dlg); d.querySelector("form").reset?.(); d.showModal();
@@ -638,6 +649,73 @@ async function initTools(){
       `<div class="modrow"><code>-</code><span>rust (ook . of _)</span></div><div class="modrow"><code>|</code><span>stukken binnen de maat (eigen verdeling)</span></div><div class="modrow"><code>||</code><span>volgende maat</span></div>`;
     $$("#mods .modrow").forEach(r=>r.onclick=()=>insertText(r.querySelector("code").textContent));
   }catch(e){}
+}
+
+/* ------------------------------------------------------------ documenteigenschappen */
+let PROPS=null, ALIAS={};
+async function initProps(){ try{ const j=await api("/api/props"); PROPS=j.fields; ALIAS=j.aliases; drawDoc(); }catch(e){} }
+function headerEnd(lines){   // index van de eerste regel na de kop
+  for(let i=0;i<lines.length;i++){
+    const c=splitComment(lines[i])[0];
+    if(/^(groove|fill|patroon|pattern|ritme|instrument|kit)\s/i.test(c) || /^\s*\[/.test(c) || /^\s*\d/.test(c)) return i;
+  }
+  return lines.length;
+}
+function readHeader(){
+  const lines=ed.value.split("\n"), end=headerEnd(lines), vals={}, where={};
+  for(let i=0;i<end;i++){
+    const m=splitComment(lines[i])[0].match(/^([A-Za-z][\w\-]*)\s*:\s*(.*?)\s*$/);
+    if(m && ALIAS[m[1].toLowerCase()]){ const id=ALIAS[m[1].toLowerCase()]; vals[id]=m[2]; where[id]=i; }
+  }
+  return {lines,end,vals,where};
+}
+function setHeader(field, value){
+  const h=readHeader(); const lines=h.lines; value=String(value??"").trim();
+  const keepEmpty = ["credit","subtitle"].includes(field.id) && field.default;   // leeg = expliciet niets
+  if(h.where[field.id]!==undefined){
+    const i=h.where[field.id], com=splitComment(lines[i])[1];
+    if(!value && !keepEmpty) lines.splice(i,1);
+    else lines[i]=`${field.key}: ${value}`+(com?"   "+com:"");
+  } else if(value || keepEmpty){
+    let at=-1; for(const i of Object.values(h.where)) at=Math.max(at,i);
+    if(at<0){ at=0; while(at<h.end && /^\s*#/.test(lines[at])) at++; at--; }
+    lines.splice(at+1,0,`${field.key}: ${value}`);
+  }
+  const sel=ed.selectionStart; ed.value=lines.join("\n"); ed.setSelectionRange(sel,sel);
+  render(); updateTitle(); scheduleCheck();
+}
+function drawDoc(){
+  const box=$("#docForm");
+  if(!PROPS) return;
+  if(!state.path || !state.path.endsWith(".drum") || state.kind!=="song"){
+    box.innerHTML='<div class="hint">Open een nummer (.drum) om de eigenschappen te zien en aan te passen. '+
+      'Instellingen voor álle nummers staan in <a href="#" id="docSettings">instellingen.txt</a>.</div>';
+    const a=$("#docSettings"); if(a) a.onclick=e=>{e.preventDefault(); openFile("instellingen.txt");};
+    return;
+  }
+  const {vals}=readHeader(); let html='<p class="doc-note">De kop van dit nummer. Wat je hier invult komt bovenaan in het bestand; '+
+    'leeg laten = standaard uit <a href="#" id="docSettings">instellingen.txt</a>.</p>', group="";
+  PROPS.forEach((f,n)=>{
+    if(f.group!==group){ group=f.group; html+=`<div class="group"><h4>${esc(group)}</h4></div>`; }
+    const v=vals[f.id]; const has=v!==undefined;
+    const ph = f.default ? `standaard: ${f.default}` : "";
+    let input;
+    if(f.type==="select") input=`<select data-n="${n}" class="${has?"has":""}">`+f.options.map(o=>`<option value="${esc(o)}" ${(v||"")===o?"selected":""}>${o?esc(o):(f.default?"standaard ("+esc(f.default)+")":"standaard")}</option>`).join("")+`</select>`;
+    else input=`<input data-n="${n}" type="${f.type==="number"?"number":"text"}" value="${has?esc(v):""}" placeholder="${esc(ph)}" class="${has?"has":""}">`;
+    html+=`<div class="prop"><label><span>${esc(f.label)} <code style="font-size:10px">${esc(f.key)}</code></span></label>${input}<div class="help">${esc(f.help)}</div></div>`;
+  });
+  box.innerHTML=html;
+  const a=$("#docSettings"); if(a) a.onclick=e=>{e.preventDefault(); openFile("instellingen.txt");};
+  box.querySelectorAll("[data-n]").forEach(el=>{
+    const f=PROPS[+el.dataset.n];
+    const apply=()=>{ setHeader(f, el.value); el.classList.toggle("has", !!el.value); };
+    if(el.tagName==="SELECT") el.onchange=apply; else { el.oninput=()=>{ clearTimeout(el._t); el._t=setTimeout(apply,350); }; el.onchange=apply; }
+  });
+}
+function refreshDoc(){   // na typen in de editor: waarden bijwerken (niet het veld waar je in typt)
+  if(!$("#r-doc").classList.contains("active") || !PROPS) return;
+  if(document.activeElement && document.activeElement.closest && document.activeElement.closest("#docForm")) return;
+  drawDoc();
 }
 
 /* ------------------------------------------------------------ bibliotheek */
@@ -729,7 +807,7 @@ $("#hsplit").addEventListener("mousedown", e=>{
 
 /* ------------------------------------------------------------ start */
 (async function(){
-  await loadTree(); initTools(); initLib(); initHelp(); updateTitle(); render();
+  await loadTree(); initTools(); initLib(); initHelp(); await initProps(); updateTitle(); render();
   try{ const s=await api("/api/status");
     $("#stMs").innerHTML = s.musescore ? `<span class="st-ok">MuseScore gevonden</span>` : `<span class="st-err">MuseScore niet gevonden (alleen MusicXML)</span>`;
     $("#stMs").title = s.musescore || "Zet 'musescore: pad' in instellingen.txt";

@@ -33,6 +33,7 @@ HEADER_KEYS = {
     "tempo": "bpm", "bpm": "bpm",
     "maat": "meter", "maatsoort": "meter", "meter": "meter", "time": "meter",
     "stijl": "feel", "feel": "feel", "gevoel": "feel", "groove": "feel",
+    "vermelding": "credit", "credit": "credit", "uitgeschreven-door": "credit",
     "door": "by", "transcriptie": "by", "by": "by", "arrangement": "by",
     "notitie": "notes", "notities": "notes", "notes": "notes", "opmerking": "notes",
     "toonsoort": "key", "key": "key",

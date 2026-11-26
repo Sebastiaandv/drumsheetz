@@ -88,18 +88,22 @@ class Writer:
     def header(self):
         s = self.song
         title = s.get("title", "Zonder titel")
-        sub = s.get("subtitle") or self.cfg.get("subtitle", "Drum sheet")
+        sub = s.get("subtitle") if "subtitle" in s else self.cfg.get("subtitle", "")
+        self.subtitle = (sub or "").strip()
         artist = s.get("artist", "")
         name = s.get("by") or self.cfg.get("name", "")
-        credit = self.cfg.get("credit", "Drum sheet: {naam}")
+        # vermelding rechtsboven (bv. "Drum sheet: {naam}"): per nummer, anders uit instellingen, anders niets
+        credit = s["credit"] if "credit" in s else self.cfg.get("credit", "")
+        credit = (credit or "").replace("{naam}", name).replace("{name}", name).strip()
         lines = [artist] if artist else []
-        if name:
-            lines.append(credit.replace("{naam}", name).replace("{name}", name))
+        if credit:
+            lines += [c.strip() for c in credit.split("\\n") if c.strip()]
         self.w('<?xml version="1.0" encoding="UTF-8"?>')
         self.w('<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" '
                '"http://www.musicxml.org/dtds/partwise.dtd">')
         self.w('<score-partwise version="4.0">')
-        self.w(f"<work><work-title>{esc(sub)}</work-title></work>")
+        if self.subtitle:
+            self.w(f"<work><work-title>{esc(self.subtitle)}</work-title></work>")
         self.w(f"<movement-title>{esc(title)}</movement-title>")
         if lines:
             self.w('<identification><creator type="composer">' + "&#10;".join(esc(x) for x in lines)
@@ -406,6 +410,7 @@ def to_musicxml(score, config=None):
     offsets = Offsets(w.offsets)
     mode = str(score.song.get("count_pos") or (config or {}).get("count_pos") or "binnen").lower()
     offsets.counts = [] if mode in ("boven", "above") else list(w.counts)
+    offsets.subtitle = w.subtitle
     offsets.accent = str(score.song.get("accent_pos") or (config or {}).get("accent_pos") or "boven").lower()
     return xml, offsets
 
@@ -414,3 +419,4 @@ class Offsets(dict):
     """Maatnummer-verschuivingen, plus de maten waarvan de 'N×' in de balk moet."""
     counts = []
     accent = "boven"
+    subtitle = ""

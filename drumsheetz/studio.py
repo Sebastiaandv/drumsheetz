@@ -24,6 +24,51 @@ LOCK = threading.Lock()
 TEXT_EXT = {".drum", ".txt", ".py", ".md"}
 
 
+# Documenteigenschappen (de kop van een .drum-bestand): (sleutel, intern, label, type, keuzes, uitleg, groep, instelling)
+PROPS = [
+    ("titel", "title", "Titel", "text", None, "Bovenaan de PDF", "Algemeen", None),
+    ("ondertitel", "subtitle", "Ondertitel", "text", None, "Kleinere regel onder de titel", "Algemeen", "subtitle"),
+    ("artiest", "artist", "Artiest", "text", None, "Rechtsboven", "Algemeen", None),
+    ("vermelding", "credit", "Vermelding", "text", None,
+     "Rechtsboven onder de artiest, bv. 'Drum sheet: {naam}'. Leeg = niets. Meerdere regels met \\n", "Algemeen", "credit"),
+    ("componist", "composer", "Componist", "text", None, "Alleen informatief", "Algemeen", None),
+    ("album", "album", "Album", "text", None, "Alleen informatief", "Algemeen", None),
+    ("jaar", "year", "Jaar", "text", None, "Alleen informatief", "Algemeen", None),
+    ("tempo", "bpm", "Tempo", "text", None, "Bv. 92, of 4.=60 / 8=200", "Muziek", None),
+    ("maat", "meter", "Maatsoort", "text", None, "Bv. 4/4, 6/8, 7/8 (2+2+3)", "Muziek", None),
+    ("stijl", "feel", "Stijl", "text", None, "Cursieve regel onder het tempo", "Muziek", None),
+    ("notitie", "notes", "Notitie", "text", None, "Extra cursieve regel", "Muziek", None),
+    ("swing", "swing", "Swing", "select", ["", "ja", "16"], "'Swing' bij de stijl en swing in de MIDI", "Muziek", None),
+    ("aftellen", "countin", "Aftellen (maten)", "number", None, "Maten stokken tikken vooraf", "Muziek", None),
+    ("toonsoort", "key", "Toonsoort", "text", None, "Alleen informatief", "Muziek", None),
+    ("stemmen", "voices", "Stemmen", "select", ["", "1", "2"],
+     "1 = alles stok omhoog, 2 = voeten apart omlaag", "Opmaak", "voices"),
+    ("layout", "layout", "Indeling", "select", ["", "secties", "doorlopend"],
+     "secties = elke sectie op een nieuwe regel", "Opmaak", None),
+    ("maten-per-regel", "bars_per_line", "Maten per regel", "number", None, "Vast aantal maten per regel", "Opmaak", None),
+    ("herhaaltekens", "compress", "%-maten", "select", ["", "ja", "nee"], "nee = alles uitschrijven", "Opmaak", None),
+    ("herhaalteller", "count_pos", "Plek van 'N×'", "select", ["", "binnen", "boven"],
+     "In de balk of boven de maat", "Opmaak", "count_pos"),
+    ("tekstgrootte", "text_size", "Tekstgrootte", "text", None,
+     "klein, normaal, groot of punten (bv. 9)", "Opmaak", "text_size"),
+    ("stijlgrootte", "feel_size", "Grootte stijlregel", "text", None, "klein, normaal, groot of punten", "Opmaak",
+     "feel_size"),
+    ("accenten", "accent_pos", "Accenten", "select", ["", "boven", "onder", "auto"], "Boven of onder de noten",
+     "Opmaak", "accent_pos"),
+    ("vorken", "wedge_pos", "Crescendo/dim", "select", ["", "onder", "boven"], "Vorken met hun letters",
+     "Opmaak", "wedge_pos"),
+    ("dynamiek", "dyn_pos", "Losse dynamiek", "select", ["", "boven", "onder"], "mf, p, ... boven of onder",
+     "Opmaak", "dyn_pos"),
+    ("duur", "duration", "Duur", "text", None, "Voor setlists, bv. 4:32 (anders berekend)", "Setlist en info", None),
+    ("status", "status", "Status", "text", None, "Bv. klaar, bezig, nakijken", "Setlist en info", None),
+    ("tags", "tags", "Tags", "text", None, "Vrije trefwoorden", "Setlist en info", None),
+    ("pdf", "pdf", "Externe PDF", "text", None, "Gebruik deze PDF in setlists in plaats van de eigen sheet",
+     "Setlist en info", None),
+    ("bron", "source", "Bron", "text", None, "Waar de partij vandaan komt", "Setlist en info", None),
+    ("audio", "audio", "Audio", "text", None, "Pad naar een opname", "Setlist en info", None),
+]
+
+
 class Studio:
     def __init__(self, root):
         self.root = pathlib.Path(root).resolve()
@@ -226,6 +271,13 @@ class Studio:
             s["body"] = "\n".join(s["body"]).strip()
         return {"sections": [s for s in sections if s["body"] and s["title"] != "Inhoud"]}
 
+    def props(self):
+        from .parser import HEADER_KEYS
+        cfg = self.project().config
+        fields = [{"key": k, "id": i, "label": lab, "type": t, "options": o, "help": h, "group": g,
+                   "default": (cfg.get(c, "") if c else "")} for k, i, lab, t, o, h, g, c in PROPS]
+        return {"fields": fields, "aliases": HEADER_KEYS}
+
     def status(self):
         from .musescore import find_musescore
         p = self.project()
@@ -335,6 +387,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, s.kit())
             if u.path == "/api/help":
                 return self.send(200, s.help())
+            if u.path == "/api/props":
+                return self.send(200, s.props())
             if u.path == "/api/status":
                 return self.send(200, s.status())
             if u.path.startswith("/uitvoer/") or u.path.startswith("/archief/"):

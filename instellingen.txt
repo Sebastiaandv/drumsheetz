@@ -1,15 +1,30 @@
+# Instellingen voor alle nummers. Elke instelling kun je per nummer overrulen in de kop van dat nummer.
+
+# Je naam. Wordt alleen gebruikt als je {naam} in 'vermelding' zet.
 naam: Sebastiaan Johan de Vries
+
+# Tekst rechtsboven onder de artiest (bv. "Drum sheet: {naam}"). Leeg = niets.
+# Per nummer: 'vermelding: Drum partituur: {naam}' in de kop. Meerdere regels met \n.
+vermelding:
+
+# Standaard-ondertitel onder de titel. Leeg = geen ondertitel (per nummer: 'ondertitel: ...').
+ondertitel:
+
 # 1 = alle noten (ook bassdrum en hi-hat-voet) in één stem met de stokken omhoog: geen losse rusten.
-# 2 = handen omhoog, voeten omlaag (zoals de oude sheets). Per nummer te overrulen met 'stemmen: 2'.
+# 2 = handen omhoog, voeten omlaag (zoals de oude sheets).
 stemmen: 1
+
 # binnen = 'N×' bij een %-maat in de balk zelf (vóór het %-teken); boven = boven de maat zoals vroeger.
 herhaalteller: binnen
-# Grootte van de cursieve teksten bij de maten (lyrics, aanwijzingen): klein, normaal, groot of een getal in punten.
-# Per nummer in de kop ('tekstgrootte: 9') of per regel ('klein', 'groot', 'grootte=7') aan te passen.
+
+# Grootte van de cursieve teksten bij de maten (lyrics, aanwijzingen): klein, normaal, groot of een getal.
 tekstgrootte: klein
+
 # Accenten (> en ^) en open/dicht-tekens: boven (boven de noten), onder, of auto (MuseScore kiest).
 accenten: boven
+
 # Crescendo/diminuendo-vorken (met hun begin- en eindletter): onder of boven de balk.
 vorken: onder
+
 # Losse dynamiektekens (mf, p, ...): boven of onder de balk.
 dynamiek: boven
