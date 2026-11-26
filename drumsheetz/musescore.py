@@ -137,6 +137,34 @@ def add_subtitle(text, sub):
     return text.replace(block, block + "\n        " + new, 1)
 
 
+def fit_title_frame(text, has_sub):
+    """Titelvak hoog genoeg maken: in MuseScore 4 staan de blokken links (componist, jaar, ...) en rechts
+    (artiest, vermelding) onderaan het vak, op dezelfde hoogte als de ondertitel. Daarom het vak verhogen,
+    zodat die blokken ónder de ondertitel komen."""
+    m = re.search(r"<VBox>.*?</VBox>", text, re.S)
+    if not m:
+        return text
+    box = m.group(0)
+
+    def lines_of(style):
+        t = re.search(r"<style>" + style + r"</style>.*?<text>(.*?)</text>", box, re.S | re.I)
+        if not t:
+            return 0
+        return len([x for x in re.split(r"\n|<br\s*/?>|&#10;", t.group(1)) if x.strip()])
+
+    n = max(lines_of("lyricist"), lines_of("composer"))
+    if not n:
+        return text
+    need = (9.5 + 3.0 if has_sub else 9.5) + 1.9 * n
+    h = re.search(r"<height>([\d.]+)</height>", box)
+    cur = float(h.group(1)) if h else 10.0
+    if need <= cur:
+        return text
+    val = f"{need:.1f}"
+    new = box.replace(h.group(0), f"<height>{val}</height>", 1) if h else box.replace("<VBox>", f"<VBox>\n        <height>{val}</height>", 1)
+    return text.replace(box, new, 1)
+
+
 def patch_mscx(path, offsets, min_system_distance="12"):
     """Zet <noOffset> ('tel op bij maatnummer') op de maat na elke herhaalmaat,
     en geef de regels wat meer ruimte zodat dynamiek bij de juiste balk hoort."""
@@ -170,6 +198,7 @@ def patch_mscx(path, offsets, min_system_distance="12"):
     sub = getattr(offsets, "subtitle", "")
     if sub:
         text = add_subtitle(text, sub)
+    text = fit_title_frame(text, bool(sub))
     acc = getattr(offsets, "accent", "")
     if acc in ("boven", "above", "onder", "below"):
         up = acc in ("boven", "above")
