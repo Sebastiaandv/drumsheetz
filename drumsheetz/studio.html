@@ -268,7 +268,7 @@ dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
     <div class="ltab" id="l-fs" style="display:none;flex-direction:column;min-height:0;flex:1">
       <div class="fs-bar">
         <button class="btn small primary" id="fsSendChanged" title="Nummers die al in forScore staan en sindsdien gewijzigd zijn opnieuw versturen">Werk forScore bij</button>
-        <button class="btn small" id="fsNewGroup" title="Nieuwe map, genre, label of tag">＋ Groep</button>
+        <button class="btn small" id="fsNewGroup" title="Nieuwe map">＋ Map</button>
       </div>
       <input id="fsFilter" placeholder="Zoek in forScore-overzicht…">
       <div id="fsTree"></div>
@@ -591,7 +591,7 @@ $("#ltabs").addEventListener("click", e=>{
 });
 
 /* ------------------------------------------------------------ forScore-beheer */
-const FS = { data:null, open:new Set(["all","map","setlists"]), extra:{map:[],genre:[],labels:[],tags:[]} };
+const FS = { data:null, open:new Set(["notyet","map","setlists"]), extra:{map:[],genre:[],labels:[],tags:[]} };
 const FS_GROUPS = [["map","Mappen","map","library"],["genre","Genres","genre","genre"],["labels","Labels","labels","labels"],["tags","Tags","tags","tags"]];
 const STATUS_TXT = {actueel:"staat actueel in forScore", nieuw:"nog niet in forScore", pdf:"PDF gewijzigd: opnieuw versturen",
   gegevens:"gegevens gewijzigd", verouderd:"nummer gewijzigd sinds de laatste PDF", "geen-pdf":"nog geen PDF gemaakt", fout:"fout in het nummer"};
@@ -612,11 +612,12 @@ function drawFs(){
   const songs = d.songs.filter(match);
   const sec = (key, title, n, body, drop) => `<div class="fs-sec" data-sec="${key}" ${drop?`data-drop="${drop}"`:""}>${FS.open.has(key)?"▾":"▸"} ${title}<span class="n">${n}</span></div>`+(FS.open.has(key)?body:"");
   let html="";
-  const todo = songs.filter(s=>s.sent && ["pdf","gegevens","verouderd"].includes(s.status));
   const notyet = songs.filter(s=>!s.sent);
-  html += sec("todo","Gewijzigd sinds versturen", todo.length, todo.map(s=>fsSongRow(s,true)).join("") || '<div class="hint" style="padding:4px 14px">Alles in forScore is bijgewerkt.</div>');
-  html += sec("notyet","Nog niet in forScore", notyet.length, notyet.map(s=>fsSongRow(s,true)).join(""));
-  for(const [key,title,hkey,field] of FS_GROUPS){
+  const insf = songs.filter(s=>s.sent);          // in de mappen staan alleen stukken die al in forScore staan
+  html += sec("notyet","Nog niet in forScore", notyet.length, notyet.map(s=>fsSongRow(s,true)).join("") ||
+    '<div class="hint" style="padding:4px 14px">Alles staat in forScore.</div>');
+  for(const [key,title,hkey,field] of FS_GROUPS.filter(g=>g[0]==="map")){
+    const songs = insf;
     const groups={};
     for(const g of FS.extra[key]) groups[g]=[];
     for(const s of songs) for(const g of (s[field]||[])) (groups[g]=groups[g]||[]).push(s);
@@ -629,7 +630,7 @@ function drawFs(){
         (open?groups[g].map(s=>fsSongRow(s,false,[hkey,g])).join(""):"");
     }).join("");
     if(key==="map" && none.length){ const open=FS.open.has("map:-"); body += `<div class="fs-grp" data-grp="map:-">${open?"▾":"▸"} <i>zonder map</i><span class="n">${none.length}</span></div>`+(open?none.map(s=>fsSongRow(s)).join(""):""); }
-    html += sec(key, title, names.length, body || `<div class="hint" style="padding:4px 14px">Sleep een nummer hierheen of maak een groep met ＋ Groep.</div>`, hkey+"|");
+    html += sec(key, title, names.length, body || `<div class="hint" style="padding:4px 14px">Maak een map met ＋ Map en sleep er nummers in.</div>`, hkey+"|");
   }
   html += sec("setlists","Setlists", d.setlists.length, d.setlists.map(sl=>{
     const gk="set:"+sl.name, open=FS.open.has(gk);
@@ -639,7 +640,6 @@ function drawFs(){
       (open?sl.items.map(i=>i.kind==="break"?`<div class="fs-song" style="color:var(--muted);font-style:italic">— ${esc(i.title)} —</div>`:
         (()=>{ const s=d.songs.find(x=>x.id===i.id); return s?fsSongRow(s):`<div class="fs-song"><span class="dot geen-pdf"></span><span class="t">${esc(i.title)}</span><span class="a">extern</span></div>`; })()).join(""):"");
   }).join("") || '<div class="hint" style="padding:4px 14px">Nog geen setlists.</div>');
-  html += sec("all","Alle stukken", songs.length, songs.map(s=>fsSongRow(s,true)).join(""));
   $("#fsTree").innerHTML = html;
 }
 $("#fsFilter").addEventListener("input", drawFs);
@@ -697,10 +697,8 @@ $("#fsSendChanged").onclick = ()=>{
   fsSend({paths});
 };
 $("#fsNewGroup").onclick = ()=>{
-  const kind = prompt("Wat voor groep? Typ: map, genre, label of tag", "map"); if(!kind) return;
-  const key = {map:"map",genre:"genre",label:"labels",labels:"labels",tag:"tags",tags:"tags"}[kind.trim().toLowerCase()];
-  if(!key){ toast("Kies map, genre, label of tag"); return; }
-  const name = prompt("Naam:"); if(!name) return;
+  const key = "map";
+  const name = prompt("Naam van de nieuwe map:"); if(!name) return;
   FS.extra[key].push(name.trim()); FS.open.add(key); drawFs(); toast("Sleep nu nummers naar de nieuwe groep");
 };
 

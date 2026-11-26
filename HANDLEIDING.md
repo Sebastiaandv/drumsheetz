@@ -1039,11 +1039,13 @@ forScore-bibliotheek vanuit Drumsheetz op orde te houden.
 
 | Onderdeel | Wat |
 |---|---|
-| **Gewijzigd sinds versturen** | Nummers die al in forScore staan maar sindsdien zijn aangepast. **Werk forScore bij** stuurt ze allemaal opnieuw. |
-| **Nog niet in forScore** | Nummers die je nog nooit hebt verstuurd. |
-| **Mappen, Genres, Labels, Tags** | Je indeling. **Sleep een nummer** op een groep om het erin te zetten; ✕ haalt het eruit. **＋ Groep** maakt een nieuwe lege groep. → stuurt alles in die groep naar forScore. |
-| **Setlists** | Je setlists met hun nummers. → stuurt de setlist als forScore-setlist (`.4ss`), met de nummers die er nog niet in staan. ✎ opent het setlistbestand. |
-| **Alle stukken** | Alles, met een bolletje: groen = actueel in forScore, blauw = nieuw, oranje = gewijzigd, open = nog geen PDF. Klik om het nummer te openen. |
+| **Nog niet in forScore** | Nummers die je nog nooit naar forScore hebt gestuurd. → stuurt er één. |
+| **Mappen** | Alles wat al in forScore staat, per map; wat in geen map zit staat onder *zonder map*. **＋ Map** maakt een nieuwe map; **sleep** een nummer op een map om het erin te zetten, ✕ haalt het eruit, → stuurt de hele map. |
+| **Setlists** | Je setlists met hun nummers. → stuurt de setlist naar forScore (met de nummers die er nog niet in staan); ✎ opent het setlistbestand. |
+
+**Werk forScore bij** stuurt alle nummers die al in forScore staan maar sindsdien zijn veranderd
+opnieuw. Het bolletje voor een nummer: groen = actueel in forScore, oranje = gewijzigd, open = nog
+geen PDF.
 
 De indeling wordt gewoon in de kop van het nummer bewaard, dus je kunt hem ook typen of in het
 Document-paneel invullen:
