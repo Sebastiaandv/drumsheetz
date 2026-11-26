@@ -117,6 +117,13 @@ Ctrl+C in de terminal). Je typt nog steeds gewoon in de `.drum`-bestanden, maar 
 | **Rechts** | *Document*: alle eigenschappen van het nummer (titel, ondertitel, vermelding, tempo, maat, stijl, aftellen, stemmen, tekstgrootte, accenten, vorken, duur, …) als invulvelden. Wat je invult komt direct bovenin het bestand; leeg = standaard uit `instellingen.txt` (staat er grijs bij). *Gereedschap*: klik om in te voegen: blokken (groove, fill, sectie, volta's, segno/coda, …), opties (crash, fill, mf, cresc, …), tekens (accent, ghost, flam, …), tellen (`*8`, `2&`, …) en instrumenten. *Bibliotheek*: alle grooves en fills doorzoeken, met voorbeeld. *Help*: doorzoek deze handleiding. |
 | **Boven** | Nieuw nummer, nieuwe setlist, Document (eigenschappen), opslaan, controleren, **Maak PDF** (of setlist), PDF openen, MIDI (tempo %, aftellen, klik), alles maken, archiveren, instellingen, help. |
 
+**Bestanden en mappen beheren** (links, tabblad *Bestanden*): ga met de muis over een map of bestand
+voor de knopjes: **＋♩** nieuw nummer in deze map, **＋▤** nieuwe map, **▶** alle nummers in deze map
+maken, **✎** hernoemen (of dubbelklikken, of **F2**), **🗑** naar het archief (nummers) of een lege map
+weghalen. **Sleep** een nummer of map naar een andere map om het te verplaatsen. Bij hernoemen en
+verplaatsen gaan de PDF's en MuseScore-bestanden mee, en worden setlists die naar het nummer verwijzen
+automatisch aangepast.
+
 Sneltoetsen: **⌘/Ctrl+S** opslaan, **⌘/Ctrl+Enter** PDF maken, **⌘/Ctrl+Z** ongedaan maken en
 **⌘/Ctrl+Shift+Z** (of Ctrl+Y) opnieuw (werkt ook na opslaan en na wijzigingen via het Document-paneel of
 het gereedschap), **⌘/Ctrl+F** zoeken en vervangen (met *Alle bestanden* zoek je in al je nummers en
@@ -131,7 +138,7 @@ de editor, zodat je ze makkelijk kunt opruimen. De panelen kun je breder/smaller
 
 | Map / bestand | Wat staat er |
 |---|---|
-| `nummers/` | Je nummers: `.drum` (nieuw formaat) of `.py` (oud/geavanceerd formaat). Submappen mogen. |
+| `nummers/` | Je nummers: `.drum` (nieuw formaat) of `.py` (oud/geavanceerd formaat). Namen mogen alles bevatten wat een gewoon bestand mag (hoofdletters, spaties, `&`, haakjes, …). Submappen mogen; de uitvoer krijgt dezelfde mappenstructuur (`uitvoer/pdf/Hatikwa/The River.pdf`). Een map die met `_` begint (bv. `_Ideeën`) is **geparkeerd**: die wordt niet meegenomen bij *alles maken*, `lijst` en het forScore-overzicht. |
 | `setlists/` | Setlists als `.txt`. |
 | `uitvoer/pdf/` | De PDF's. |
 | `uitvoer/mscz/` | MuseScore-bestanden (om in MuseScore nog iets met de hand te verschuiven). |
@@ -159,6 +166,7 @@ zonder extensie (`letlove`), de titel (`"Let Love Rule"`), een stuk ervan (`krav
 |---|---|
 | `maak` | Maak PDF's van **alle gewijzigde** nummers. Ongewijzigde worden overgeslagen. |
 | `maak letlove crime` | Alleen deze nummers. |
+| `maak "nummers/Hatikwa"` | Alle nummers in die map (ook als hij geparkeerd is). |
 | `maak -a` | Alles opnieuw, ook als er niets veranderd is. |
 | `maak --xml` | Alleen MusicXML (geen MuseScore nodig). |
 | `maak --midi` | Ook een MIDI-bestand maken. |
@@ -167,7 +175,7 @@ zonder extensie (`letlove`), de titel (`"Let Love Rule"`), een stuk ervan (`krav
 | `lijst` | Tabel met alle nummers: tempo, maatsoort, aantal maten, geschatte duur, status, PDF ja/nee. |
 | `lijst --zoek queen` | Alleen nummers waar "queen" in zit. |
 | `controleer` | Controleert alle nummers op fouten en geeft waarschuwingen (bv. een rasterrij met 15 tekens). |
-| `nieuw "Titel" "Artiest"` | Nieuw nummer uit sjabloon. Opties: `--maat 6/8`, `--tempo 72`, `--stijl "..."`, `--id naam`. |
+| `nieuw "Titel" "Artiest"` | Nieuw nummer uit sjabloon (bestandsnaam = titel). Opties: `--maat 6/8`, `--tempo 72`, `--stijl "..."`, `--map Hatikwa`, `--id bestandsnaam`. |
 | `midi letlove` | MIDI-oefenbestand. Opties: `--tempo 80` (procent), `--klik`, `--aftellen 2`. |
 | `bibliotheek` | Alle ingebouwde en eigen grooves en fills als drumtab. |
 | `bibliotheek funk` | Eén patroon bekijken. |
