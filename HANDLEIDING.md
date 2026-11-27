@@ -43,7 +43,9 @@ een bibliotheek met kant-en-klare grooves en fills, en een tekstweergave in de t
    23. [Commentaar](#423-commentaar)
 5. [De bibliotheek](#5-de-bibliotheek)
 6. [Setlists](#6-setlists)
-7. [forScore op de iPad](#7-forscore-op-de-ipad)
+7. [Versies en forScore op de iPad](#7-versies-en-forscore-op-de-ipad)
+   - [Versiebeheer](#versiebeheer)
+   - [forScore](#forscore)
 8. [MIDI: oefenen met een meespeelbestand](#8-midi-oefenen-met-een-meespeelbestand)
 9. [Archief](#9-archief)
 10. [Het geavanceerde Python-formaat](#10-het-geavanceerde-python-formaat)
@@ -189,7 +191,14 @@ zonder extensie (`letlove`), de titel (`"Let Love Rule"`), een stuk ervan (`krav
 | `setlist nieuw bruiloft always crime scene` | Nieuwe setlist met deze nummers. |
 | `setlist toon bruiloft` | Overzicht met tempo, maatsoort, duur, subtotalen per set. |
 | `setlist maak bruiloft` | Alle PDF's, genummerde kopieën, compleet boek, voorblad, podiumlijst. |
-| `forscore [nummers]` | Nieuwe/gewijzigde PDF's naar forScore (Mac → iPad via iCloud). `-a` = alles. |
+| `forscore` | forScore gelijk maken aan Drumsheetz: nieuwe nummers, nieuwe versies, setlists (zie hoofdstuk 7). |
+| `forscore letlove --notitie "nieuwe intro"` | Alleen dit nummer, met een notitie bij de nieuwe versie. |
+| `versies` | Overzicht: welke versie elk nummer heeft en of het sindsdien gewijzigd is. |
+| `versies letlove` | Alle versies van één nummer, met datum, notitie en naam in forScore. |
+| `versies letlove --nieuw "notitie"` | Nu een versie vastleggen (met PDF). |
+| `versies letlove --verschil 2` | Wat er veranderd is sinds V2 (`--verschil 2 4`: tussen V2 en V4). |
+| `versies letlove --terug 2` | V2 terugzetten (wat er stond wordt eerst als reservekopie bewaard). |
+| `versies --controleer` | Controleer of alle versiebestanden er nog zijn en niet veranderd zijn. |
 | `studio` | Open de Studio: editor met bestanden, gereedschap en help in je browser. |
 | `help` | Overzicht van de opdrachten. `python3 drums.py maak -h` geeft de opties van één opdracht. |
 
@@ -998,7 +1007,57 @@ Een voorbeeld staat in `setlists/voorbeeld.txt` (de volgorde van de oude map `ar
 
 ---
 
-## 7. forScore op de iPad
+## 7. Versies en forScore op de iPad
+
+### Versiebeheer
+
+Elk nummer heeft versies: **V1, V2, V3, …** Een versie is een vaste momentopname van het nummer (de
+`.drum`-tekst én de PDF), bewaard in de map `versies/`. In forScore is elke versie een **eigen stuk**:
+"Lean on Me - Bill Withers **V2**". Zo wordt er in forScore nooit iets overschreven: je aantekeningen
+met de Apple Pencil op V1 blijven gewoon op V1 staan.
+
+**Hoe ontstaat een versie?**
+
+- Automatisch bij **⇅ forScore**: is het nummer *muzikaal* veranderd sinds de vorige versie, dan wordt
+  het de volgende versie en gaat het als nieuw stuk naar forScore.
+- Zelf, met **Nieuwe versie** in het tabblad *Versies* (of `drums.py versies letlove --nieuw "notitie"`).
+  Handig als je een tussenstand wilt vastleggen, met een notitie erbij.
+
+**Wat telt als verandering?** Alles wat op het blad komt (tempo, patronen, opbouw, teksten, ...).
+Wat alleen voor forScore is telt **niet**: `labels:`, `genre:`, `tags:`, `waardering:`,
+`moeilijkheid:`, `referentie:`, `forscore-naam:`, en ook geen extra spaties of lege regels.
+
+**Het tabblad Versies** (rechts in de Studio) laat voor het open nummer zien:
+
+| Onderdeel | Wat |
+|---|---|
+| Bovenaan | "Het nummer is gelijk aan V3", of "Gewijzigd sinds V3: wordt V4" met wat er veranderd is (bv. *+2 −1 regels: deel Refrein*). |
+| **Nieuwe versie** | Leg nu een versie vast (met PDF). Typ eventueel eerst een notitie. |
+| Per versie | Datum, notitie (klik erop om hem te veranderen), wat er veranderd was, en de naam in forScore. |
+| **Verschil met nu** | Laat regel voor regel zien wat er sinds die versie veranderd is (rood weg, groen erbij). |
+| **PDF** | Open de PDF van die versie, precies zoals hij toen was. |
+| **Terugzetten** | Zet die versie terug in het nummer. Wat er stond wordt eerst als **reservekopie** bewaard. |
+| **Reservekopieën** | Onderaan: wat er stond vóór elk terugzetten. Ook die kun je terugzetten. |
+
+**Terugzetten is veilig.** De geschiedenis loopt altijd door: zet je V1 terug terwijl je al op V3
+zat, dan wordt het bij de volgende ⇅ forScore **V4 (= V1)**. Staat V1 nog in forScore, dan wordt
+dat stuk gewoon weer gebruikt (met je aantekeningen), en er komt niets dubbel in.
+
+**In de boom** staat achter elk nummer zijn versie: `V3`, of `V3*` (oranje) als het sindsdien
+gewijzigd is. Op het blad zelf staat linksboven **Versie V3**, zodat je op papier ook ziet welke
+versie het is (uitzetten: `versie-op-blad: nee` in `instellingen.txt`).
+
+**Waterdicht:**
+
+- Versiebestanden zijn alleen-lezen en hebben een controlesom. `drums.py versies --controleer` (of het
+  tabblad Versies) meldt het als er iets ontbreekt of is veranderd. Drumsheetz gooit nooit een versie weg.
+- Hernoem of verplaats je een nummer in de Studio, dan gaat de geschiedenis mee. Doe je het buiten de
+  Studio om (Finder), dan wordt de geschiedenis teruggevonden aan de inhoud of aan titel + artiest.
+- Setlists hebben ook versies (zie hieronder).
+- `versies/` is jouw geschiedenis: gooi die map niet weg en neem hem mee in je back-up (Time Machine).
+  `uitvoer/` mag je altijd weggooien; `versies/` niet.
+
+### forScore
 
 Je maakt de nummers op de Mac; Drumsheetz zet ze in **forScore voor Mac**, en de
 **iCloud-synchronisatie** van forScore zet ze op je iPad.
@@ -1020,33 +1079,41 @@ Er is maar **één boom**: je gewone Drumsheetz-mappen in `nummers/`. forScore v
   Submappen geven meerdere labels (`Kerk/Kerst/…` → *Kerk* en *Kerst*). Mappen die met `_` beginnen
   (geparkeerd) gaan niet naar forScore. Wil je nog een label erbij, zet dan `labels: …` in het nummer.
 - **Eén knop: ⇅ forScore** (in de Studio, rechtsboven) of `python3 drums.py forscore` in de Terminal.
-  Die maakt forScore gelijk aan Drumsheetz: PDF's maken waar nodig, nieuwe nummers erin, gewijzigde
-  nummers bijwerken, nieuwe setlists erin. Het getal op de knop is hoeveel er nog moet.
+  Die maakt forScore gelijk aan Drumsheetz: PDF's maken waar nodig, nieuwe nummers erin (V1),
+  gewijzigde nummers als nieuwe versie erin (V2, V3, …), setlists erin. Het getal op de knop is hoeveel
+  er nog moet. Voor hij begint zegt hij wat hij gaat doen.
 
-forScore blijft de baas over je bibliotheek: labels, annotaties en indeling in forScore worden nooit
-door Drumsheetz aangepast of overschreven. Drumsheetz **kijkt** in de forScore-bibliotheek op je Mac
+forScore blijft de baas over je bibliotheek: **stukken die al in forScore staan worden nooit
+aangeraakt** (niet overschreven, niet verplaatst, geen labels veranderd). Er komen alleen nieuwe
+stukken en nieuwe setlists bij. Drumsheetz **kijkt** in de forScore-bibliotheek op je Mac
 (alleen lezen) en stuurt bestanden die forScore zelf importeert. Wat daardoor niet automatisch kan,
 krijg je na het synchroniseren als korte lijst **"Zelf doen in forScore"** in het Log.
 
 | Wat | Hoe |
 |---|---|
 | **Herkennen** | Een nummer hoort bij een stuk in forScore als de bestandsnaam klopt ("Titel - Artiest.pdf"), óf als de **titel** gelijk is en de componist niet tegenspreekt. Ook stukken die je zelf in forScore hebt gezet, of die er onder een andere naam in staan, worden herkend. Twee nummers met dezelfde titel maar een andere artiest worden niet door elkaar gehaald. |
-| **Nieuw nummer** | Gaat als `.4sc`: PDF + titel, componist, **map als label**, genre, trefwoorden (zodra de zelftest dat heeft bevestigd; anders als PDF). Daarna wordt gecontroleerd of het er staat. |
-| **Gewijzigd nummer** | Gaat als PDF onder de **naam die het in forScore al heeft**. forScore vraagt wat hij moet doen: kies **Overschrijven** (niet "dupliceren"). Labels en annotaties blijven bewaard. Drumsheetz controleert of de nieuwe versie echt is overgenomen. |
+| **Stond al in forScore** | Een nummer dat al in forScore stond voordat er versies waren (bv. "The River.pdf"), wordt **V1**: er wordt niets verstuurd en er komt niets dubbel in. Pas als je het nummer verandert komt er "The River - Artiest V2" bij. |
+| **Nieuw nummer** | Gaat als V1 (`.4sc`: PDF + titel "Titel V1", componist, **map als label**, genre, trefwoorden; zolang de zelftest dat niet heeft bevestigd als PDF). Daarna wordt gecontroleerd of het er staat. |
+| **Gewijzigd nummer** | Wordt de volgende versie en gaat als **nieuw stuk** naar forScore ("… V2"), met de labels van de map. De oude versie blijft staan met je aantekeningen. |
+| **Oude versies** | Na het synchroniseren zie je in het Log welke oude versies nog in forScore staan. Die mag je weggooien zodra je je aantekeningen hebt overgezet; het hoeft niet. |
 | **Nummer naar andere map verplaatst** | forScore laat zijn labels niet van buitenaf veranderen. Je krijgt de taak "label toevoegen: … / label weghalen: …" en in de boom een ⚑ achter het nummer tot het klopt. |
-| **Nieuwe setlist** | Eerst gaan de stukken die nog ontbreken, dan de setlist (**Open Setlist**). Daarna wordt gecontroleerd of hij **compleet** is. |
-| **Gewijzigde setlist** | forScore kan een bestaande setlist niet laten bijwerken. Je krijgt de taak om hem in forScore te verwijderen; de volgende ⇅ zet de nieuwe erin. |
+| **Setlists** | Een setlist gebruikt altijd de **nieuwste versie** van elk nummer. Eerst gaan de stukken die nog ontbreken, dan de setlist (**Open Setlist**, "Bruiloft V1"), en er wordt gecontroleerd of hij **compleet** is. |
+| **Gewijzigde setlist** | Verandert de setlist, of komt er van een nummer erin een nieuwe versie, dan gaat er een nieuwe setlist naar forScore: "Bruiloft V2". De oude blijft staan (mag weg). Een setlist die al in forScore stond (zonder V) wordt V1. |
 | **Dubbelen** | Staat een stuk twee keer in forScore (bv. "Naam 2.pdf"), dan zie je ⚠ in de boom en een taak om de kopie weg te gooien (meestal die zonder labels). |
 
 **Bolletjes in de boom** (achter elk nummer en elke setlist): groen = actueel in forScore,
-blauw = nog niet in forScore, oranje = gewijzigd (gaat mee met de volgende ⇅), open = nog geen PDF.
+blauw = nog niet in forScore, oranje = gewijzigd (wordt een nieuwe versie bij de volgende ⇅).
 Houd de muis erop voor de naam in forScore. ⚑ = labels kloppen niet met de map, ⚠ = dubbel in forScore.
+
+**Kan forScore niet gelezen worden** (bv. geen toestemming), dan stuurt Drumsheetz geen nummers die nog
+nooit verstuurd zijn: hij kan dan niet zien of ze er al in staan, en maakt liever geen dubbele.
 
 ### Opdrachten
 
 ```bash
-python3 drums.py forscore                     # alles gelijk maken (nummers én setlists)
+python3 drums.py forscore                     # alles gelijk maken (nummers, versies én setlists)
 python3 drums.py forscore "The River"         # alleen één nummer
+python3 drums.py forscore "The River" --notitie "nieuwe brug"   # met notitie bij de nieuwe versie
 python3 drums.py forscore --setlist bruiloft  # alleen een setlist (met de stukken die nog ontbreken)
 python3 drums.py forscore --labels-ophalen    # labels die je in forScore extra gaf → 'labels:' (eerst bekijken)
 python3 drums.py forscore --labels-ophalen --toepassen
@@ -1210,6 +1277,7 @@ vorken: onder                          # crescendo/diminuendo (met hun letters):
 dynamiek: boven                        # losse dynamiektekens (mf, p, ...): boven of onder
 tekstgrootte: klein                    # teksten bij de maten: klein, normaal, groot of punten (bv. 9)
 stijlgrootte: normaal                  # de stijl/notitie-regel bovenaan
+versie-op-blad: ja                     # 'Versie V3' linksboven op het blad (nee = weglaten)
 ```
 
 MuseScore wordt gezocht in (op volgorde): `musescore:` in de instellingen, de omgevingsvariabele

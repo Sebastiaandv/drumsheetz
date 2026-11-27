@@ -30,6 +30,7 @@ CONFIG_KEYS = {"naam": "name", "name": "name", "ondertitel": "subtitle", "subtit
                "accenten": "accent_pos", "accent": "accent_pos",
                "vorken": "wedge_pos", "crescendo": "wedge_pos", "dynamiek": "dyn_pos",
                "forscore": "forscore", "forscore-formaat": "forscore_format",
+               "versie-op-blad": "version_stamp", "versie": "version_stamp",
                "tekstgrootte": "text_size", "stijlgrootte": "feel_size"}
 
 
@@ -126,6 +127,13 @@ class Project:
         song["_file"] = rel
         song["_path"] = str(path)
         song["_id"] = self.song_id(path)
+        stamp = str(self.config.get("version_stamp", "ja")).strip().lower()
+        if stamp not in ("nee", "no", "uit", "off", "0") and path.suffix == ".drum" \
+                and self.songs_dir.resolve() in path.resolve().parents:
+            from .versions import version_label
+            n = version_label(self, path)
+            if n:
+                song["_version"] = n
         return song, book, warns
 
     def find(self, ref, files=None):

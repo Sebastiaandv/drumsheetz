@@ -444,8 +444,31 @@ class Studio:
             self._cleanup_empty(project)
         return {"ok": True, "path": self.rel(dst)}
 
+    def versions(self, action, data):
+        from . import versions as V
+        project = self.project()
+        rel = data["path"]
+        logs = []
+        with LOCK:
+            if action == "info":
+                return V.info(project, rel)
+            if action == "create":
+                v = V.create(project, rel, data.get("note", ""), log=logs.append)
+                return {"version": v, "log": "\n".join(logs)}
+            if action == "restore":
+                return dict(V.restore(project, rel, int(data["n"]), log=logs.append), log="\n".join(logs))
+            if action == "restore_backup":
+                return dict(V.restore_backup(project, rel, data["file"], log=logs.append), log="\n".join(logs))
+            if action == "note":
+                return V.set_note(project, rel, int(data["n"]), data.get("note", ""))
+            if action == "diff":
+                return V.compare(project, rel, data.get("a"), data.get("b", "werk"))
+        raise ValueError("onbekende actie")
+
     def _move_outputs(self, project, oid, nid):
         import json as _json
+        from . import versions as V
+        V.move(project, oid, nid)
         oname = pathlib.PurePosixPath(oid).name
         for kind, ext in (("pdf", "pdf"), ("mscz", "mscz"), ("xml", "musicxml"), ("midi", "mid")):
             folder = project.out(kind, *pathlib.PurePosixPath(oid).parts[:-1])
@@ -591,7 +614,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, s.props())
             if u.path == "/api/status":
                 return self.send(200, s.status())
-            if u.path.startswith("/uitvoer/") or u.path.startswith("/archief/"):
+            if u.path.startswith(("/uitvoer/", "/archief/", "/versies/")):
                 p = s.safe(urllib.parse.unquote(u.path.lstrip("/")))
                 if not p.is_file():
                     return self.send(404, {"error": "niet gevonden"})
@@ -624,9 +647,13 @@ class Handler(BaseHTTPRequestHandler):
             "/api/deldir": lambda: s.rmdir(data),
             "/api/build-folder": lambda: s.run_cli(["maak", data["path"]] + (["-a"] if data.get("all") else [])),
             "/api/forscore": lambda: s.run_cli(["forscore"] + list(data.get("paths") or ([data["path"]] if data.get("path") else []))
-                                                 + (["-a"] if data.get("all") else [])
-                                                 + (["--gegevens"] if data.get("meta") else [])
                                                  + sum((["--setlist", n] for n in data.get("setlists") or []), [])),
+            "/api/versions": lambda: s.versions("info", data),
+            "/api/versions/create": lambda: s.versions("create", data),
+            "/api/versions/restore": lambda: s.versions("restore", data),
+            "/api/versions/restore-backup": lambda: s.versions("restore_backup", data),
+            "/api/versions/note": lambda: s.versions("note", data),
+            "/api/versions/diff": lambda: s.versions("diff", data),
             "/api/forscore/catalog": lambda: s.fs_catalog(),
             "/api/forscore/selftest": lambda: s.run_cli(["forscore", "--zelftest"]),
             "/api/forscore/labels": lambda: s.run_cli(["forscore", "--labels-ophalen"] + (["--toepassen"] if data.get("apply") else [])),

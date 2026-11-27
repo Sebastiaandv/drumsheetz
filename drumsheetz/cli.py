@@ -114,10 +114,8 @@ def main(argv=None, root=None):
     p = sub.add_parser("forscore", aliases=["fs"],
                        help="forScore gelijk maken aan Drumsheetz (zonder nummers: alles, ook setlists)")
     p.add_argument("nummers", nargs="*", help="leeg = alle nummers")
-    p.add_argument("-a", "--alles", action="store_true", help="ook ongewijzigde opnieuw sturen")
     p.add_argument("--geen-open", action="store_true", help="alleen klaarzetten in uitvoer/forscore/")
-    p.add_argument("--gegevens", action="store_true",
-                   help="ook bestaande stukken opnieuw met alle gegevens sturen (.4sc; vervangt annotaties!)")
+    p.add_argument("--notitie", default="", help="notitie bij een nieuwe versie (wat is er veranderd?)")
     p.add_argument("--setlist", action="append", default=[], help="stuur ook deze setlist (.4ss)")
     p.add_argument("--labels-ophalen", action="store_true",
                    help="labels uit forScore (Mac) als mappen in de nummers zetten (laat eerst zien wat er verandert)")
@@ -125,6 +123,14 @@ def main(argv=None, root=None):
     p.add_argument("--onderzoek", action="store_true", help="laat zien wat er in de forScore-database gevonden wordt")
     p.add_argument("--zelftest", action="store_true",
                    help="probeer PDF, .4sc en setlist één keer uit in forScore en maak een rapport")
+
+    p = sub.add_parser("versies", aliases=["versie", "versions"], help="versies van een nummer: bekijken, maken, terugzetten")
+    p.add_argument("nummer", nargs="?", help="nummer (leeg = overzicht van alle nummers)")
+    p.add_argument("--nieuw", nargs="?", const="", default=None, metavar="NOTITIE",
+                   help="nieuwe versie maken (met optionele notitie)")
+    p.add_argument("--terug", type=int, metavar="N", help="versie N terugzetten (wat er stond wordt bewaard)")
+    p.add_argument("--verschil", nargs="+", metavar="N", help="verschil tussen versie N en nu (of tussen N en M)")
+    p.add_argument("--controleer", action="store_true", help="controleer of alle versiebestanden nog kloppen")
 
     p = sub.add_parser("studio", aliases=["interface", "ui", "app"], help="open de Studio (editor in je browser)")
     p.add_argument("--poort", type=int, default=8765)
@@ -150,7 +156,8 @@ def main(argv=None, root=None):
            "check": "controleer", "test": "controleer", "new": "nieuw", "library": "bibliotheek",
            "lib": "bibliotheek", "kit": "instrumenten", "instruments": "instrumenten", "archive": "archiveer",
            "restore": "herstel", "convert": "converteer", "watch": "kijk", "set": "setlist",
-           "interface": "studio", "ui": "studio", "app": "studio", "fs": "forscore"}.get(args.cmd, args.cmd)
+           "interface": "studio", "ui": "studio", "app": "studio", "fs": "forscore",
+           "versie": "versies", "versions": "versies"}.get(args.cmd, args.cmd)
     try:
         return COMMANDS[cmd](project, args) or 0
     except NotationError as e:
@@ -517,18 +524,65 @@ def cmd_forscore(project, args):
     if args.labels_ophalen:
         fs.pull_labels(project, apply=args.toepassen)
         return
-    if not args.nummers and not args.setlist and not args.alles and not args.gegevens:
-        todo = fs.sync(project, open_app=not args.geen_open)
-        return 0 if not todo else 0
-    if args.nummers or not args.setlist:
+    if not args.nummers and not args.setlist:
+        fs.sync(project, open_app=not args.geen_open)
+        return 0
+    if args.nummers:
         paths = select(project, args.nummers)
         res = build(project, paths, log=lambda m: print(m) if m.startswith(("✗", "  !")) else None)
         fs.send(project, [(sc.song, project.out_file("pdf", p, "pdf"), sc) for p, sc, err in res if sc],
-                force=args.alles, open_app=not args.geen_open, force_meta=args.gegevens)
+                open_app=not args.geen_open, note=args.notitie)
     ok = True
     for name in args.setlist:
         ok = fs.send_setlist(project, name, open_app=not args.geen_open) and ok
     return 0 if ok else 1
+
+
+def cmd_versions(project, args):
+    import time as _t
+    from . import versions as V
+    if args.controleer:
+        problems = V.check_all(project)
+        for x in problems:
+            print(f"✗ {x}")
+        print("✓ alle versies zijn in orde" if not problems else f"{len(problems)} probleem/problemen")
+        return 1 if problems else 0
+    if not args.nummer:
+        for f in project.song_files(include_parked=True):
+            h = V.history(project, f, attach=False)
+            cur = V.content_hash(f.read_text(encoding="utf-8"))
+            lat = h.latest
+            state = "nog geen versie" if lat is None else (f"V{lat['n']}" + (
+                "" if lat["hash"] == cur else f"  (gewijzigd: wordt V{h.next_number(cur)})"))
+            print(f"  {project.song_id(f):40} {state}")
+        return 0
+    f = project.find(args.nummer)
+    rel = str(f.relative_to(project.root)).replace("\\", "/")
+    if args.nieuw is not None:
+        V.create(project, rel, args.nieuw)
+        return 0
+    if args.terug:
+        V.restore(project, rel, args.terug)
+        return 0
+    if args.verschil:
+        a = args.verschil[0]
+        b = args.verschil[1] if len(args.verschil) > 1 else "werk"
+        d = V.compare(project, rel, a, b)
+        print(f"V{a} → {'nu' if b == 'werk' else 'V' + b}: {d['summary']}")
+        for kind, line in d["lines"]:
+            print(("" if kind == "@" else kind) + line)
+        return 0
+    i = V.info(project, rel)
+    print(f"{i['id']}: " + ("nog geen versies" if not i["versions"] else f"{len(i['versions'])} versie(s)"))
+    if i["changed"] and i["latest"]:
+        print(f"  nu gewijzigd t.o.v. V{i['latest']} ({i['pending']}): wordt V{i['next']}")
+    for v in i["versions"]:
+        fs_ = f"  forScore: {v['forscore']}" if v.get("forscore") else ""
+        print(f"  V{v['n']:<3} {_t.strftime('%d-%m-%Y %H:%M', _t.localtime(v['time']))}  "
+              f"{v.get('note') or v.get('changes') or ''}{fs_}")
+    for x in i["problems"]:
+        print(f"  ✗ {x}")
+    return 0
 
 
 def cmd_studio(project, args):
@@ -536,7 +590,7 @@ def cmd_studio(project, args):
     serve(project.root, args.poort, not args.geen_browser)
 
 
-COMMANDS = {"studio": cmd_studio, "forscore": cmd_forscore, "maak": cmd_build, "toon": cmd_show, "lijst": cmd_list, "controleer": cmd_check, "nieuw": cmd_new,
+COMMANDS = {"versies": cmd_versions, "studio": cmd_studio, "forscore": cmd_forscore, "maak": cmd_build, "toon": cmd_show, "lijst": cmd_list, "controleer": cmd_check, "nieuw": cmd_new,
             "midi": cmd_midi, "bibliotheek": cmd_library, "instrumenten": cmd_kit, "archiveer": cmd_archive,
             "herstel": cmd_restore, "converteer": cmd_convert, "kijk": cmd_watch, "setlist": cmd_setlist}
 

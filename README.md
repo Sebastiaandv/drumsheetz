@@ -2,7 +2,8 @@
 
 Drum sheets uitschrijven in gewone tekst en er nette PDF's van maken (via MuseScore), in de
 vertrouwde opmaak: elke sectie in een kader op een nieuwe regel, herhaalde maten als % met "N×".
-Plus setlists, MIDI om mee te oefenen en een bibliotheek met grooves en fills.
+Plus setlists, versiebeheer (V1, V2, … met terugzetten), forScore op de iPad met één knop, MIDI om
+mee te oefenen en een bibliotheek met grooves en fills.
 
 ```
 titel: Mijn Nummer
@@ -25,6 +26,8 @@ python3 drums.py studio            # editor in je browser, met bestanden, gereed
 python3 drums.py maak              # alle gewijzigde nummers -> uitvoer/pdf/
 python3 drums.py toon <nummer>     # als drumtab in de terminal
 python3 drums.py setlist maak <naam>
+python3 drums.py forscore          # forScore (Mac → iPad) gelijk maken: nieuwe nummers en versies
+python3 drums.py versies <nummer>  # versies bekijken, vergelijken, terugzetten
 python3 drums.py help
 ```
 

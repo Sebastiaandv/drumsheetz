@@ -118,6 +118,8 @@ class Writer:
             left.append(f"Bron: {s['source']}")
         if s.get("status"):
             left.append(f"Status: {s['status']}")
+        if s.get("_version"):
+            left.append(f"Versie V{s['_version']}")
         if lines or left:
             self.w("<identification>"
                    + ('<creator type="composer">' + "&#10;".join(esc(x) for x in lines) + "</creator>" if lines else "")
