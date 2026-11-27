@@ -286,7 +286,7 @@ IMPORT_SECONDS = 45
 
 
 def remember(project, what, ok, detail=""):
-    """Laatste forScore-actie bewaren voor de statuspagina (uitvoer/.forscore-laatste.json)."""
+    """Laatste forScore-actie bewaren voor de statusweergave (uitvoer/.forscore-laatste.json)."""
     try:
         f = project.out(".forscore-laatste.json")
         f.parent.mkdir(parents=True, exist_ok=True)
@@ -303,7 +303,7 @@ def last_action(project):
         return None
 
 
-_HUNG = []          # bestanden waarop forScore bleef hangen (deze sessie), voor de statuspagina
+_HUNG = []          # bestanden waarop forScore bleef hangen (deze sessie), voor de statusweergave
 
 
 def import_files(files, lib_ok, log):

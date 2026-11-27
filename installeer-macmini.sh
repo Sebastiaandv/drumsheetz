@@ -266,7 +266,7 @@ cat <<EOF
 EOF
 else
 cat <<EOF
-  d) forScore: niet mogelijk op macOS $MACOS (forScore voor Mac vraagt macOS 14). De statuspagina laat dit
+  d) forScore: niet mogelijk op macOS $MACOS (forScore voor Mac vraagt macOS 14). De statusweergave laat dit
      ook zien. Alles behalve de forScore-sync werkt gewoon.
 EOF
 fi

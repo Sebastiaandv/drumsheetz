@@ -32,7 +32,7 @@ python3 drums.py muziek maak ~/drumsheetz-muziek   # je muziek in een eigen map/
 python3 drums.py help
 ```
 
-Op een Mac mini als server in je thuisnetwerk: `./installeer-macmini.sh` (Studio, Sync- en statuspagina).
+Op een Mac mini als server in je thuisnetwerk: `./installeer-macmini.sh` (Studio met GitLab, forScore en status).
 
 Nodig: Python 3.8+, [MuseScore 4](https://musescore.org) (Mac/Windows/Linux, wordt automatisch
 gevonden) en voor setlist-boeken optioneel `pip3 install -r requirements.txt`.

@@ -196,6 +196,24 @@ class DepthTest(Base):
         self.assertEqual(self.p.nested_folders(), ["nummers/Kerk/Kerst"])
 
 
+class BuilderApiTest(Base):
+    def test_songs_and_setlist_info(self):
+        from drumsheetz.studio import Studio
+        st = Studio(self.music)
+        songs = {x["id"]: x for x in st.songs()["songs"]}
+        self.assertEqual(songs["Kerk/Beta"]["folder"], "Kerk")
+        self.assertEqual((songs["Alpha"]["title"], songs["Alpha"]["bpm"], songs["Alpha"]["meter"]), ("Alpha", "100", "4/4"))
+        self.assertGreater(songs["Alpha"]["duration"], 0)
+        text = "titel: Set\n# commentaar\n[Set 1]\nAlpha | vol gas\nKerk/Beta [3:00]\nBestaatNiet\n"
+        info = st.setlist_info("setlists/s.txt", text)
+        e = info["entries"]
+        self.assertEqual([x["kind"] for x in e], ["break", "song", "song", "song"])
+        self.assertEqual([x["line"] for x in e], [3, 4, 5, 6])
+        self.assertEqual((e[1]["path"], e[1]["note"]), ("nummers/Alpha.drum", "vol gas"))
+        self.assertEqual(e[2]["duration"], 180)
+        self.assertTrue(e[3]["error"])
+
+
 class AccessTest(unittest.TestCase):
     def allowed(self, ip, server, host="127.0.0.1"):
         import ipaddress

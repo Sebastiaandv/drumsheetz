@@ -109,31 +109,86 @@ Liever niet in de terminal werken? Start de Studio:
 python3 drums.py studio
 ```
 
-Je browser opent dan `http://127.0.0.1:8765` (alleen bereikbaar vanaf je eigen computer; stoppen met
-Ctrl+C in de terminal). Je typt nog steeds gewoon in de `.drum`-bestanden, maar met alles erbij:
+Je browser opent `http://127.0.0.1:8765` (stoppen met Ctrl+C in de terminal). De Studio werkt zoals
+VS Code: links een **iconenbalk**, daarnaast een **zijbalk**, in het midden **tabbladen** met de editor, onderin
+een **paneel** en helemaal onderaan een **statusbalk**.
 
-| Plek | Wat |
+```
+┌──┬────────────┬─────────────────────────────┬──────────────┐
+│▤ │ VERKENNER  │ lean ×  The River ●         │ PDF          │
+│⌕ │ ▾ nummers  │ nummers › lean.drum › [Refrein]            │
+│⑂ │   ▸ Kerk   │  23 [Intro] 4 tacet         │  (voorbeeld) │
+│▯ │   lean  V1●│  24 [Couplet 1] 8 v fill …  │              │
+│☰ │ ▾ setlists ├─────────────────────────────┴──────────────┤
+│⚌ │ OVERZICHT  │ PROBLEMEN │ UITVOER │ DRUMTAB              │
+└──┴────────────┴────────────────────────────────────────────┘
+ ⑂ main · 2 gewijzigd │ forScore: 3 te doen │ ✓      V1* │ 4/4 · tempo 99 │ r 24, k 5
+```
+
+**De iconenbalk** (klik nog een keer op het actieve icoon om de zijbalk in te klappen):
+
+| Icoon | Weergave |
 |---|---|
-| **Links** | Bestanden: nummers, setlists, voorbeelden, `bibliotheek.drum`, `instellingen.txt`, de handleiding. Met zoekveld. |
-| **Midden** | De editor met kleuren (secties, patronen, instrumenten, accenten, ghost notes, teksten, opties) en regelnummers. Fouten worden **tijdens het typen** gevonden en de regel kleurt rood. |
-| **Onder** | *Drumtab* (het nummer als tekst, live bijgewerkt), *Problemen* (klik om naar de regel te gaan), *PDF* (de gemaakte PDF), *Log*. |
-| **Rechts** | *Document*: alle eigenschappen van het nummer (titel, ondertitel, vermelding, tempo, maat, stijl, aftellen, stemmen, tekstgrootte, accenten, vorken, duur, …) als invulvelden. Wat je invult komt direct bovenin het bestand; leeg = standaard uit `instellingen.txt` (staat er grijs bij). *Gereedschap*: klik om in te voegen: blokken (groove, fill, sectie, volta's, segno/coda, …), opties (crash, fill, mf, cresc, …), tekens (accent, ghost, flam, …), tellen (`*8`, `2&`, …) en instrumenten. *Bibliotheek*: alle grooves en fills doorzoeken, met voorbeeld. *Help*: doorzoek deze handleiding. |
-| **Boven** | Nieuw nummer, nieuwe setlist, Document (eigenschappen), opslaan, controleren, **Maak PDF** (of setlist), PDF openen, MIDI (tempo %, aftellen, klik), alles maken, archiveren, instellingen, help. |
+| Verkenner | Je bestanden (nummers, setlists, voorbeelden, bibliotheek, instellingen) en daaronder het **Overzicht**: de secties en patronen van het open bestand (klik = erheen). |
+| Zoeken | Zoeken in alle bestanden, per bestand gegroepeerd; klik op een regel om erheen te gaan. Vervangen in het open bestand. |
+| GitLab | Wijzigingen per nummer, met per regel *bekijk* en *→ GitLab*, vinkjes, en **Alles naar GitLab**. Bovenaan: ⟳ vernieuwen, ↓ ophalen, 🔗 GitLab-adres. Het getal op het icoon = aantal wijzigingen. Zie [hoofdstuk 14](#14-muziekmap-sync-status-en-de-mac-mini). |
+| forScore | Alle nummers per map (= label), met hun versie en wat er moet gebeuren; per nummer → of **Alles naar forScore**. Via ⋯: extra labels ophalen en de zelftest. Het getal = wat er nog naar forScore moet. |
+| Setlists | Je setlists; klik er een aan om hem in de **setlist-bouwer** te openen (zie [hoofdstuk 6](#6-setlists)). |
+| Nummer | Van het open nummer: **Versies** (vastleggen, vergelijken, terugzetten) en **Eigenschappen** (alle kopregels als invulvelden; leeg = standaard uit `instellingen.txt`). |
+| Invoegen | Klik om in te voegen: bouwstenen (groove, fill, sectie, volta's, segno/coda, …), opties (crash, fill, mf, cresc, …), tekens (accent, ghost, flam, …), tellen, instrumenten, en de **bibliotheek** met alle grooves en fills. |
+| Handleiding | Deze handleiding, doorzoekbaar. |
+| Status (onderaan) | Werkt alles? Systeem, muziekmap, versies, MuseScore, forScore en GitLab, met uitleg. Een getal of ! op het icoon betekent dat er iets is. |
+| Instellingen (tandwiel) | `instellingen.txt`, je eigen `bibliotheek.drum`, het **thema** (licht, donker of automatisch) en de sneltoetsen. |
 
-**Bestanden en mappen beheren** (links, tabblad *Bestanden*): ga met de muis over een map of bestand
-voor de knopjes: **＋♩** nieuw nummer in deze map, **＋▤** nieuwe map, **▶** alle nummers in deze map
-maken, **✎** hernoemen (of dubbelklikken, of **F2**), **🗑** naar het archief (nummers) of een lege map
-weghalen. **Sleep** een nummer of map naar een andere map om het te verplaatsen. Bij hernoemen en
-verplaatsen gaan de PDF's en MuseScore-bestanden mee, en worden setlists die naar het nummer verwijzen
-automatisch aangepast.
+**Tabbladen.** Eén klik op een bestand opent het als *voorbeeld-tabblad* (schuin geschreven): klik je daarna
+een ander bestand aan, dan komt dat ervoor in de plaats. Zodra je typt, of als je dubbelklikt, blijft het
+tabblad staan. Een ● op een tabblad = niet opgeslagen. Sluiten met ✕, de middelste muisknop of ⌥W; slepen
+om de volgorde te veranderen; rechtsklik voor meer. Je open tabbladen, de breedte van de panelen en het
+thema worden onthouden.
 
-Sneltoetsen: **⌘/Ctrl+S** opslaan, **⌘/Ctrl+Enter** PDF maken, **⌘/Ctrl+Z** ongedaan maken en
-**⌘/Ctrl+Shift+Z** (of Ctrl+Y) opnieuw (werkt ook na opslaan en na wijzigingen via het Document-paneel of
-het gereedschap), **⌘/Ctrl+F** zoeken en vervangen (met *Alle bestanden* zoek je in al je nummers en
-setlists; klik op een resultaat om er naartoe te gaan), **Tab** = 2 spaties, **Enter** houdt de inspringing aan.
+**Rechtsboven in de editor**: ▶ **Maak PDF** (of setlist), ◫ **voorbeeld** ernaast (de PDF naast de
+editor; na het maken gaat hij vanzelf open), ⋯ voor de rest (opslaan, controleren, MIDI, naar forScore,
+archiveren, …). Bij een setlist staat er ook ⟨/⟩ om te wisselen tussen de bouwer en de tekst.
 
-Patronen die je hebt gemaakt maar nergens in de opbouw gebruikt, staan **grijs en doorgestreept** in
-de editor, zodat je ze makkelijk kunt opruimen. De panelen kun je breder/smaller slepen. Andere poort: `python3 drums.py studio --poort 9000`.
+**Onder de tabbladen** staat het kruimelpad: `nummers › Kerk › The River.drum › [Refrein]`. Klik op een map
+om hem in de verkenner te tonen, op de sectie om naar een andere sectie te springen.
+
+**Het paneel onderin**: *Problemen* (fouten en waarschuwingen terwijl je typt; klik = naar de regel),
+*Uitvoer* (wat PDF maken, forScore en GitLab te melden hadden) en *Drumtab* (het nummer als tekst).
+
+**De statusbalk**: GitLab (branch en wijzigingen), forScore (wat er nog moet), ✓ of het aantal fouten en
+waarschuwingen, de versie van het nummer (`V3`, of `V3*` als het sindsdien gewijzigd is), maatsoort, tempo,
+aantal maten en duur, en de cursorpositie. Alles is klikbaar.
+
+**Bestanden beheren** in de verkenner: **rechtsklik** op een map of bestand (nieuw nummer hier, nieuwe map,
+alle nummers maken, hernoemen, archiveren, naar forScore, …), de knoppen naast *Bestanden* (nieuw nummer,
+nieuwe setlist, nieuwe map, alles maken, vernieuwen, inklappen), **slepen** om te verplaatsen, **F2** om te
+hernoemen. Bij hernoemen en verplaatsen gaan PDF's, versies en verwijzingen in setlists mee.
+
+**Opdrachtenpalet en snel openen**
+
+| Toets | Wat |
+|---|---|
+| ⌘P / Ctrl+P | **Bestand openen**: typ een stukje van de naam. |
+| ⌘⇧P / Ctrl+Shift+P / F1 | **Alle opdrachten** (begin met `>`). |
+| ⌘⇧O / Ctrl+Shift+O | Naar een **sectie of patroon** in het open bestand (begin met `@`). |
+| Ctrl+G | **Naar regel** (begin met `:`). |
+| ⌘S / Ctrl+S | Opslaan (⌘⌥S: alles opslaan). |
+| ⌘↵ / Ctrl+Enter | PDF maken. |
+| ⌘⇧V / Ctrl+Shift+V | Voorbeeld ernaast aan/uit. |
+| ⌘B / Ctrl+B | Zijbalk aan/uit. |
+| ⌘J / Ctrl+J | Paneel onderin aan/uit. |
+| ⌘F / Ctrl+F | Zoeken en vervangen in het bestand. |
+| ⌘⇧F / Ctrl+Shift+F | Zoeken in alle bestanden. |
+| ⌘⇧E / ⌘⇧G | Verkenner / GitLab. |
+| ⌥W / Alt+W | Tabblad sluiten. |
+| ⌘⌥← → | Vorig / volgend tabblad. |
+| ⌘Z / ⌘⇧Z | Ongedaan maken / opnieuw, per tabblad, ook na opslaan en na wijzigingen via Eigenschappen of de bouwer. |
+| Tab / ⇧Tab | Inspringen (ook voor meerdere regels tegelijk). |
+
+Patronen die je hebt gemaakt maar nergens in de opbouw gebruikt, staan **grijs en doorgestreept**, ook in
+het overzicht. Andere poort: `python3 drums.py studio --poort 9000`. De oude adressen `/sync` en `/status`
+openen de Studio meteen in de weergave GitLab of Status.
 
 ---
 
@@ -991,6 +1046,25 @@ annihilator [5:10]
 - **Gekochte/andere PDF's**: geef het pad naar het `.pdf`-bestand, eventueel met `= Artiest - Titel`.
   Of zet in een nummer `pdf: pad/naar/bestand.pdf` om die PDF te gebruiken in plaats van de eigen sheet.
 - `[Naam]` of `--- Naam ---` = een tussenkop (Set 1, Pauze, Toegift, …), met subtotaal per set.
+
+### De setlist-bouwer (Studio)
+
+Open een setlist in de Studio (icoon *Setlists*, of gewoon in de verkenner) en je krijgt de **bouwer**:
+
+- **Bovenaan**: titel, datum, plaats en notitie, als invulvelden.
+- **Daaronder**: aantal nummers en de totale **speelduur**, met knoppen **＋ Set / pauze**, **→ forScore**
+  (de setlist met zijn nummers) en **▶ Maak setlist** (PDF's, boek, voorblad en podiumlijst).
+- **De lijst**: elk nummer met volgnummer, titel en artiest, tempo, maatsoort en duur. Sets en pauzes staan
+  ertussen met hun **subtotaal**. **Sleep** (⋮⋮) om de volgorde te veranderen, klik op *+ notitie* voor een
+  notitie, dubbelklik op een set om hem te hernoemen, ✕ om iets weg te halen, ↗ om het nummer te openen.
+  Een regel die niet gevonden wordt kleurt rood.
+- **Rechts: Nummers toevoegen**: al je nummers, doorzoekbaar op titel, artiest of map. **Sleep** een nummer naar
+  de plek in de lijst, of klik op ＋ om het achteraan te zetten. ✓ betekent dat het er al in staat. Met
+  **＋ Los nummer** zet je een nummer erin dat (nog) niet in Drumsheetz staat; in forScore wordt dat een
+  plaatshouder.
+
+De bouwer schrijft gewoon het tekstbestand hierboven (zelfde formaat, je commentaar blijft staan). Met
+⟨/⟩ rechtsboven wissel je tussen bouwer en tekst. Ongedaan maken (⌘Z) en opslaan (⌘S) werken zoals overal.
 - `#` = commentaar.
 
 **Opdrachten:**
@@ -1030,16 +1104,16 @@ met de Apple Pencil op V1 blijven gewoon op V1 staan.
 
 **Hoe ontstaat een versie?**
 
-- Automatisch bij **⇅ forScore**: is het nummer *muzikaal* veranderd sinds de vorige versie, dan wordt
+- Automatisch bij **Alles naar forScore**: is het nummer *muzikaal* veranderd sinds de vorige versie, dan wordt
   het de volgende versie en gaat het als nieuw stuk naar forScore.
-- Zelf, met **Nieuwe versie** in het tabblad *Versies* (of `drums.py versies letlove --nieuw "notitie"`).
+- Zelf, met **Nieuwe versie** in de weergave *Nummer* (of `drums.py versies letlove --nieuw "notitie"`).
   Handig als je een tussenstand wilt vastleggen, met een notitie erbij.
 
 **Wat telt als verandering?** Alles wat op het blad komt (tempo, patronen, opbouw, teksten, ...).
 Wat alleen voor forScore is telt **niet**: `labels:`, `genre:`, `tags:`, `waardering:`,
 `moeilijkheid:`, `referentie:`, `forscore-naam:`, en ook geen extra spaties of lege regels.
 
-**Het tabblad Versies** (rechts in de Studio) laat voor het open nummer zien:
+**Versies in de Studio** (icoon *Nummer* in de iconenbalk) laat voor het open nummer zien:
 
 | Onderdeel | Wat |
 |---|---|
@@ -1052,7 +1126,7 @@ Wat alleen voor forScore is telt **niet**: `labels:`, `genre:`, `tags:`, `waarde
 | **Reservekopieën** | Onderaan: wat er stond vóór elk terugzetten. Ook die kun je terugzetten. |
 
 **Terugzetten is veilig.** De geschiedenis loopt altijd door: zet je V1 terug terwijl je al op V3
-zat, dan wordt het bij de volgende ⇅ forScore **V4 (= V1)**. Staat V1 nog in forScore, dan wordt
+zat, dan wordt het bij de volgende keer forScore **V4 (= V1)**. Staat V1 nog in forScore, dan wordt
 dat stuk gewoon weer gebruikt (met je aantekeningen), en er komt niets dubbel in.
 
 **In de boom** staat achter elk nummer zijn versie: `V3`, of `V3*` (oranje) als het sindsdien
@@ -1062,7 +1136,7 @@ versie het is (uitzetten: `versie-op-blad: nee` in `instellingen.txt`).
 **Waterdicht:**
 
 - Versiebestanden zijn alleen-lezen en hebben een controlesom. `drums.py versies --controleer` (of het
-  tabblad Versies) meldt het als er iets ontbreekt of is veranderd. Drumsheetz gooit nooit een versie weg.
+  weergave Nummer) meldt het als er iets ontbreekt of is veranderd. Drumsheetz gooit nooit een versie weg.
 - Hernoem of verplaats je een nummer in de Studio, dan gaat de geschiedenis mee. Doe je het buiten de
   Studio om (Finder), dan wordt de geschiedenis teruggevonden aan de inhoud of aan titel + artiest.
 - Setlists hebben ook versies (zie hieronder).
@@ -1090,7 +1164,7 @@ Er is maar **één boom**: je gewone Drumsheetz-mappen in `nummers/`. forScore v
 - **De map is het label.** `nummers/Hatikwa/The River.drum` krijgt in forScore het label *Hatikwa*.
   Submappen geven meerdere labels (`Kerk/Kerst/…` → *Kerk* en *Kerst*). Mappen die met `_` beginnen
   (geparkeerd) gaan niet naar forScore. Wil je nog een label erbij, zet dan `labels: …` in het nummer.
-- **Eén knop: ⇅ forScore** (in de Studio, rechtsboven) of `python3 drums.py forscore` in de Terminal.
+- **Eén knop: Alles naar forScore** (in de Studio, icoon *forScore*) of `python3 drums.py forscore` in de Terminal.
   Die maakt forScore gelijk aan Drumsheetz: PDF's maken waar nodig, nieuwe nummers erin (V1),
   gewijzigde nummers als nieuwe versie erin (V2, V3, …), setlists erin. Het getal op de knop is hoeveel
   er nog moet. Voor hij begint zegt hij wat hij gaat doen.
@@ -1115,13 +1189,13 @@ krijg je na het synchroniseren als korte lijst **"Zelf doen in forScore"** in he
 | **Dubbelen** | Staat een stuk twee keer in forScore (bv. "Naam 2.pdf"), dan zie je ⚠ in de boom en een taak om de kopie weg te gooien (meestal die zonder labels). |
 
 **Bolletjes in de boom** (achter elk nummer en elke setlist): groen = actueel in forScore,
-blauw = nog niet in forScore, oranje = gewijzigd (wordt een nieuwe versie bij de volgende ⇅).
+blauw = nog niet in forScore, oranje = gewijzigd (wordt een nieuwe versie bij de volgende keer forScore).
 Houd de muis erop voor de naam in forScore. ⚑ = labels kloppen niet met de map, ⚠ = dubbel in forScore.
 
 **Blijft forScore hangen** op "Loading… 0 of 1 files imported"? Drumsheetz stuurt de bestanden één
 voor één en wacht na elk bestand tot het echt in forScore staat. Komt een bestand er na 45 seconden niet
 in, dan stopt hij en zegt hij welk bestand het was. Klik in forScore op **Cancel** (of beantwoord de
-vraag die soms achter een ander venster staat); de rest gaat mee met de volgende ⇅ forScore. Blijft
+vraag die soms achter een ander venster staat); de rest gaat mee met de volgende keer *Alles naar forScore*. Blijft
 forScore twee keer op dezelfde losse PDF hangen, dan probeert Drumsheetz het niet meer: sleep dat
 bestand dan zelf in forScore, daarna wordt het vanzelf herkend.
 
@@ -1354,12 +1428,12 @@ omgevingsvariabele `DRUMSHEETZ_MUZIEK`.
 **Muziek naar een andere Mac** (bv. de Mac mini): kopieer de hele muziekmap (AirDrop, USB, netwerk), en zeg
 daar `python3 drums.py muziek gebruik <pad>`. Of, zodra je GitLab er is: `git clone <adres>` en dan `gebruik`.
 
-### De Sync-pagina
+### GitLab en forScore in de Studio
 
-Knop **Sync** in de Studio (opent in een nieuw tabblad, adres `/sync`). Er gaat **niets automatisch**: jij kiest
+Iconen **GitLab** en **forScore** in de iconenbalk van de Studio. Er gaat **niets automatisch**: jij kiest
 wat er weggaat.
 
-**Links: GitLab.** Wat er veranderd is sinds de laatste vastlegging, per nummer gegroepeerd (het `.drum`-bestand
+**GitLab.** Wat er veranderd is sinds de laatste vastlegging, per nummer gegroepeerd (het `.drum`-bestand
 plus zijn versiegeschiedenis horen bij elkaar):
 
 | Label | Betekent |
@@ -1368,7 +1442,7 @@ plus zijn versiegeschiedenis horen bij elkaar):
 | gewijzigd | Het bestand is veranderd. Klik op **bekijk** voor wat er veranderd is (rood weg, groen erbij). |
 | verplaatst | Naar een andere map of hernoemd (de inhoud is herkend). **bekijk** vergelijkt met het oude bestand. |
 | verwijderd | Bestand is weg (bv. gearchiveerd). |
-| alleen versies | Er is een versie bij gekomen (bv. na ⇅ forScore), het nummer zelf is niet veranderd. |
+| alleen versies | Er is een versie bij gekomen (bv. na het versturen naar forScore), het nummer zelf is niet veranderd. |
 
 - **→ GitLab** achter een regel: alleen dat stuk vastleggen en versturen.
 - Vinkjes + **Geselecteerde naar GitLab**: een paar tegelijk.
@@ -1382,14 +1456,14 @@ plus zijn versiegeschiedenis horen bij elkaar):
   zonder samenvoegen kan; anders zegt de pagina wat er aan de hand is).
 - **⟳ Vernieuwen** kijkt ook in GitLab of er iets nieuws is ("1 nieuw in GitLab").
 
-**Rechts: forScore.** Alle nummers, gegroepeerd per **map = label** in forScore, met hun versie en wat er
+**forScore.** Alle nummers, gegroepeerd per **map = label** in forScore, met hun versie en wat er
 moet gebeuren ("nog niet in forScore → wordt V1", "gewijzigd → wordt V3"). **→ forScore** stuurt één nummer
-(met zijn map als label); **Alles naar forScore** doet hetzelfde als ⇅ forScore. Ook setlists staan erbij.
-"alleen wat nog moet" verbergt wat al actueel is. Onderaan staat het **Log** van de laatste actie.
+(met zijn map als label); Ook setlists staan erbij. "alleen wat nog moet" verbergt wat al actueel is. Wat er gebeurde staat in het
+paneel onderin bij **Uitvoer**.
 
-### De statuspagina
+### Status
 
-Knop **Status** in de Studio (adres `/status`). Per onderdeel een bolletje (groen = goed, oranje = let op,
+Icoon **Status** onderaan de iconenbalk. Per onderdeel een bolletje (groen = goed, oranje = let op,
 rood = werkt niet) met uitleg en wat je eraan kunt doen:
 
 | Groep | Wat wordt gecontroleerd |
@@ -1400,7 +1474,7 @@ rood = werkt niet) met uitleg en wat je eraan kunt doen:
 | forScore | Geïnstalleerd (en kan het op deze macOS?), bibliotheek leesbaar, zelftest gedaan, laatste sync, of forScore ergens op bleef hangen, iCloud. |
 | GitLab | Muziek in git, wijzigingen die nog niet zijn vastgelegd, GitLab-adres bereikbaar, vastleggingen die nog niet verstuurd zijn. |
 
-Vink **elke minuut vernieuwen** aan om hem open te laten staan als dashboard.
+Zolang de weergave open staat, wordt hij elke minuut bijgewerkt (⟳ om het meteen te doen).
 
 ### Drumsheetz op een Mac mini (server)
 
@@ -1450,9 +1524,9 @@ internet. Komt je VPN met andere adressen binnen, zet dan in `instellingen.txt` 
 
 **Welke Mac mini?** forScore voor Mac vraagt **macOS 14 of nieuwer**. Een Mac mini *Late 2014* (model A1347,
 Macmini7,1) gaat officieel niet verder dan macOS 12 Monterey. Daarop werkt alles behalve forScore: de Studio,
-PDF's maken (MuseScore 4.6; 4.7 vraagt macOS 13), versies, Sync naar GitLab en de statuspagina. Voor forScore
+PDF's maken (MuseScore 4.6; 4.7 vraagt macOS 13), versies, GitLab en de statusweergave. Voor forScore
 op zo'n Mac mini is er OpenCore Legacy Patcher (onofficieel, op eigen risico). Het installatiescript en de
-statuspagina zeggen precies wat er op jouw Mac kan.
+statusweergave zeggen precies wat er op jouw Mac kan.
 
 ## 15. Spiekbrief
 

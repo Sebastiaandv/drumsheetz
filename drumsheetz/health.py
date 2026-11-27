@@ -193,7 +193,7 @@ def check(project, server=None):
             + (f" · laatste: {info['last']['subject']} ({_ago(info['last']['time'])})" if info.get("last") else ""))
         if not info["remote"]:
             add("GitLab", "GitLab-server", "info", "nog niet ingesteld",
-                "Later: adres instellen op de Sync-pagina of met drums.py muziek gitlab <url>")
+                "Later: adres instellen in de Studio (icoon GitLab, 🔗) of met drums.py muziek gitlab <url>")
         else:
             try:
                 r = gitsync.git(project.root, "ls-remote", "--heads", "origin", check=False, timeout=8)
@@ -205,7 +205,7 @@ def check(project, server=None):
                 "" if reach else (r.stderr or r.stdout).strip()[:200])
             if info["ahead"]:
                 add("GitLab", "Nog te versturen", "warn", f"{info['ahead']} vastlegging(en) nog niet in GitLab",
-                    "Sync-pagina › Alles naar GitLab")
+                    "Studio › GitLab › Alles naar GitLab")
     order = ["ok", "info", "warn", "err"]
     worst = max((order.index(c["state"]) for c in out), default=0)
     return {"checks": out, "overall": order[worst], "time": int(time.time()), "root": str(project.root)}

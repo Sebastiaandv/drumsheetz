@@ -88,6 +88,7 @@ class Studio:
         self.root = pathlib.Path(root).resolve()
         self.code = CODE_ROOT
         self.server_info = {}
+        self._song_cache = {}
 
     # ------------------------------------------------------------------ hulp
     def project(self):
@@ -482,6 +483,74 @@ class Studio:
             self._cleanup_empty(project)
         return {"ok": True, "path": self.rel(dst)}
 
+    def songs(self):
+        """Alle nummers met titel, artiest, map, tempo, maatsoort en duur (voor de setlist-bouwer).
+        Per bestand gecachet op wijzigingstijd, dus snel."""
+        from .build import load_and_arrange
+        from .project import parse_duration, quick_meta
+        from .rows import NotationError
+        project = self.project()
+        out = []
+        cfg_key = repr(sorted(project.config.items()))
+        for f in project.song_files():
+            try:
+                mt = f.stat().st_mtime
+            except OSError:
+                continue
+            key = str(f)
+            hit = self._song_cache.get(key)
+            if not hit or hit[0] != (mt, cfg_key):
+                info = {"title": f.stem, "artist": "", "bpm": "", "meter": "", "duration": None, "error": ""}
+                try:
+                    sc = load_and_arrange(project, f)
+                    s = sc.song
+                    info.update(title=s.get("title") or f.stem, artist=s.get("artist", ""), bpm=str(sc.tempo[0]),
+                                meter=str(sc.meter).split(" ")[0],
+                                duration=parse_duration(s["duration"]) if s.get("duration") else round(sc.seconds()))
+                except NotationError as e:
+                    q = quick_meta(f)
+                    info.update(title=q.get("title", f.stem), artist=q.get("artist", ""), error=e.msg)
+                except Exception as e:  # noqa: BLE001 - één kapot nummer mag de lijst niet breken
+                    info.update(error=f"{type(e).__name__}: {e}")
+                hit = ((mt, cfg_key), info)
+                self._song_cache[key] = hit
+            rel = self.rel(f)
+            sid = project.song_id(f)
+            out.append(dict(hit[1], path=rel, id=sid, folder=sid.split("/")[0] if "/" in sid else ""))
+        return {"songs": out}
+
+    def setlist_info(self, rel, content):
+        """Een setlist regel voor regel, met wat er bij elke regel hoort (voor de setlist-bouwer)."""
+        from . import setlist as sl
+        project = self.project()
+        meta, entries = sl.parse_setlist(content, pathlib.Path(rel).stem)
+        errors = sl.resolve(project, entries, self.safe(rel))
+        bad = {}
+        for e in errors:
+            m = re.match(r"regel (\d+):\s*(.*)", e)
+            if m:
+                bad[int(m.group(1))] = m.group(2)
+        songs = {s["path"]: s for s in self.songs()["songs"]}
+        items = []
+        for e in entries:
+            d = {"line": e.line, "kind": e.kind, "ref": e.ref, "display": e.display, "note": e.note,
+                 "title": e.title or e.display or e.ref, "artist": e.artist, "duration": e.duration,
+                 "bpm": "", "meter": "", "path": "", "error": bad.get(e.line, "")}
+            if e.kind == "song" and e.path:
+                try:
+                    d["path"] = self.rel(e.path)
+                except ValueError:
+                    d["path"] = str(e.path)
+                info = songs.get(d["path"]) or {}
+                d.update(bpm=info.get("bpm", ""), meter=info.get("meter", ""),
+                         error=d["error"] or info.get("error", ""))
+                if d["duration"] is None:
+                    d["duration"] = info.get("duration")
+            elif e.kind == "song" and not d["error"]:
+                d["error"] = "niet gevonden"
+            items.append(d)
+        return {"meta": meta, "entries": items}
+
     def git(self, action, data):
         from . import gitsync
         project = self.project()
@@ -673,11 +742,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if u.path in ("/", "/index.html"):
                 return self.send(200, (HERE / "studio.html").read_text(encoding="utf-8"), "text/html; charset=utf-8")
-            if u.path == "/pages.css":
-                return self.send(200, (HERE / "pages.css").read_text(encoding="utf-8"), "text/css; charset=utf-8")
-            if u.path in ("/sync", "/status"):
-                return self.send(200, (HERE / f"{u.path[1:]}.html").read_text(encoding="utf-8"),
-                                 "text/html; charset=utf-8")
+            if u.path in ("/sync", "/status"):            # oude losse pagina's: nu iconen in de Studio
+                return self.send(200, (HERE / "studio.html").read_text(encoding="utf-8"), "text/html; charset=utf-8")
             if u.path == "/api/health":
                 return self.send(200, s.health())
             if u.path == "/api/git/status":
@@ -696,6 +762,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, s.fs_catalog())
             if u.path == "/api/search":
                 return self.send(200, s.search(q.get("q", ""), q.get("case") == "1"))
+            if u.path == "/api/songs":
+                return self.send(200, s.songs())
+            if u.path in ("/studio.css", "/studio.js", "/views.js"):
+                ctype = "text/css" if u.path.endswith(".css") else "text/javascript"
+                return self.send(200, (HERE / u.path[1:]).read_text(encoding="utf-8"), ctype + "; charset=utf-8")
             if u.path == "/api/props":
                 return self.send(200, s.props())
             if u.path == "/api/status":
@@ -734,6 +805,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/build-folder": lambda: s.run_cli(["maak", data["path"]] + (["-a"] if data.get("all") else [])),
             "/api/forscore": lambda: s.run_cli(["forscore"] + list(data.get("paths") or ([data["path"]] if data.get("path") else []))
                                                  + sum((["--setlist", n] for n in data.get("setlists") or []), [])),
+            "/api/setlist-info": lambda: s.setlist_info(data["path"], data.get("content", "")),
             "/api/git/send": lambda: s.git("send", data),
             "/api/git/diff": lambda: s.git("diff", data),
             "/api/git/remote": lambda: s.git("remote", data),

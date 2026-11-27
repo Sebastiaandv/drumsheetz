@@ -3,7 +3,7 @@
 Uitgangspunten:
   - Er gaat NIETS automatisch: alleen wat je zelf aanklikt wordt vastgelegd (commit) en verstuurd (push).
   - Zonder GitLab-adres werkt alles ook: dan wordt het alleen lokaal vastgelegd. Later het adres instellen
-    (drums.py muziek gitlab <url>, of op de Sync-pagina) en dan gaat alles wat er nog niet was mee.
+    (drums.py muziek gitlab <url>, of in de Studio (icoon GitLab, 🔗)) en dan gaat alles wat er nog niet was mee.
   - Bij elkaar wat bij elkaar hoort: een nummer is zijn .drum-bestand plus zijn versiegeschiedenis.
 """
 import os
@@ -59,7 +59,7 @@ def git(root, *args, check=True, timeout=60):
 # toestand
 
 def state(project):
-    """Kan de Sync-pagina met git werken? {enabled, reason, can_init}"""
+    """Kan de Studio (GitLab) met git werken? {enabled, reason, can_init}"""
     root = pathlib.Path(project.root)
     if not available():
         return {"enabled": False, "can_init": False,
@@ -302,7 +302,7 @@ def _message(items, message):
 def push(project, log=print):
     root = project.root
     if not remote_url(project):
-        log("· nog geen GitLab-adres ingesteld: alleen lokaal vastgelegd (stel het adres in op de Sync-pagina "
+        log("· nog geen GitLab-adres ingesteld: alleen lokaal vastgelegd (stel het adres in in de Studio (icoon GitLab, 🔗) "
             "of met: drums.py muziek gitlab <url>)")
         return False
     up = git(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}", check=False)
