@@ -311,7 +311,7 @@ Bovenaan, als `sleutel: waarde`. Alleen `titel` is eigenlijk nodig.
 | `swing` | Zet "Swing" bij de stijl én laat de MIDI swingen. `ja` of `8` = 8sten, `16` = 16den | `swing: ja` |
 | `aftellen` | Aantal maten aftellen met stokken (staat op het blad én in de MIDI) | `aftellen: 1` |
 | `stemmen` | `1` = alles (ook bassdrum en hi-hat-voet) in één stem met de stokken omhoog, zonder losse rusten; `2` = handen omhoog, voeten omlaag (de oude opmaak). Standaard uit `instellingen.txt` | `stemmen: 2` |
-| `herhaalteller` | Waar de `N×` bij een %-maat staat: `binnen` (in de balk, rechts naast het %-teken; standaard), `links` (in de balk, aan het begin van de maat) of `boven` (boven de maat, zoals vroeger) | `herhaalteller: boven` |
+| `herhaalteller` | Waar de `N×` bij een %-maat staat: `binnen` (in de balk, strak rechts naast het %-teken; standaard), `links` (in de balk, strak links ernaast) of `boven` (kaarsrecht boven het %-teken). Drumsheetz vraagt MuseScore waar elke maat staat en zet de teller precies daar; past hij er niet naast, dan wordt alleen die maat iets breder, en past het dan nog niet, dan komt hij erboven. | `herhaalteller: boven` |
 | `vorken` / `dynamiek` | Vorken (met hun letters) en losse dynamiektekens `onder` of `boven` de balk; standaard vorken onder, losse letters boven | `vorken: boven` |
 | `accenten` | Waar accenten (`>`, `^`) en open/dicht-tekens staan: `boven` (boven de noten, standaard), `onder`, of `auto` (MuseScore kiest, meestal bij de nootkop) | `accenten: auto` |
 | `tekstgrootte` | Grootte van de cursieve teksten bij de maten (lyrics, aanwijzingen): `klein` (8), `normaal` (10), `groot` (12), `heelklein`, `heelgroot` of een getal in punten. Standaard uit `instellingen.txt` | `tekstgrootte: 9` |
@@ -1371,7 +1371,7 @@ ondertitel:                            # standaard-ondertitel; leeg = geen
 musescore: /Applications/MuseScore 4.app/Contents/MacOS/mscore   # alleen nodig als hij niet gevonden wordt
 regelafstand: 12                       # ruimte tussen de regels op het blad
 stemmen: 1                             # 1 = alles stok omhoog in één stem, 2 = voeten apart omlaag
-herhaalteller: binnen                  # 'N×' bij een %-maat: binnen (rechts naast het %), links, of boven
+herhaalteller: binnen                  # 'N×' bij een %-maat: binnen (strak rechts naast het %), links, of boven (kaarsrecht erboven)
 accenten: boven                        # accenten en open/dicht-tekens: boven, onder of auto
 vorken: onder                          # crescendo/diminuendo (met hun letters): onder of boven
 dynamiek: boven                        # losse dynamiektekens (mf, p, ...): boven of onder

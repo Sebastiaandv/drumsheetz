@@ -10,6 +10,8 @@ import shutil
 import subprocess
 import tempfile
 
+from .countplace import style_count
+
 CANDIDATES = {
     "Darwin": [
         "/Applications/MuseScore 4.app/Contents/MacOS/mscore",
@@ -88,27 +90,6 @@ def run_job(ms, jobs, timeout=900):
                 run(ms, s, d)
 
 
-# 'N×' midden in de balk, links van het %-teken, met een wit vlakje achter de tekst zodat de
-# notenbalklijnen er niet doorheen lopen (offset in spatiums vanaf de bovenste lijn).
-COUNT_X = 0.3
-COUNT_STYLE = ('<autoplace>0</autoplace><offset x="0.3" y="2.55"/><frameType>1</frameType>'
-               '<frameWidth>0</frameWidth><framePadding>0.15</framePadding>'
-               '<frameFgColor r="255" g="255" b="255" a="0"/><frameBgColor r="255" g="255" b="255" a="255"/>')
-
-
-# MuseScore 4 zet extra regels in een StaffText (bv. <eid>, <linkedMain/>, eigen stijl); die mogen er
-# tussen staan. De tekst zelf kan cursief zijn of niet, en × kan als entiteit geschreven zijn.
-COUNT_RE = re.compile(r"(<StaffText(?: [^>]*)?>)((?:(?!</StaffText>).)*?)"
-                      r"(<text>(?:<[^>]+>)*\s*\d+\s*(?:×|&#215;|&#xd7;|&times;|x)\s*(?:<[^>]+>)*</text>)", re.S | re.I)
-_REMOVE = re.compile(r"\s*<(autoplace|offset|frameType|frameWidth|framePadding|frameFgColor|frameBgColor|placement)"
-                     r"\b[^>]*?(?:/>|>[^<]*</\1>)")
-
-
-def _count_style(m):
-    middle = _REMOVE.sub("", m.group(2))
-    return m.group(1) + middle + COUNT_STYLE + m.group(3)
-
-
 # Accenten/marcato/open-dicht boven (of onder) de noten zetten, ongeacht de stokrichting.
 ARTIC_RE = re.compile(r"<Articulation>(?:(?!</Articulation>).)*?</Articulation>", re.S)
 
@@ -181,11 +162,9 @@ def patch_mscx(path, offsets, min_system_distance="12"):
         off = offsets.get(idx[0])
         if off:
             body = body.replace(">", f">\n          <noOffset>{off}</noOffset>", 1)
-        if idx[0] in counts:
-            body, n = COUNT_RE.subn(_count_style, body, count=1)
+        if idx[0] in counts:                   # voorlopige plek; place_counts zet hem precies goed
+            body, n = style_count(body, 0.3, 2.55, "left")
             placed[0] += n
-            if n and "<stretch>" not in body:          # wat extra ruimte voor '% N×'
-                body = body.replace(">", ">\n          <stretch>1.6</stretch>", 1)
         return body
 
     try:
@@ -225,11 +204,11 @@ def render(ms, items, cfg, log=print):
             jobs1.append((it["xml"], [it["mscx"]]))
         run_job(ms, jobs1)
         jobs2 = []
-        right = []
+        counted = []
         for it in items:
             placed, wanted = patch_mscx(it["mscx"], it["offsets"], cfg.get("minSystemDistance", "12"))
-            if placed and getattr(it["offsets"], "count_side", "rechts") == "rechts":
-                right.append(it)
+            if placed:
+                counted.append(it)
             if placed < wanted:
                 log(f"  ! {it.get('id', '')}: {wanted - placed} van {wanted} herhaaltellers niet in de balk gezet "
                     "(stuur uitvoer/debug/*.mscx mee als je dit meldt)")
@@ -242,60 +221,72 @@ def render(ms, items, cfg, log=print):
                 if pathlib.Path(o).exists():
                     pathlib.Path(o).unlink()
             jobs2.append((it["mscx"], outs))
-        if right:
-            place_counts(ms, right, tmp, log)
+        if counted:
+            place_counts(ms, counted, tmp, log)
         run_job(ms, jobs2)
 
 
 def place_counts(ms, items, tmp, log=print):
-    """Proef-SVG maken, meten waar elk %-teken staat en de 'N×' er rechts naast zetten."""
-    from .svgplace import count_shifts
-    jobs = [(it["mscx"], [tmp / f"meet{i}.svg"]) for i, it in enumerate(items)]
-    try:
-        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
-            json.dump([{"in": str(s), "out": str(o[0])} for s, o in jobs], f)
-            jf = f.name
-        subprocess.run([ms, "-j", jf], capture_output=True, text=True, env=_env(), timeout=900)
-        os.unlink(jf)
-    except (subprocess.TimeoutExpired, OSError):
-        pass
-    for i, it in enumerate(items):
-        pages = sorted(tmp.glob(f"meet{i}*.svg"), key=lambda p: [int(x) for x in re.findall(r"-(\d+)\.svg$", p.name)] or [0])
-        if not pages:
-            try:
-                run(ms, it["mscx"], tmp / f"meet{i}.svg")
-            except MuseScoreError:
-                pass       # bij meerdere pagina's heten de bestanden meet0-1.svg, meet0-2.svg, ...
-            pages = sorted(tmp.glob(f"meet{i}*.svg"),
-                           key=lambda p: [int(x) for x in re.findall(r"-(\d+)\.svg$", p.name)] or [0])
-        text = pathlib.Path(it["mscx"]).read_text(encoding="utf-8")
-        marker = f'<offset x="{COUNT_X}" y="2.55"/>'
-        n = text.count(marker)
-        shifts = count_shifts([p.read_text(encoding="utf-8", errors="replace") for p in pages]) if pages else []
-        if not n:
-            continue
-        if len(shifts) != n or (shifts and all(s is None for s in shifts)):
-            log(f"  ! {it.get('id', '')}: herhaaltellers niet naast het %-teken gezet "
-                f"({len([s for s in shifts if s is not None])} van {n} gemeten); ze staan links in de maat. "
-                "Stuur uitvoer/debug/ mee als je dit meldt.")
-            if it.get("pdf"):
+    """De 'N×'-tellers precies bij de %-tekens zetten, met de maatposities die MuseScore zelf uitrekent
+    (.mpos/.spos). Zie countplace.py. Past een teller er niet naast: die maat iets breder en opnieuw meten;
+    past hij dan nog niet, dan kaarsrecht boven het %-teken."""
+    from . import countplace as CP
+    pending = list(items)
+    for rnd in (1, 2):
+        jobs = []
+        for i, it in enumerate(pending):
+            it["_mpos"], it["_spos"] = tmp / f"pos{rnd}-{i}.mpos", tmp / f"pos{rnd}-{i}.spos"
+            jobs.append((it["mscx"], [it["_mpos"], it["_spos"]]))
+        try:
+            run_job(ms, jobs)
+        except MuseScoreError:
+            pass
+        again = []
+        for it in pending:
+            mp, sp = pathlib.Path(it["_mpos"]), pathlib.Path(it["_spos"])
+            for f in (mp, sp):
+                if not f.exists():
+                    try:
+                        run(ms, it["mscx"], f)
+                    except MuseScoreError:
+                        pass
+            text = pathlib.Path(it["mscx"]).read_text(encoding="utf-8")
+            offs = it["offsets"]
+            info = getattr(offs, "count_info", {}) or {}
+            mode = getattr(offs, "count_mode", "rechts")
+            pl = CP.plan(text, mp.read_text(encoding="utf-8") if mp.exists() else "",
+                         sp.read_text(encoding="utf-8") if sp.exists() else "", info, mode) if info else None
+            if not pl:
+                log(f"  ! {it.get('id', '')}: MuseScore gaf geen maatposities; de herhaaltellers staan links in de maat.")
+                continue
+            needs = {i: p for i, p in pl.items() if p["need"] > 0}
+            if needs and rnd == 1:
+                stretches = {i: min(2.2, (p["width"] + p["need"] + 0.4) / max(p["width"], 1.0)) for i, p in needs.items()}
+                text, _ = CP.apply(CP.add_stretch(text, stretches), pl)
+                pathlib.Path(it["mscx"]).write_text(text, encoding="utf-8")
+                again.append(it)
+                continue
+            final = {i: (CP.above(p) if p["need"] > 0 else p) for i, p in pl.items()}
+            text, n = CP.apply(text, final)
+            pathlib.Path(it["mscx"]).write_text(text, encoding="utf-8")
+            if it.get("pdf"):                         # klein meetverslag, voor als het ooit toch niet klopt
+                dbg = pathlib.Path(it["pdf"]).parent.parent / "debug" / "tellers"
+                dbg.mkdir(parents=True, exist_ok=True)
+                (dbg / (it.get("id", "nummer").replace("/", "_") + ".json")).write_text(
+                    CP.debug_report(final, mode), encoding="utf-8")
+            if n < len(info) and it.get("pdf"):
+                log(f"  ! {it.get('id', '')}: {len(info) - n} van {len(info)} herhaaltellers niet geplaatst "
+                    "(stuur uitvoer/debug/ mee als je dit meldt)")
                 dbg = pathlib.Path(it["pdf"]).parent.parent / "debug"
                 dbg.mkdir(parents=True, exist_ok=True)
-                for p in pages:
-                    shutil.copyfile(p, dbg / f"{it.get('id', 'nummer').replace('/', '_')}-{p.name}")
-                shutil.copyfile(it["mscx"], dbg / f"{it.get('id', 'nummer').replace('/', '_')}.mscx")
-            continue
-        k = [0]
-
-        def repl(_):
-            s = shifts[k[0]]
-            k[0] += 1
-            x = COUNT_X if s is None else round(COUNT_X + s, 2)
-            return f'<offset x="{x}" y="2.55"/>'
-
-        text = text.replace(marker, "\0MARK\0")
-        text = re.sub("\0MARK\0", repl, text)
-        pathlib.Path(it["mscx"]).write_text(text, encoding="utf-8")
+                name = it.get("id", "nummer").replace("/", "_")
+                (dbg / f"{name}-tellers.json").write_text(CP.debug_report(pl, mode), encoding="utf-8")
+                for f in (mp, sp, pathlib.Path(it["mscx"])):
+                    if f.exists():
+                        shutil.copyfile(f, dbg / f"{name}{f.suffix}")
+        pending = again
+        if not pending:
+            break
 
 
 def version(ms):

@@ -26,6 +26,7 @@ class Writer:
         self.out = []
         self.offsets = {}
         self.counts = []          # maten met een 'N×'-teller bij de %
+        self.count_info = {}      # maat -> (eenheid van de %, tekst)
         self.instr_ids = {}
 
     def w(self, s):
@@ -274,6 +275,7 @@ class Writer:
             if reps > 1:
                 self.w(self.words(f"{reps}×"))
                 self.counts.append(idx)
+                self.count_info[idx] = (m.pct_unit, f"{reps}×")
         v1, v2 = self.voices[idx]
         sticking = {h.pos: h.text for h in m.bar.hits if h.instr.code == "ST"}
         self.voice(v1, 1, sticking, m, meter)
@@ -426,8 +428,10 @@ def to_musicxml(score, config=None):
     xml = w.build()
     offsets = Offsets(w.offsets)
     mode = str(score.song.get("count_pos") or (config or {}).get("count_pos") or "binnen").lower()
-    offsets.counts = [] if mode in ("boven", "above") else list(w.counts)
-    offsets.count_side = "links" if mode in ("links", "binnen-links", "left") else "rechts"
+    offsets.counts = list(w.counts)
+    offsets.count_info = dict(w.count_info)
+    offsets.count_mode = ("boven" if mode in ("boven", "above", "erboven") else
+                          "links" if mode in ("links", "binnen-links", "left") else "rechts")
     offsets.subtitle = w.subtitle
     offsets.accent = str(score.song.get("accent_pos") or (config or {}).get("accent_pos") or "boven").lower()
     return xml, offsets
@@ -438,4 +442,5 @@ class Offsets(dict):
     counts = []
     accent = "boven"
     subtitle = ""
-    count_side = "rechts"
+    count_info = {}
+    count_mode = "rechts"
