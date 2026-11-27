@@ -3,6 +3,7 @@ zelftests op de Mac, en schrijft dat in een database met precies dezelfde opbouw
 
 Gebruik: python3 fake_forscore.py <bestand>      (database: $DRUMSHEETZ_FORSCORE_DB)
 Gedrag bij een bestaand stuk: $FAKE_FORSCORE_MODE = overwrite (standaard) | duplicate | ignore
+Blijft hangen op bestanden met $FAKE_FORSCORE_HANG in de naam.
 """
 import gzip
 import os
@@ -130,6 +131,13 @@ def import_4ss(con, p):
 
 def main():
     p = pathlib.Path(sys.argv[1])
+    hang = os.environ.get("FAKE_FORSCORE_HANG")
+    if hang and hang in p.name:                    # forScore blijft hangen op 'Loading… 0 of 1'
+        log = os.environ.get("FAKE_FORSCORE_LOG")
+        if log:
+            with open(log, "a", encoding="utf-8") as f:
+                f.write(p.name + "\n")
+        return
     con = connect()
     {".pdf": import_pdf, ".4sc": import_4sc, ".4ss": import_4ss}[p.suffix.lower()](con, p)
     con.commit()

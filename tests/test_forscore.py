@@ -48,7 +48,8 @@ class ForScoreTest(unittest.TestCase):
         self.log_file = self.dir / "opened.txt"
         self.env = {"DRUMSHEETZ_FORSCORE_DB": str(self.db), "DRUMSHEETZ_FORSCORE_POLL": "0.05",
                     "DRUMSHEETZ_FORSCORE_OPEN": f"{sys.executable} {ROOT / 'tests' / 'fake_forscore.py'}",
-                    "FAKE_FORSCORE_LOG": str(self.log_file), "FAKE_FORSCORE_MODE": "overwrite"}
+                    "FAKE_FORSCORE_LOG": str(self.log_file), "FAKE_FORSCORE_MODE": "overwrite",
+                    "FAKE_FORSCORE_HANG": ""}
         self.old_env = {k: os.environ.get(k) for k in self.env}
         os.environ.update(self.env)
         fake_forscore.connect().close()               # lege forScore-bibliotheek
@@ -299,6 +300,44 @@ class ForScoreTest(unittest.TestCase):
         self.assertEqual(len(self.opened()), n)                    # zelfde muziek: geen nieuwe versie
         self.assertTrue(any("label toevoegen: Band" in t and "label weghalen: Kerk" in t for t in todo), todo)
         self.assertTrue((self.dir / "versies" / "Band" / "Alpha" / "versies.json").exists())
+
+    def test_import_stops_at_the_file_where_forscore_hangs(self):
+        os.environ["FAKE_FORSCORE_HANG"] = "Beta"
+        a, b, c = (self.song(f"{n}.drum", n, "X") for n in ("Alpha", "Beta", "Gamma"))
+        self.send(a, b, c)
+        self.assertEqual(self.opened(), ["Alpha - X V1.4sc", "Beta - X V1.4sc"])    # Gamma niet meer gestuurd
+        self.assertTrue(any("nog niet geïmporteerd" in m and "Cancel" in m for m in self.logs), self.logs)
+        self.assertTrue(any("Gamma - X V1.pdf" in m and "volgende keer" in m for m in self.logs), self.logs)
+        os.environ["FAKE_FORSCORE_HANG"] = ""
+        self.send(a, b, c)
+        self.assertEqual(sorted(fake_forscore.items(self.db)),
+                         ["Alpha - X V1.pdf", "Beta - X V1.pdf", "Gamma - X V1.pdf"])
+
+    def ext_setlist(self, line):
+        pdf = self.dir / "gekocht" / "one-love-people-get-ready.pdf"
+        blank_pdf(pdf)
+        (self.dir / "setlists" / "s.txt").write_text(f"titel: S\n{line}\n", encoding="utf-8")
+        return pdf
+
+    def test_bought_pdf_already_in_forscore_under_other_name_is_not_sent_again(self):
+        c = fake_forscore.connect()
+        fake_forscore.add_score(c, "One Love.pdf", 100)
+        c.commit()
+        c.close()
+        self.ext_setlist("gekocht/one-love-people-get-ready.pdf = Bob Marley - One Love")
+        self.assertTrue(fs.send_setlist(self.p, "s", log=self.logs.append), self.logs)
+        self.assertEqual(self.opened(), ["S V1.4ss"])
+        self.assertEqual(self.lib().setlists["S V1"], ["One Love.pdf"])
+        fs.sync(self.p, log=self.logs.append)
+        self.assertEqual(self.opened(), ["S V1.4ss"])                       # ook later niet opnieuw
+
+    def test_bought_pdf_that_hangs_twice_is_left_to_the_user(self):
+        os.environ["FAKE_FORSCORE_HANG"] = "one-love"
+        self.ext_setlist("gekocht/one-love-people-get-ready.pdf = Bob Marley - One Love")
+        for _ in range(3):
+            fs.send_setlist(self.p, "s", log=self.logs.append)
+        self.assertEqual(self.opened().count("one-love-people-get-ready.pdf"), 2)
+        self.assertTrue(any("al twee keer op hangen" in m for m in self.logs), self.logs)
 
     def test_catalog_only_forscore_and_counts(self):
         c = fake_forscore.connect()

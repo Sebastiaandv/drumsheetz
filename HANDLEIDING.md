@@ -1099,11 +1099,19 @@ krijg je na het synchroniseren als korte lijst **"Zelf doen in forScore"** in he
 | **Nummer naar andere map verplaatst** | forScore laat zijn labels niet van buitenaf veranderen. Je krijgt de taak "label toevoegen: … / label weghalen: …" en in de boom een ⚑ achter het nummer tot het klopt. |
 | **Setlists** | Een setlist gebruikt altijd de **nieuwste versie** van elk nummer. Eerst gaan de stukken die nog ontbreken, dan de setlist (**Open Setlist**, "Bruiloft V1"), en er wordt gecontroleerd of hij **compleet** is. |
 | **Gewijzigde setlist** | Verandert de setlist, of komt er van een nummer erin een nieuwe versie, dan gaat er een nieuwe setlist naar forScore: "Bruiloft V2". De oude blijft staan (mag weg). Een setlist die al in forScore stond (zonder V) wordt V1. |
+| **Losse PDF's in een setlist** | Een gekochte PDF (`gekocht/song.pdf = Artiest - Titel`) wordt in forScore gezocht op bestandsnaam én op titel. Staat hij er al (ook onder een andere naam), dan wordt die gebruikt en niets verstuurd. Eén keer gevonden = onthouden. |
 | **Dubbelen** | Staat een stuk twee keer in forScore (bv. "Naam 2.pdf"), dan zie je ⚠ in de boom en een taak om de kopie weg te gooien (meestal die zonder labels). |
 
 **Bolletjes in de boom** (achter elk nummer en elke setlist): groen = actueel in forScore,
 blauw = nog niet in forScore, oranje = gewijzigd (wordt een nieuwe versie bij de volgende ⇅).
 Houd de muis erop voor de naam in forScore. ⚑ = labels kloppen niet met de map, ⚠ = dubbel in forScore.
+
+**Blijft forScore hangen** op "Loading… 0 of 1 files imported"? Drumsheetz stuurt de bestanden één
+voor één en wacht na elk bestand tot het echt in forScore staat. Komt een bestand er na 45 seconden niet
+in, dan stopt hij en zegt hij welk bestand het was. Klik in forScore op **Cancel** (of beantwoord de
+vraag die soms achter een ander venster staat); de rest gaat mee met de volgende ⇅ forScore. Blijft
+forScore twee keer op dezelfde losse PDF hangen, dan probeert Drumsheetz het niet meer: sleep dat
+bestand dan zelf in forScore, daarna wordt het vanzelf herkend.
 
 **Kan forScore niet gelezen worden** (bv. geen toestemming), dan stuurt Drumsheetz geen nummers die nog
 nooit verstuurd zijn: hij kan dan niet zien of ze er al in staan, en maakt liever geen dubbele.

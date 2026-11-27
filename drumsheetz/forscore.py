@@ -266,13 +266,13 @@ def open_files(files, log):
     return True
 
 
-def wait_for(names, setlist=None, seconds=None, log=print):
+def wait_for(names, setlist=None, seconds=None, log=print, poll=None):
     """Wacht tot de bestandsnamen (en eventueel de setlist) in de forScore-bibliotheek staan.
     Geeft (bibliotheek, ontbrekende namen) of (bibliotheek, None) als er niet gecontroleerd kan worden."""
     deadline = time.time() + (seconds or VERIFY_SECONDS * _poll() / 3)
     lib = None
     while time.time() < deadline:
-        time.sleep(_poll())
+        time.sleep(poll or _poll())
         lib = library()
         if not lib.ok:
             return lib, None
@@ -280,6 +280,34 @@ def wait_for(names, setlist=None, seconds=None, log=print):
         if not missing and (setlist is None or setlist in lib.setlists):
             return lib, []
     return lib, [n for n in names if not (lib and lib.has(n))]
+
+
+IMPORT_SECONDS = 45
+
+
+def import_files(files, lib_ok, log):
+    """Bestanden één voor één naar forScore, en na elk bestand wachten tot het echt in de bibliotheek
+    staat. Zo stapelen de imports in forScore zich niet op, en zie je precies bij welk bestand forScore
+    blijft hangen. files: [(pad, verwachte naam in forScore)].
+    Geeft (gelukte namen, naam waarbij forScore bleef hangen of None)."""
+    done = []
+    for i, (path, name) in enumerate(files, 1):
+        if len(files) > 1:
+            log(f"  … {i}/{len(files)}: {name}")
+        if not open_files([path], log):
+            return done, name
+        if not lib_ok:
+            done.append(name)
+            continue
+        secs = IMPORT_SECONDS * _poll() / 3
+        _, missing = wait_for([name], seconds=secs, log=log, poll=min(_poll(), 1.0))
+        if missing:
+            log(f"  ✗ forScore heeft '{name}' na {int(secs)} s nog niet geïmporteerd. Kijk op de Mac in forScore: "
+                "staat er een vraag open (soms achter een ander venster)? Blijft hij op 'Loading… 0 of 1 files "
+                "imported' staan, klik dan op Cancel. Ik stop hier; de rest gaat mee met de volgende ⇅ forScore.")
+            return done, name
+        done.append(name)
+    return done, None
 
 
 # ---------------------------------------------------------------------------
@@ -488,26 +516,71 @@ def send(project, items, open_app=True, log=print, lib=None, note="", **_ignored
     if not open_app:
         log(f"✓ {len(jobs)} bestand(en) klaargezet in {out.relative_to(project.root)}/")
         return present
-    log(f"→ naar forScore: {', '.join(j[2] for j in jobs)}")
-    if not open_files([j[3] for j in jobs], log):
-        return present
-    missing = []
-    if lib.ok:
-        _, missing = wait_for([j[2] for j in jobs], log=log)
-        missing = missing or []
+    log(f"→ naar forScore ({len(jobs)}), één voor één met controle")
+    done, stuck = import_files([(j[3], j[2]) for j in jobs], lib.ok, log)
     for hist, v, name, dst in jobs:
-        if name in missing:
-            log(f"  ✗ {name}: niet in forScore verschenen (vroeg forScore iets? kijk op de Mac)")
+        if name not in done:
             continue
         v.update(forscore=name, sent=True, sent_time=int(time.time()))
         hist.save()
         present.append(name)
         log(f"  ✓ {name}" + (" staat in forScore" if lib.ok else " verstuurd (niet gecontroleerd)"))
+    if stuck:
+        rest = [j[2] for j in jobs if j[2] not in done and j[2] != stuck]
+        if rest:
+            log(f"  · nog niet verstuurd (volgende keer): {', '.join(rest)}")
     return present
 
 
 # ---------------------------------------------------------------------------
 # setlists: ook met versies; een setlist gebruikt altijd de nieuwste versie van elk nummer
+
+def _extern_state(project):
+    from . import versions as V
+    f = V.root(project) / V.SETLISTS / "_losse-pdfs.json"
+    try:
+        return f, json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return f, {}
+
+
+def _song_owned(project):
+    """forScore-namen die bij Drumsheetz-nummers horen (die zijn nooit een losse PDF)."""
+    from . import versions as V
+    out = set()
+    for d in V._all_histories(project):
+        try:
+            data = json.loads((d / V.INDEX).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        out |= {v["forscore"].lower() for v in data.get("versions", []) if v.get("forscore")}
+    return out
+
+
+def match_pdf(project, e, lib, ext=None, owned=None):
+    """Zoek een losse PDF uit een setlist (bv. gekocht) in forScore: op bestandsnaam, op de naam die we
+    onthouden hebben, of op titel ('Artiest - Titel' of 'Titel'). Stukken van Drumsheetz-nummers tellen niet."""
+    import re
+    if lib is None or not lib.ok:
+        return None
+    fname = pathlib.Path(e.pdf).name
+    if lib.has(fname):
+        return lib.get(fname)
+    ext = ext if ext is not None else _extern_state(project)[1]
+    known = (ext.get(str(e.ref or e.pdf)) or {}).get("forscore")
+    if known and lib.has(known):
+        return lib.get(known)
+    owned = owned if owned is not None else _song_owned(project)
+    title = e.title or pathlib.Path(e.pdf).stem
+    keys = {_norm(title)} | {_norm(x) for x in re.split(r"\s+-\s+", title)[1:]}
+    keys.discard("")
+    base = _base(fname)
+    cands = [r_ for r_ in lib.scores.values() if r_["file"].lower() not in owned and
+             (_base(r_["file"]) == base or _norm(r_["title"]) in keys or _base(r_["file"]) in keys)]
+    if not cands:
+        return None
+    return sorted(cands, key=lambda r_: (not r_["labels"], r_.get("added") or 0))[0]
+
 
 def _rows_equal(a, b):
     return [str(x).lower() for x in a] == [str(x).lower() for x in b]
@@ -541,7 +614,9 @@ def setlist_rows(project, entries, lib):
                 sent = [v for v in hist.versions if v.get("sent") and v.get("forscore")]
                 rows.append((s.get("title", e.ref), sent[-1]["forscore"] if sent else None))
         elif e.kind == "pdf" and e.pdf:
-            rows.append((e.title or pathlib.Path(e.pdf).stem, pathlib.Path(e.pdf).name))
+            rec = match_pdf(project, e, lib) if lib.ok else None
+            rows.append((e.title or pathlib.Path(e.pdf).stem,
+                         rec["file"] if rec else (None if lib.ok else pathlib.Path(e.pdf).name)))
     return rows
 
 
@@ -592,18 +667,38 @@ def send_setlist(project, name, open_app=True, log=print, songs=True):
              open_app=open_app, log=log, lib=lib)
     out = project.out("forscore")
     out.mkdir(parents=True, exist_ok=True)
-    ext_files = []
-    for e in entries:                       # externe (gekochte) PDF's
-        if e.kind == "pdf" and e.pdf:
-            fname = pathlib.Path(e.pdf).name
-            if not _has(lib, fname):
-                shutil.copyfile(e.pdf, out / fname)
-                ext_files.append(out / fname)
-    if ext_files and open_app:
-        log(f"→ externe PDF's naar forScore: {', '.join(p.name for p in ext_files)}")
-        open_files(ext_files, log)
-        if lib.ok:
-            wait_for([p.name for p in ext_files], log=log)
+    ext_file, ext = _extern_state(project)
+    owned = _song_owned(project)
+    ext_jobs = []
+    for e in entries:                       # losse (gekochte) PDF's
+        if e.kind != "pdf" or not e.pdf:
+            continue
+        key = str(e.ref or e.pdf)
+        rec = match_pdf(project, e, lib, ext, owned)
+        if rec is not None:
+            ext[key] = {"forscore": rec["file"]}
+            continue
+        if not lib.ok:
+            log(f"  ! {pathlib.Path(e.pdf).name}: niet verstuurd (forScore-bibliotheek niet te lezen)")
+            continue
+        if (ext.get(key) or {}).get("fails", 0) >= 2:
+            log(f"  ! {pathlib.Path(e.pdf).name}: forScore bleef hier al twee keer op hangen. Sleep het bestand "
+                f"zelf in forScore ({e.pdf}); daarna wordt het vanzelf herkend.")
+            continue
+        fname = pathlib.Path(e.pdf).name
+        shutil.copyfile(e.pdf, out / fname)
+        ext_jobs.append((key, out / fname, fname))
+    if ext_jobs and open_app:
+        log(f"→ losse PDF's naar forScore: {', '.join(j[2] for j in ext_jobs)}")
+        done, stuck = import_files([(j[1], j[2]) for j in ext_jobs], lib.ok, log)
+        for key, _p, fname in ext_jobs:
+            if fname in done:
+                ext[key] = {"forscore": fname}
+                log(f"  ✓ {fname} staat in forScore")
+            elif fname == stuck:
+                ext[key] = {"fails": (ext.get(key) or {}).get("fails", 0) + 1}
+    ext_file.parent.mkdir(parents=True, exist_ok=True)
+    ext_file.write_text(json.dumps(ext, indent=1, ensure_ascii=False), encoding="utf-8")
     lib = library()
     title = meta.get("title") or f.stem
     rows = setlist_rows(project, entries, lib)
