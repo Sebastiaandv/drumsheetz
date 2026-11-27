@@ -122,6 +122,25 @@ def spatium_mm(mscx):
     return float(m.group(1)) if m else 1.75
 
 
+UNIT_CANDIDATES = (3600.0, 1200.0, 600.0, 300.0, 144.0, 100.0, 96.0, 72.0)   # eenheden per inch in .mpos/.spos
+
+
+def units_per_spatium(measures, sp_mm):
+    """Hoeveel .mpos-eenheden één spatium is. NIET uit de hoogte van een maat halen: dat is de hoogte van de hele
+    regel (bij MuseScore 4 meer dan de notenbalk). Wel: de spatium in mm uit het bestand, en de eenheid per inch
+    waarbij de breedste regel een echte paginabreedte heeft (A4/Letter: 5,5 tot 8,6 inch bedrukbaar)."""
+    lines = {}
+    for x, y, w, _h, p in measures:
+        lo, hi = lines.get((p, round(y)), (x, x + w))
+        lines[(p, round(y))] = (min(lo, x), max(hi, x + w))
+    widest = max((hi - lo for lo, hi in lines.values()), default=0)
+    if widest > 0:
+        for dpi in UNIT_CANDIDATES:
+            if 5.5 <= widest / dpi <= 8.6:
+                return sp_mm / 25.4 * dpi, dpi
+    return None, None
+
+
 def text_width_sp(n_chars, size_pt, sp_mm):
     return n_chars * 0.62 * size_pt * 0.3528 / sp_mm
 
@@ -134,6 +153,7 @@ def plan(mscx, mpos, spos, counts, mode, font_pt=10.0):
         return None
     segs = first_segments(measures, segments)
     spmm = spatium_mm(mscx)
+    sp_units, dpi = units_per_spatium(measures, spmm)
     dmap = display_map(mscx) or []
     result = {}
     for real, (unit, label) in counts.items():
@@ -141,7 +161,7 @@ def plan(mscx, mpos, spos, counts, mode, font_pt=10.0):
         if idx >= len(measures) or segs[idx] is None:
             continue
         mx, my, msx, msy, mp = measures[idx]
-        sp = (msy / 4.0) if msy > 0 else 250.0
+        sp = sp_units or ((msy / 4.0) if msy > 0 else 250.0)
         seg = segs[idx]
         first_in_system = not any(p == mp and abs(y - my) < 1 and x < mx - 1 for (x, y, _, _, p) in measures)
         x1 = (seg - LEAD * sp) if first_in_system else mx
@@ -170,7 +190,7 @@ def plan(mscx, mpos, spos, counts, mode, font_pt=10.0):
             if room < 0:
                 need = -room
         result[real] = {"x": (target - seg) / sp, "y": y, "align": align, "need": need / sp if need else 0.0,
-                       "width": msx / sp, "center": (center - seg) / sp}
+                       "width": msx / sp, "center": (center - seg) / sp, "sp": round(sp, 2), "dpi": dpi or 0}
     return result
 
 

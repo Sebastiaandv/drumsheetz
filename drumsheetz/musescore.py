@@ -274,6 +274,9 @@ def place_counts(ms, items, tmp, log=print):
                 dbg.mkdir(parents=True, exist_ok=True)
                 (dbg / (it.get("id", "nummer").replace("/", "_") + ".json")).write_text(
                     CP.debug_report(final, mode), encoding="utf-8")
+                for f in (mp, sp):                       # posities erbij, zodat het na te rekenen is
+                    if f.exists():
+                        shutil.copyfile(f, dbg / (it.get("id", "nummer").replace("/", "_") + f.suffix))
             if n < len(info) and it.get("pdf"):
                 log(f"  ! {it.get('id', '')}: {len(info) - n} van {len(info)} herhaaltellers niet geplaatst "
                     "(stuur uitvoer/debug/ mee als je dit meldt)")
