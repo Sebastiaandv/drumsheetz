@@ -214,6 +214,37 @@ class BuilderApiTest(Base):
         self.assertTrue(e[3]["error"])
 
 
+class SetlistFileTest(Base):
+    def test_rename_moves_history_and_outputs(self):
+        from drumsheetz.studio import Studio
+        h = self.music / "versies" / ".setlists"
+        h.mkdir(parents=True)
+        (h / "s.json").write_text('{"versions": []}', encoding="utf-8")
+        out = self.music / "uitvoer" / "setlists"
+        (out / "s").mkdir(parents=True)
+        (out / "s.md").write_text("x", encoding="utf-8")
+        res = Studio(self.music).move({"from": "setlists/s.txt", "to": "setlists/bruiloft"})
+        self.assertEqual(res["path"], "setlists/bruiloft.txt")
+        self.assertTrue((self.music / "setlists" / "bruiloft.txt").exists())
+        self.assertTrue((h / "bruiloft.json").exists())
+        self.assertFalse((h / "s.json").exists())
+        self.assertTrue((out / "bruiloft").is_dir())
+        self.assertTrue((out / "bruiloft.md").exists())
+
+    def test_delete_goes_to_archive(self):
+        from drumsheetz.studio import Studio
+        st = Studio(self.music)
+        res = st.delete_setlist({"path": "setlists/s.txt"})
+        self.assertFalse((self.music / "setlists" / "s.txt").exists())
+        self.assertTrue((self.music / res["archived"]).exists())
+        self.assertTrue(res["archived"].startswith("archief/setlists/"))
+        (self.music / "setlists" / "s.txt").write_text("titel: Set\n", encoding="utf-8")
+        res2 = st.delete_setlist({"path": "setlists/s.txt"})           # nog een keer: overschrijft niets
+        self.assertNotEqual(res["archived"], res2["archived"])
+        with self.assertRaises(ValueError):
+            st.delete_setlist({"path": "nummers/Alpha.drum"})
+
+
 class AccessTest(unittest.TestCase):
     def allowed(self, ip, server, host="127.0.0.1"):
         import ipaddress

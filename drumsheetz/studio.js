@@ -511,6 +511,8 @@ $("#aMore").onclick = e=>{ e.stopPropagation(); const k=state&&state.kind;
     ["Naar forScore (dit nummer)", ()=>runCmd("fsThis"), "", k==="song"||k==="setlist"],
     ["Nieuwe versie…", ()=>{ setView("song"); }, "", k==="song"], "-",
     ["Archiveer nummer", ()=>archiveSong(), "", k==="song" && !!state && state.path.startsWith("nummers/")],
+    ["Setlist hernoemen…", ()=>renameSetlist(state.path), "", k==="setlist"],
+    ["Setlist verwijderen (naar archief)", ()=>deleteSetlist(state.path), "", k==="setlist"],
     ["Toon in verkenner", ()=>state && revealInTree(state.path), "", !!state],
     ["PDF in nieuw tabblad", ()=>$("#pvOpen").click(), "", !!(state && state.pdf)]]); };
 $("#aBuild").onclick = build;
@@ -619,7 +621,8 @@ $("#tree").addEventListener("contextmenu", e=>{
     ["Openen in voorbeeld", async ()=>{ await openFile(path,{pinned:true}); showPreview(true); }, "", /\.drum$/.test(path)], "-",
     ["Naar forScore", ()=>fsSend(path.startsWith("setlists/") ? {setlists:[nameOf(path)]} : {paths:[path]}), "", top==="nummers"||top==="setlists"],
     ["Hernoemen", ()=>startRename(n), "F2", managed],
-    ["Archiveren", ()=>archiveSong(path), "", top==="nummers"], "-",
+    ["Archiveren", ()=>archiveSong(path), "", top==="nummers"],
+    ["Verwijderen (naar archief)", ()=>deleteSetlist(path), "", top==="setlists"], "-",
     ["Pad kopiëren", ()=>navigator.clipboard?.writeText(path)],
   ];
   showMenu(e.clientX, e.clientY, items);
@@ -660,6 +663,7 @@ async function doMove(from, to){
     if(openDirs.has(from)) openDirs.add(j.path);
     openDirs.add(parentOf(j.path));
     drawTabs(); updateUI(); persistTabs(); await loadTree(); if(typeof loadFs==="function") loadFs();
+    if(typeof builderSync==="function" && isBuilder()){ BL.path=null; builderSync(); }
     toast("Verplaatst naar "+j.path);
   }catch(err){ toast(err.message); drawTree(); }
 }
@@ -679,6 +683,26 @@ $("#tree").addEventListener("drop", e=>{
   if(isDir && dir.split("/")[0]!=="voorbeelden" && dir!=="nummers"){ toast("Mappen in mappen kan niet: in forScore is een map een label, en labels kunnen niet in elkaar."); return; }
   openDirs.add(dir); doMove(from, dir+"/"+baseOf(from));
 });
+
+/* ------------------------------------------------------------ setlists hernoemen en verwijderen */
+async function renameSetlist(path){
+  const old = nameOf(path);
+  let name = prompt("Nieuwe bestandsnaam voor de setlist (zonder .txt):", old); if(name===null) return;
+  name = name.trim().replace(/\.txt$/i,"").replace(/[\\/:*?"<>|]+/g,"-").trim();
+  if(!name || name===old) return;
+  await doMove(path, "setlists/"+name+".txt");
+  drawSetlists && drawSetlists();
+}
+async function deleteSetlist(path){
+  if(!confirm(`Setlist '${nameOf(path)}' verwijderen?\n\nHij gaat naar archief/setlists/ (daar kun je hem altijd terughalen). De setlist in forScore blijft staan.`)) return;
+  try{
+    const j = await api("/api/delete-setlist", {path});
+    const m = TABS.find(t=>t.path===path);
+    if(m){ if(m===state) stash(); m.saved = m.content; await closeTab(m); }
+    toast("Verwijderd: staat nu in "+j.archived);
+    await loadTree(); if(typeof loadFs==="function") loadFs();
+  }catch(err){ toast(err.message); }
+}
 
 /* ------------------------------------------------------------ nieuw nummer / setlist */
 async function newSong(folder){
@@ -1060,6 +1084,8 @@ const CMDS = [
   ["check","Controleer",""  ,()=>{ check(); showPanel(true); panelTab("prob"); }],
   ["midi","MIDI-oefenbestand…","",()=>midi()],
   ["archive","Archiveer dit nummer","",()=>archiveSong()],
+  ["renameSetlist","Setlist hernoemen…","",()=>state && state.kind==="setlist" && renameSetlist(state.path)],
+  ["deleteSetlist","Setlist verwijderen (naar archief)","",()=>state && state.kind==="setlist" && deleteSetlist(state.path)],
   ["reveal","Toon in verkenner","",()=>state && revealInTree(state.path)],
   ["setlistText","Setlist: als tekst","",()=>setSetlistView("text")],
   ["setlistBuilder","Setlist: bouwer","",()=>setSetlistView("builder")],

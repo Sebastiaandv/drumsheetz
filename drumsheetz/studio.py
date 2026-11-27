@@ -473,6 +473,8 @@ class Studio:
             dst.parent.mkdir(parents=True, exist_ok=True)
             old_ids = [(project.song_id(a), a.stem) for a, _ in mapping]
             src.rename(dst)
+            if src.suffix == ".txt" and self.rel(dst).startswith("setlists/") and src.stem != dst.stem:
+                self._move_setlist_extras(project, src.stem, dst.stem)
             for (a, b), (oid, ostem) in zip(mapping, old_ids):
                 if b.suffix not in (".drum", ".py") or not str(b.resolve()).startswith(str(project.songs_dir.resolve())):
                     continue
@@ -482,6 +484,40 @@ class Studio:
                     self._rename_refs(project, oid, ostem, nid)
             self._cleanup_empty(project)
         return {"ok": True, "path": self.rel(dst)}
+
+    def _move_setlist_extras(self, project, old, new):
+        """Bij een hernoemde setlist: versiegeschiedenis en gemaakte bestanden (uitvoer/setlists) gaan mee."""
+        from . import versions as V
+        h_old = V.root(project) / V.SETLISTS / f"{old}.json"
+        h_new = V.root(project) / V.SETLISTS / f"{new}.json"
+        if h_old.exists() and not h_new.exists():
+            h_old.rename(h_new)
+        out = project.out("setlists")
+        if out.exists():
+            for p in list(out.iterdir()):
+                if p.name == old or p.name.startswith((old + ".", old + "-", old + " ")):
+                    target = out / (new + p.name[len(old):])
+                    if not target.exists():
+                        p.rename(target)
+
+    def delete_setlist(self, data):
+        """Setlist 'verwijderen': naar archief/setlists/<datum>/ (terug te halen; de versiegeschiedenis blijft)."""
+        import datetime
+        rel = str(data.get("path", "")).strip().strip("/")
+        p = self._check_managed(rel)
+        if not (rel.startswith("setlists/") and p.suffix == ".txt" and p.is_file()):
+            raise ValueError("alleen setlists (setlists/*.txt) kunnen zo worden verwijderd")
+        project = self.project()
+        folder = project.archive_dir / "setlists" / datetime.date.today().isoformat()
+        folder.mkdir(parents=True, exist_ok=True)
+        dst = folder / p.name
+        i = 2
+        while dst.exists():
+            dst = folder / f"{p.stem}-{i}{p.suffix}"
+            i += 1
+        with LOCK:
+            p.rename(dst)
+        return {"ok": True, "archived": self.rel(dst)}
 
     def songs(self):
         """Alle nummers met titel, artiest, map, tempo, maatsoort en duur (voor de setlist-bouwer).
@@ -800,6 +836,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/new-setlist": lambda: s.new_setlist(data),
             "/api/archive": lambda: s.run_cli(["archiveer", data["path"]]),
             "/api/move": lambda: s.move(data),
+            "/api/delete-setlist": lambda: s.delete_setlist(data),
             "/api/mkdir": lambda: s.mkdir(data),
             "/api/deldir": lambda: s.rmdir(data),
             "/api/build-folder": lambda: s.run_cli(["maak", data["path"]] + (["-a"] if data.get("all") else [])),

@@ -250,10 +250,14 @@ function drawSetlists(){
     const s = FS.data ? FS.data.setlists.find(x=>x.path===f.path) : null;
     const n = s ? s.items.filter(i=>i.kind!=="break").length : null;
     return `<div class="li${state&&f.path===state.path?" active":""}" data-open="${esc(f.path)}"><span class="hint" style="width:14px">☰</span>
-      <div class="m"><div class="t">${esc(s ? s.title : nameOf(f.path))}</div><div class="s">${n!==null?n+" nummers · ":""}${esc(nameOf(f.path))}</div></div>${fsDot(f.path)}</div>`;
+      <div class="m"><div class="t">${esc(s ? s.title : nameOf(f.path))}</div><div class="s">${n!==null?n+" nummers · ":""}${esc(baseOf(f.path))}</div></div>
+      <span class="acts"><button class="ib" data-rename="${esc(f.path)}" title="Bestandsnaam wijzigen"><svg class="i s"><use href="#i-code"/></svg></button>
+        <button class="ib" data-del="${esc(f.path)}" title="Verwijderen (naar archief)"><svg class="i s"><use href="#i-close"/></svg></button></span>${fsDot(f.path)}</div>`;
   }).join("");
 }
-$("#slBody").addEventListener("click", e=>{ const r=e.target.closest("[data-open]"); if(r) openFile(r.dataset.open, {pinned:true}).then(m=>{ if(m){ setSetlistView("builder"); } }); });
+$("#slBody").addEventListener("click", e=>{
+  const b=e.target.closest("button"); if(b){ e.stopPropagation(); if(b.dataset.rename) renameSetlist(b.dataset.rename); if(b.dataset.del) deleteSetlist(b.dataset.del); return; }
+  const r=e.target.closest("[data-open]"); if(r) openFile(r.dataset.open, {pinned:true}).then(m=>{ if(m){ setSetlistView("builder"); } }); });
 
 /* ================================================================== setlist-bouwer */
 const BL = { songs:null, info:null, infoFor:null, items:[], header:[], trailing:[], timer:null, drag:null, q:"" };
@@ -350,6 +354,9 @@ function drawBuilder(){
       <label>Datum<input data-meta="datum" value="${esc(meta.datum)}" placeholder="bv. 12 juni 2026"></label>
       <label>Plaats<input data-meta="plaats" value="${esc(meta.plaats)}" placeholder="bv. De Boerderij"></label>
       <label class="full">Notitie<input data-meta="notitie" value="${esc(meta.notitie)}" placeholder="bv. In-ears mee!"></label>
+      <div class="full b-file">Bestand: <span class="mono">${esc(state.path)}</span>
+        <button class="btn small" id="blRename" title="Bestandsnaam wijzigen">Hernoemen…</button>
+        <button class="btn small" id="blDelete" title="Naar archief/setlists/ verplaatsen">Verwijderen</button></div>
     </div>
     <div class="b-sum"><span><b>${n}</b> nummers</span><span>speelduur <b>${fmtDur(tot)}${unknown?"+":""}</b></span>
       <span class="sp"></span>
@@ -381,6 +388,8 @@ $("#builder").addEventListener("input", e=>{
 $("#builder").addEventListener("click", async e=>{
   const t=e.target.closest("button,[data-note]"); if(!t) return;
   if(t.id==="blBuild") return build();
+  if(t.id==="blRename"){ if(dirty()) await save(); return renameSetlist(state.path); }
+  if(t.id==="blDelete") return deleteSetlist(state.path);
   if(t.id==="blFs") return fsSend({setlists:[nameOf(state.path)]});
   if(t.id==="blReload"){ await loadSongs(true); drawBuilder(); return; }
   if(t.id==="blBreak"){ const name=prompt("Naam van de set of pauze:", BL.items.some(i=>i.info.kind==="break") ? "Pauze" : "Set 1"); if(!name) return;

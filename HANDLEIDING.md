@@ -1063,6 +1063,12 @@ Open een setlist in de Studio (icoon *Setlists*, of gewoon in de verkenner) en j
   **＋ Los nummer** zet je een nummer erin dat (nog) niet in Drumsheetz staat; in forScore wordt dat een
   plaatshouder.
 
+**Hernoemen en verwijderen.** Onder de titel staat de bestandsnaam met **Hernoemen…** en **Verwijderen**.
+Dezelfde knoppen staan in de weergave *Setlists* (ga met de muis over een setlist) en bij rechtsklik in de
+verkenner. Hernoemen verandert alleen de bestandsnaam: de titel (en dus de naam in forScore) blijft, en de
+versiegeschiedenis en gemaakte bestanden gaan mee. **Verwijderen** zet de setlist in `archief/setlists/<datum>/`,
+zodat je hem altijd terug kunt halen (terugzetten in `setlists/`); de setlist in forScore blijft staan.
+
 De bouwer schrijft gewoon het tekstbestand hierboven (zelfde formaat, je commentaar blijft staan). Met
 ⟨/⟩ rechtsboven wissel je tussen bouwer en tekst. Ongedaan maken (⌘Z) en opslaan (⌘S) werken zoals overal.
 - `#` = commentaar.
