@@ -14,6 +14,61 @@ SETLIST_DIR = "setlists"
 ARCHIVE_DIR = "archief"
 LIBRARY_FILE = "bibliotheek.drum"
 CONFIG_FILE = "instellingen.txt"
+VERSION_DIR = "versies"
+
+# Het programma (drums.py, drumsheetz/, voorbeelden/, HANDLEIDING.md) en je muziek (nummers/, setlists/,
+# versies/, archief/, instellingen.txt, bibliotheek.drum) kunnen in aparte mappen staan. Welke muziekmap
+# gebruikt wordt: --muziek <pad>, anders $DRUMSHEETZ_MUZIEK, anders muziekmap.txt naast drums.py, anders
+# de programmamap zelf (zoals vroeger).
+CODE_ROOT = pathlib.Path(__file__).resolve().parent.parent
+POINTER_FILE = "muziekmap.txt"
+MUSIC_ITEMS = (SONG_DIR, SETLIST_DIR, VERSION_DIR, ARCHIVE_DIR, CONFIG_FILE, LIBRARY_FILE)
+# forScore kent geen mappen in mappen (mappen = labels): nummers/<map>/<nummer> is het diepst
+MAX_FOLDER_DEPTH = 1
+
+
+def read_pointer(code_root=CODE_ROOT):
+    f = pathlib.Path(code_root) / POINTER_FILE
+    if not f.exists():
+        return None
+    for line in f.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            return line
+    return None
+
+
+def music_root(code_root=CODE_ROOT, override=None):
+    """De map met je muziek (zie boven). Een opgegeven map die niet bestaat is een fout, geen stille terugval."""
+    code_root = pathlib.Path(code_root).resolve()
+    cand = override or os.environ.get("DRUMSHEETZ_MUZIEK") or read_pointer(code_root)
+    if not cand:
+        return code_root
+    p = pathlib.Path(cand).expanduser()
+    if not p.is_absolute():
+        p = code_root / p
+    if not p.is_dir():
+        raise SystemExit(f"✗ muziekmap niet gevonden: {p}\n  (ingesteld via --muziek, DRUMSHEETZ_MUZIEK of "
+                         f"{POINTER_FILE}). Pas het pad aan, of: python3 drums.py muziek gebruik <pad>")
+    return p.resolve()
+
+
+def write_pointer(path, code_root=CODE_ROOT):
+    f = pathlib.Path(code_root) / POINTER_FILE
+    f.write_text("# Map met je muziek (nummers, setlists, versies). Zie HANDLEIDING.md, hoofdstuk 'Muziekmap'.\n"
+                 f"{pathlib.Path(path).expanduser().resolve()}\n", encoding="utf-8")
+    return f
+
+
+def folder_too_deep(rel_dir):
+    """Foutmelding als een map in nummers/ te diep zou komen (forScore: mappen = labels, geen nesting)."""
+    parts = [p for p in pathlib.PurePosixPath(str(rel_dir).replace("\\", "/")).parts if p not in ("", ".")]
+    if parts and parts[0] == SONG_DIR:
+        parts = parts[1:]
+    if len(parts) > MAX_FOLDER_DEPTH:
+        return (f"mappen in mappen kan niet: in forScore is een map een label, en labels kunnen niet in elkaar. "
+                f"Gebruik één map ('{parts[0]}'), en eventueel 'labels:' in het nummer voor extra labels.")
+    return None
 
 DEFAULT_CONFIG = {
     "name": "",
@@ -30,13 +85,14 @@ CONFIG_KEYS = {"naam": "name", "name": "name", "ondertitel": "subtitle", "subtit
                "accenten": "accent_pos", "accent": "accent_pos",
                "vorken": "wedge_pos", "crescendo": "wedge_pos", "dynamiek": "dyn_pos",
                "forscore": "forscore", "forscore-formaat": "forscore_format",
-               "versie-op-blad": "version_stamp", "versie": "version_stamp",
+               "versie-op-blad": "version_stamp", "versie": "version_stamp", "toegang": "access",
                "tekstgrootte": "text_size", "stijlgrootte": "feel_size"}
 
 
 class Project:
     def __init__(self, root):
         self.root = pathlib.Path(root).resolve()
+        self.code_root = CODE_ROOT
         self.config = dict(DEFAULT_CONFIG)
         cfg = self.root / CONFIG_FILE
         if cfg.exists():
@@ -66,6 +122,18 @@ class Project:
     @property
     def archive_dir(self):
         return self.root / ARCHIVE_DIR
+
+    @property
+    def separate(self):
+        """Staat de muziek in een eigen map (los van het programma)?"""
+        return self.root != self.code_root
+
+    def nested_folders(self):
+        """Mappen in nummers/ die te diep zitten (bv. buiten de Studio om gemaakt)."""
+        if not self.songs_dir.exists():
+            return []
+        return sorted(p.relative_to(self.root).as_posix() for p in self.songs_dir.glob("*/*")
+                      if p.is_dir() and not p.name.startswith("."))
 
     # bibliotheek --------------------------------------------------------
     def library(self):

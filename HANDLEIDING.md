@@ -52,7 +52,8 @@ een bibliotheek met kant-en-klare grooves en fills, en een tekstweergave in de t
 11. [Automatisch transcriberen uit een opname](#11-automatisch-transcriberen-uit-een-opname)
 12. [Instellingen](#12-instellingen)
 13. [Foutmeldingen en tips](#13-foutmeldingen-en-tips)
-14. [Spiekbrief](#14-spiekbrief)
+14. [Muziekmap, Sync, Status en de Mac mini](#14-muziekmap-sync-status-en-de-mac-mini)
+15. [Spiekbrief](#15-spiekbrief)
 
 ---
 
@@ -140,8 +141,9 @@ de editor, zodat je ze makkelijk kunt opruimen. De panelen kun je breder/smaller
 
 | Map / bestand | Wat staat er |
 |---|---|
-| `nummers/` | Je nummers: `.drum` (nieuw formaat) of `.py` (oud/geavanceerd formaat). Namen mogen alles bevatten wat een gewoon bestand mag (hoofdletters, spaties, `&`, haakjes, …). Submappen mogen; de uitvoer krijgt dezelfde mappenstructuur (`uitvoer/pdf/Hatikwa/The River.pdf`). Een map die met `_` begint (bv. `_Ideeën`) is **geparkeerd**: die wordt niet meegenomen bij *alles maken*, `lijst` en het forScore-overzicht. |
-| `setlists/` | Setlists als `.txt`. |
+| `nummers/` | Je nummers: `.drum` (nieuw formaat) of `.py` (oud/geavanceerd formaat). Namen mogen alles bevatten wat een gewoon bestand mag (hoofdletters, spaties, `&`, haakjes, …). Eén laag mappen mag (`nummers/Hatikwa/The River.drum`): een map is een **label** in forScore, en labels kunnen niet in elkaar, dus **mappen in mappen kan niet** (de Studio laat het niet toe; een te diepe map uit Finder krijgt een ⚠). De uitvoer krijgt dezelfde mappenstructuur (`uitvoer/pdf/Hatikwa/The River.pdf`). Een map die met `_` begint (bv. `_Ideeën`) is **geparkeerd**: die wordt niet meegenomen bij *alles maken*, `lijst` en het forScore-overzicht. |
+| `setlists/` | Setlists als `.txt` (geen submappen). |
+| `versies/` | De versiegeschiedenis van je nummers (V1, V2, …). Niet met de hand aanpassen. |
 | `uitvoer/pdf/` | De PDF's. |
 | `uitvoer/mscz/` | MuseScore-bestanden (om in MuseScore nog iets met de hand te verschuiven). |
 | `uitvoer/xml/` | MusicXML (tussenstap; opent ook in Sibelius, Dorico, Guitar Pro, ...). |
@@ -154,6 +156,11 @@ de editor, zodat je ze makkelijk kunt opruimen. De panelen kun je breder/smaller
 | `tools/auto.py` | Automatisch transcriberen uit een opname. |
 | `drumsheetz/` | Het programma zelf. |
 | `drums.py` | Hiermee start je alles. |
+
+**Muziek en programma apart.** Je muziek (`nummers/`, `setlists/`, `versies/`, `archief/`,
+`instellingen.txt`, `bibliotheek.drum`) kan in een **eigen map** staan, los van het programma, met een eigen
+git-repo (voor GitLab). Zie [hoofdstuk 14](#14-muziekmap-sync-status-en-de-mac-mini). `uitvoer/` staat dan ook
+in de muziekmap.
 
 ---
 
@@ -200,6 +207,11 @@ zonder extensie (`letlove`), de titel (`"Let Love Rule"`), een stuk ervan (`krav
 | `versies letlove --terug 2` | V2 terugzetten (wat er stond wordt eerst als reservekopie bewaard). |
 | `versies --controleer` | Controleer of alle versiebestanden er nog zijn en niet veranderd zijn. |
 | `studio` | Open de Studio: editor met bestanden, gereedschap en help in je browser. |
+| `studio --server` | Studio als server in je thuisnetwerk (bv. op een Mac mini achter Nginx Proxy Manager). |
+| `muziek` | Waar staat je muziek, en is het een git-repo met GitLab? |
+| `muziek maak ~/drumsheetz-muziek` | Eigen muziekmap maken met een kopie van je nummers, als git-repo. |
+| `muziek gebruik <pad>` | Een bestaande muziekmap gebruiken (bv. gekopieerd of gekloond). |
+| `muziek gitlab <url>` | GitLab-adres van je muziek instellen (leeg = weghalen). |
 | `help` | Overzicht van de opdrachten. `python3 drums.py maak -h` geeft de opties van één opdracht. |
 
 ---
@@ -1319,7 +1331,130 @@ Fouten noemen bestand, regelnummer en vaak een suggestie:
 
 ---
 
-## 14. Spiekbrief
+## 14. Muziekmap, Sync, Status en de Mac mini
+
+### De muziekmap
+
+Het programma (Drumsheetz) en je muziek zijn twee verschillende dingen. Het programma werk ik bij via
+GitHub; je muziek is van jou en hoort in een **eigen map met een eigen git-repo**, zodat je hem later naar je
+eigen GitLab kunt sturen.
+
+```bash
+python3 drums.py muziek maak ~/drumsheetz-muziek    # eenmalig: kopie van je nummers, setlists, versies en archief
+python3 drums.py muziek                             # waar staat mijn muziek?
+```
+
+`muziek maak` **kopieert** (er wordt niets verplaatst of weggegooid), maakt er een git-repo van met een eerste
+vastlegging, en onthoudt de map in `muziekmap.txt` naast `drums.py`. Vanaf dan werken de Studio en alle
+opdrachten met die map. De oude nummers in de programmamap blijven als reserve staan.
+
+Andere manieren om de muziekmap te kiezen: `python3 drums.py --muziek <pad> …` (één keer), of de
+omgevingsvariabele `DRUMSHEETZ_MUZIEK`.
+
+**Muziek naar een andere Mac** (bv. de Mac mini): kopieer de hele muziekmap (AirDrop, USB, netwerk), en zeg
+daar `python3 drums.py muziek gebruik <pad>`. Of, zodra je GitLab er is: `git clone <adres>` en dan `gebruik`.
+
+### De Sync-pagina
+
+Knop **Sync** in de Studio (opent in een nieuw tabblad, adres `/sync`). Er gaat **niets automatisch**: jij kiest
+wat er weggaat.
+
+**Links: GitLab.** Wat er veranderd is sinds de laatste vastlegging, per nummer gegroepeerd (het `.drum`-bestand
+plus zijn versiegeschiedenis horen bij elkaar):
+
+| Label | Betekent |
+|---|---|
+| nieuw | Nieuw nummer of setlist, nog nooit vastgelegd. |
+| gewijzigd | Het bestand is veranderd. Klik op **bekijk** voor wat er veranderd is (rood weg, groen erbij). |
+| verplaatst | Naar een andere map of hernoemd (de inhoud is herkend). **bekijk** vergelijkt met het oude bestand. |
+| verwijderd | Bestand is weg (bv. gearchiveerd). |
+| alleen versies | Er is een versie bij gekomen (bv. na ⇅ forScore), het nummer zelf is niet veranderd. |
+
+- **→ GitLab** achter een regel: alleen dat stuk vastleggen en versturen.
+- Vinkjes + **Geselecteerde naar GitLab**: een paar tegelijk.
+- **Alles naar GitLab**: alles in één keer.
+- In het tekstvak kun je een omschrijving typen; leeg = automatisch ("Bijgewerkt: The River – Hatikwa").
+- **GitLab-adres instellen…**: het adres van je muziek-repo in GitLab (bv. `git@gitlab.thuis:sebastiaan/drumsheetz-muziek.git`).
+  Zolang dat er niet is, wordt alles alleen **lokaal** vastgelegd; zodra het adres er is, gaat bij de volgende
+  keer alles mee wat nog niet in GitLab stond. Is GitLab even onbereikbaar, dan blijft het lokaal vastgelegd en
+  probeer je het later opnieuw.
+- **↓ Ophalen uit GitLab**: wijzigingen die ergens anders in GitLab zijn gezet hierheen halen (alleen als dat
+  zonder samenvoegen kan; anders zegt de pagina wat er aan de hand is).
+- **⟳ Vernieuwen** kijkt ook in GitLab of er iets nieuws is ("1 nieuw in GitLab").
+
+**Rechts: forScore.** Alle nummers, gegroepeerd per **map = label** in forScore, met hun versie en wat er
+moet gebeuren ("nog niet in forScore → wordt V1", "gewijzigd → wordt V3"). **→ forScore** stuurt één nummer
+(met zijn map als label); **Alles naar forScore** doet hetzelfde als ⇅ forScore. Ook setlists staan erbij.
+"alleen wat nog moet" verbergt wat al actueel is. Onderaan staat het **Log** van de laatste actie.
+
+### De statuspagina
+
+Knop **Status** in de Studio (adres `/status`). Per onderdeel een bolletje (groen = goed, oranje = let op,
+rood = werkt niet) met uitleg en wat je eraan kunt doen:
+
+| Groep | Wat wordt gecontroleerd |
+|---|---|
+| Systeem | macOS en model, Python, schijfruimte, of de Studio als server draait. |
+| Drumsheetz | Versie van het programma, de muziekmap (apart of niet), mappen die te diep zitten, of alle versiebestanden kloppen. |
+| MuseScore | Gevonden, en welke versie. |
+| forScore | Geïnstalleerd (en kan het op deze macOS?), bibliotheek leesbaar, zelftest gedaan, laatste sync, of forScore ergens op bleef hangen, iCloud. |
+| GitLab | Muziek in git, wijzigingen die nog niet zijn vastgelegd, GitLab-adres bereikbaar, vastleggingen die nog niet verstuurd zijn. |
+
+Vink **elke minuut vernieuwen** aan om hem open te laten staan als dashboard.
+
+### Drumsheetz op een Mac mini (server)
+
+Op een Mac die altijd aan staat draait de Studio als **achtergronddienst**. Je opent hem vanaf elk apparaat
+in je thuisnetwerk (of via je VPN) in de browser, bijvoorbeeld via je eigen domein met Nginx Proxy Manager.
+
+```bash
+git clone https://github.com/sebastiaandv/drumsheetz.git ~/drumsheetz
+cd ~/drumsheetz
+./installeer-macmini.sh
+```
+
+Het script controleert en regelt, en is veilig om opnieuw te draaien:
+
+1. **Deze Mac**: macOS-versie en model, en wat daarop kan (zie hieronder).
+2. **git en Python** (de Command Line Tools van Apple; het script start de installatie als ze ontbreken).
+3. **pypdf** (voor titels en gegevens in de PDF).
+4. **MuseScore**: gevonden of niet, en welke versie je nodig hebt voor deze macOS.
+5. **Muziekmap**: nieuw maken, een bestaande kiezen, of klonen van een git-adres
+   (`--muziek <pad of git-adres>` om het meteen op te geven).
+6. **Altijd aan**: slaapstand uit en na stroomuitval vanzelf opstarten (vraagt je wachtwoord).
+7. **Achtergronddienst**: de Studio start vanzelf na het inloggen en herstart bij een crash
+   (`~/Library/LaunchAgents/nl.drumsheetz.studio.plist`, logboek in `~/Library/Logs/Drumsheetz/studio.log`).
+8. Een lijstje met wat je zelf nog doet: automatisch inloggen, Schermdeling, Nginx Proxy Manager, forScore.
+
+Later:
+
+```bash
+./installeer-macmini.sh --bijwerken     # programma bijwerken (git pull) en de dienst herstarten
+./installeer-macmini.sh --stop          # dienst stoppen en verwijderen (je muziek blijft staan)
+```
+
+**Nginx Proxy Manager**: maak een Proxy Host (bv. `drumsheetz.thuis`) naar `<ip van de Mac mini>:8765`, scheme
+`http`. Zet in het tabblad *Advanced*:
+
+```
+proxy_read_timeout 900s;
+proxy_send_timeout 900s;
+```
+
+want een forScore-sync van veel nummers kan een paar minuten duren.
+
+**Veiligheid**: in servermodus laat de Studio alleen **privé-adressen** toe (192.168.x.x, 10.x.x.x,
+172.16–31.x.x, 100.64.x.x–100.127.x.x, en de Mac zelf), dus je thuisnetwerk, je VPN en je proxy; nooit rechtstreeks
+internet. Komt je VPN met andere adressen binnen, zet dan in `instellingen.txt` van de muziekmap bijvoorbeeld
+`toegang: 10.20.0.0/16`. Er is geen wachtwoord: zet de Studio dus niet zelf open naar internet.
+
+**Welke Mac mini?** forScore voor Mac vraagt **macOS 14 of nieuwer**. Een Mac mini *Late 2014* (model A1347,
+Macmini7,1) gaat officieel niet verder dan macOS 12 Monterey. Daarop werkt alles behalve forScore: de Studio,
+PDF's maken (MuseScore 4.6; 4.7 vraagt macOS 13), versies, Sync naar GitLab en de statuspagina. Voor forScore
+op zo'n Mac mini is er OpenCore Legacy Patcher (onofficieel, op eigen risico). Het installatiescript en de
+statuspagina zeggen precies wat er op jouw Mac kan.
+
+## 15. Spiekbrief
 
 ```
 # ---------- kop ----------

@@ -28,8 +28,11 @@ python3 drums.py toon <nummer>     # als drumtab in de terminal
 python3 drums.py setlist maak <naam>
 python3 drums.py forscore          # forScore (Mac → iPad) gelijk maken: nieuwe nummers en versies
 python3 drums.py versies <nummer>  # versies bekijken, vergelijken, terugzetten
+python3 drums.py muziek maak ~/drumsheetz-muziek   # je muziek in een eigen map/git-repo (voor GitLab)
 python3 drums.py help
 ```
+
+Op een Mac mini als server in je thuisnetwerk: `./installeer-macmini.sh` (Studio, Sync- en statuspagina).
 
 Nodig: Python 3.8+, [MuseScore 4](https://musescore.org) (Mac/Windows/Linux, wordt automatisch
 gevonden) en voor setlist-boeken optioneel `pip3 install -r requirements.txt`.

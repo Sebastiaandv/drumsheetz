@@ -1,10 +1,12 @@
 """Drumsheetz Studio: een lokale interface in je browser.
 
     python3 drums.py studio            start op http://127.0.0.1:8765 en opent de browser
+    python3 drums.py studio --server   servermodus: bereikbaar vanuit het thuisnetwerk (bv. achter een proxy)
 
-Alles draait op je eigen computer (alleen bereikbaar vanaf deze computer). De .drum-bestanden
-blijven gewone tekstbestanden; de Studio is alleen een editor met hulpmiddelen eromheen.
+Standaard alleen bereikbaar vanaf deze computer. In servermodus alleen vanaf privé-adressen (thuisnetwerk,
+VPN, proxy), nooit rechtstreeks vanaf internet. De .drum-bestanden blijven gewone tekstbestanden.
 """
+import ipaddress
 import contextlib
 import io
 import json
@@ -17,7 +19,7 @@ import urllib.parse
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .project import Project, simplify
+from .project import CODE_ROOT, Project, folder_too_deep, simplify
 
 HERE = pathlib.Path(__file__).resolve().parent
 LOCK = threading.Lock()
@@ -78,22 +80,38 @@ PROPS = [
 ]
 
 
+CODE_ITEMS = ("voorbeelden", "HANDLEIDING.md")      # horen bij het programma, niet bij je muziek
+
+
 class Studio:
     def __init__(self, root):
         self.root = pathlib.Path(root).resolve()
+        self.code = CODE_ROOT
+        self.server_info = {}
 
     # ------------------------------------------------------------------ hulp
     def project(self):
         return Project(self.root)
 
+    def _base(self, rel):
+        first = pathlib.PurePosixPath(str(rel).replace("\\", "/")).parts[:1]
+        if self.code != self.root and first and first[0] in CODE_ITEMS:
+            return self.code
+        return self.root
+
     def safe(self, rel):
-        p = (self.root / rel).resolve()
-        if self.root not in p.parents and p != self.root:
+        base = self._base(rel)
+        p = (base / rel).resolve()
+        if base not in p.parents and p != base:
             raise ValueError("pad buiten de projectmap")
         return p
 
     def rel(self, p):
-        return str(pathlib.Path(p).resolve().relative_to(self.root)).replace("\\", "/")
+        p = pathlib.Path(p).resolve()
+        try:
+            return str(p.relative_to(self.root)).replace("\\", "/")
+        except ValueError:
+            return str(p.relative_to(self.code)).replace("\\", "/")
 
     def run_cli(self, argv):
         """Voer een drums.py-opdracht uit en geef de uitvoer als tekst terug."""
@@ -131,10 +149,10 @@ class Studio:
             {"name": "setlists", "path": "setlists", "dir": True, "open": True, "root": True,
              "children": walk(self.root / "setlists", {".txt"})},
             {"name": "voorbeelden", "path": "voorbeelden", "dir": True, "root": True,
-             "children": walk(self.root / "voorbeelden", {".drum", ".py"})},
+             "children": walk(self.safe("voorbeelden"), {".drum", ".py"})},
         ]
         for f in ("bibliotheek.drum", "instellingen.txt", "HANDLEIDING.md"):
-            if (self.root / f).exists():
+            if self.safe(f).exists():
                 nodes.append({"name": f, "path": f, "dir": False})
         return {"tree": nodes}
 
@@ -262,7 +280,7 @@ class Studio:
         return {"instruments": inst, "mods": [{"ch": k, "desc": v} for k, v in MODS.items()]}
 
     def help(self):
-        md = (self.root / "HANDLEIDING.md")
+        md = self.safe("HANDLEIDING.md")
         text = md.read_text(encoding="utf-8") if md.exists() else ""
         sections, cur = [], None
         in_code = False
@@ -292,10 +310,10 @@ class Studio:
             return {"results": out}
         files = []
         for d, exts in (("nummers", (".drum", ".py")), ("setlists", (".txt",)), ("voorbeelden", (".drum", ".py"))):
-            if (self.root / d).exists():
-                files += sorted(p for p in (self.root / d).rglob("*") if p.suffix in exts)
-        files += [self.root / f for f in ("bibliotheek.drum", "instellingen.txt", "HANDLEIDING.md")
-                  if (self.root / f).exists()]
+            if self.safe(d).exists():
+                files += sorted(p for p in self.safe(d).rglob("*") if p.suffix in exts)
+        files += [self.safe(f) for f in ("bibliotheek.drum", "instellingen.txt", "HANDLEIDING.md")
+                  if self.safe(f).exists()]
         needle = q if case else q.lower()
         for p in files:
             try:
@@ -359,7 +377,8 @@ class Studio:
         from .musescore import find_musescore
         p = self.project()
         ms = find_musescore(p.config.get("musescore", ""))
-        return {"musescore": ms or "", "root": str(self.root), "name": p.config.get("name", "")}
+        return {"musescore": ms or "", "root": str(self.root), "name": p.config.get("name", ""),
+                "separate": p.separate}
 
     def new_song(self, data):
         from .project import safe_filename
@@ -370,6 +389,9 @@ class Studio:
         folder = (data.get("folder") or "").strip().strip("/")
         if folder.startswith("nummers"):
             folder = folder[len("nummers"):].strip("/")
+        err = folder_too_deep(folder) if folder else None
+        if err:
+            raise ValueError(err)
         if folder:
             argv += ["--map", folder]
         if data.get("meter"):
@@ -393,8 +415,19 @@ class Studio:
                 raise ValueError(f"ongeldige naam '{part}' (niet met een punt beginnen, geen / \\ : * ? \" < > |)")
         return self.safe(rel)
 
+    def _check_depth(self, rel_dir):
+        """forScore kent geen mappen in mappen: nummers/<map> is het diepst, setlists/ heeft geen submappen."""
+        parts = pathlib.PurePosixPath(rel_dir).parts
+        if parts and parts[0] == "nummers":
+            err = folder_too_deep(rel_dir)
+            if err:
+                raise ValueError(err)
+        elif parts and parts[0] == "setlists" and len(parts) > 1:
+            raise ValueError("setlists kunnen niet in mappen")
+
     def mkdir(self, data):
         p = self._check_managed(data["path"])
+        self._check_depth(data["path"].strip("/"))
         if p.exists():
             raise ValueError("die map bestaat al")
         p.mkdir(parents=True)
@@ -422,8 +455,13 @@ class Studio:
             raise ValueError(f"'{dst_rel}' bestaat al")
         if src.is_dir() and (dst.resolve() == src.resolve() or src.resolve() in dst.resolve().parents):
             raise ValueError("een map kan niet in zichzelf worden gezet")
-        if src.parts[len(self.root.parts)] != dst.parts[len(self.root.parts)]:
+        if self.rel(src).split("/")[0] != dst_rel.split("/")[0]:
             raise ValueError("verplaatsen kan alleen binnen dezelfde hoofdmap (nummers, setlists of voorbeelden)")
+        # niet te diep: een map komt op dst_rel, een bestand in de map van dst_rel
+        self._check_depth(dst_rel if src.is_dir() else str(pathlib.PurePosixPath(dst_rel).parent))
+        if src.is_dir() and any(c.is_dir() and not c.name.startswith(".") for c in src.iterdir()) \
+                and dst_rel.split("/")[0] == "nummers" and len(pathlib.PurePosixPath(dst_rel).parts) > 1:
+            raise ValueError("deze map heeft zelf mappen; die kan niet in een andere map")
         project = self.project()
         songs = [src] if src.is_file() else [f for f in src.rglob("*") if f.suffix in (".drum", ".py")]
         mapping = []                                    # (oud pad, nieuw pad) per nummer
@@ -443,6 +481,32 @@ class Studio:
                     self._rename_refs(project, oid, ostem, nid)
             self._cleanup_empty(project)
         return {"ok": True, "path": self.rel(dst)}
+
+    def git(self, action, data):
+        from . import gitsync
+        project = self.project()
+        logs = []
+        with LOCK:
+            if action == "status":
+                return gitsync.status(project, fetch=bool(data.get("fetch")))
+            if action == "diff":
+                return gitsync.diff(project, data["path"], data.get("base"))
+            if action == "send":
+                keys = None if data.get("all") else list(data.get("keys") or [])
+                res = gitsync.send(project, keys, data.get("message", ""), log=logs.append)
+            elif action == "remote":
+                res = gitsync.set_remote(project, data.get("url", ""), log=logs.append)
+            elif action == "pull":
+                res = gitsync.pull(project, log=logs.append)
+            elif action == "init":
+                res = gitsync.init(project, log=logs.append)
+            else:
+                raise ValueError("onbekende actie")
+        return dict(res, log="\n".join(logs))
+
+    def health(self):
+        from . import health
+        return health.check(self.project(), self.server_info)
 
     def versions(self, action, data):
         from . import versions as V
@@ -500,7 +564,7 @@ class Studio:
             changed = False
             for i, line in enumerate(lines):
                 body, sep, comment = line.partition("#")
-                ref_part = re.split(r"[|=\[]", body, 1)[0]
+                ref_part = re.split(r"[|=\[]", body, maxsplit=1)[0]
                 ref = ref_part.strip()
                 if ref and ":" not in ref and not ref.startswith("[") and simplify(ref) in keys:
                     lead = ref_part[:len(ref_part) - len(ref_part.lstrip())]
@@ -583,9 +647,22 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    server_mode = False
+    allowed_nets = []          # extra netwerken (instelling 'toegang:'), naast privé-adressen en 100.64.0.0/10
+
     def _local_only(self):
+        """Wie mag erbij? Normaal: alleen deze computer (ook de Host-kop moet lokaal zijn, tegen DNS-trucs).
+        Servermodus: elk privé-adres (thuisnetwerk, VPN, proxy zoals Nginx Proxy Manager), nooit internet."""
+        try:
+            ip = ipaddress.ip_address(self.client_address[0])
+            if getattr(ip, "ipv4_mapped", None):
+                ip = ip.ipv4_mapped
+        except ValueError:
+            return False
+        if self.server_mode:
+            return ip.is_private or ip.is_loopback or ip.is_link_local or any(ip in n for n in self.allowed_nets)
         host = (self.headers.get("Host") or "").split(":")[0]
-        return host in ("127.0.0.1", "localhost", "[::1]", "::1")
+        return ip.is_loopback and host in ("127.0.0.1", "localhost", "[::1]", "::1")
 
     def do_GET(self):
         if not self._local_only():
@@ -596,6 +673,15 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if u.path in ("/", "/index.html"):
                 return self.send(200, (HERE / "studio.html").read_text(encoding="utf-8"), "text/html; charset=utf-8")
+            if u.path == "/pages.css":
+                return self.send(200, (HERE / "pages.css").read_text(encoding="utf-8"), "text/css; charset=utf-8")
+            if u.path in ("/sync", "/status"):
+                return self.send(200, (HERE / f"{u.path[1:]}.html").read_text(encoding="utf-8"),
+                                 "text/html; charset=utf-8")
+            if u.path == "/api/health":
+                return self.send(200, s.health())
+            if u.path == "/api/git/status":
+                return self.send(200, s.git("status", {"fetch": q.get("fetch")}))
             if u.path == "/api/tree":
                 return self.send(200, s.tree())
             if u.path == "/api/file":
@@ -648,6 +734,11 @@ class Handler(BaseHTTPRequestHandler):
             "/api/build-folder": lambda: s.run_cli(["maak", data["path"]] + (["-a"] if data.get("all") else [])),
             "/api/forscore": lambda: s.run_cli(["forscore"] + list(data.get("paths") or ([data["path"]] if data.get("path") else []))
                                                  + sum((["--setlist", n] for n in data.get("setlists") or []), [])),
+            "/api/git/send": lambda: s.git("send", data),
+            "/api/git/diff": lambda: s.git("diff", data),
+            "/api/git/remote": lambda: s.git("remote", data),
+            "/api/git/pull": lambda: s.git("pull", data),
+            "/api/git/init": lambda: s.git("init", data),
             "/api/versions": lambda: s.versions("info", data),
             "/api/versions/create": lambda: s.versions("create", data),
             "/api/versions/restore": lambda: s.versions("restore", data),
@@ -668,18 +759,32 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(400, {"error": f"{e}"})
 
 
-def serve(root, port=8765, open_browser=True):
+def serve(root, port=8765, open_browser=True, server=False, host=None):
     Handler.studio = Studio(root)
-    for p in range(port, port + 20):
+    Handler.server_mode = server
+    nets = [ipaddress.ip_network("100.64.0.0/10")]          # VPN's met 'carrier-grade' adressen (bv. Tailscale)
+    for x in str(Handler.studio.project().config.get("access", "") or "").replace(";", ",").split(","):
+        if x.strip():
+            try:
+                nets.append(ipaddress.ip_network(x.strip(), strict=False))
+            except ValueError:
+                print(f"! instelling 'toegang': '{x.strip()}' is geen netwerk (bv. 10.20.0.0/16)")
+    Handler.allowed_nets = nets
+    host = host or ("0.0.0.0" if server else "127.0.0.1")
+    for p in range(port, port + (1 if server else 20)):
         try:
-            httpd = ThreadingHTTPServer(("127.0.0.1", p), Handler)
+            httpd = ThreadingHTTPServer((host, p), Handler)
             break
         except OSError:
             continue
     else:
-        raise SystemExit("geen vrije poort gevonden")
+        raise SystemExit(f"poort {port} is bezet (draait de Studio al?)" if server else "geen vrije poort gevonden")
+    Handler.studio.server_info = {"host": host, "port": p, "server": server}
     url = f"http://127.0.0.1:{p}/"
     print(f"Drumsheetz Studio draait op {url}  (Ctrl+C om te stoppen)")
+    print(f"Muziekmap: {Handler.studio.root}")
+    if server:
+        print(f"Servermodus: bereikbaar op poort {p} vanaf privé-adressen (thuisnetwerk, VPN, proxy).")
     if open_browser:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     try:

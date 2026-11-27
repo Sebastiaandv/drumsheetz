@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drumsheetz Sync</title>
+<link rel="stylesheet" href="/pages.css">
+<style>
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:1100px){ .cols{grid-template-columns:1fr} }
+.row input[type=checkbox]{margin-top:4px;width:16px;height:16px;accent-color:var(--accent)}
+.meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.meta b{color:var(--text);font-weight:600}
+.warnmark{color:var(--warn);margin-left:4px;cursor:help}
+#gitMsg{flex:1;min-width:180px}
+#fsSearch{width:180px}
+label.tog{display:flex;gap:5px;align-items:center;font-size:12.5px;color:var(--muted);cursor:pointer}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">D</span>Drumsheetz <small>Sync</small></div>
+  <span class="hint" id="root"></span>
+  <span class="spacer"></span>
+  <button class="btn" id="bRefresh" title="Opnieuw kijken (ook of er iets nieuws in GitLab staat)">⟳ Vernieuwen</button>
+  <a class="btn" href="/status" target="drumsheetz-status">Status ↗</a>
+  <a class="btn" href="/" target="drumsheetz-studio">← Studio</a>
+</header>
+<main>
+  <div class="cols">
+    <section class="card" id="git">
+      <div class="card-h"><h2>GitLab</h2><div class="meta" id="gitMeta"></div></div>
+      <div id="gitBody"><div class="empty hint">Laden…</div></div>
+    </section>
+    <section class="card" id="fs">
+      <div class="card-h"><h2>forScore</h2><div class="meta" id="fsMeta"></div></div>
+      <div class="bar">
+        <label class="tog"><input type="checkbox" id="fsTodo" checked> alleen wat nog moet</label>
+        <input type="search" id="fsSearch" placeholder="Zoek nummer…">
+        <span class="spacer"></span>
+        <button class="btn primary" id="fsAll" disabled>Alles naar forScore</button>
+      </div>
+      <div id="fsBody"><div class="empty hint">Laden…</div></div>
+    </section>
+  </div>
+  <section class="card log"><div class="card-h"><h2>Log</h2><span class="hint" id="logWhen"></span></div><pre id="log" class="hint">Nog niets gedaan.</pre></section>
+</main>
+
+<dialog id="dlgDiff"><form method="dialog">
+  <h3 id="diffTitle">Verschil</h3>
+  <div class="hint" id="diffSum"></div>
+  <pre id="diffOut"></pre>
+  <div class="actions"><button class="btn primary" value="ok">Sluiten</button></div>
+</form></dialog>
+<div id="busy"><div id="busyMsg">Bezig…</div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function api(url, body){
+  const opt = body===undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)};
+  const r = await fetch(url, opt); const j = await r.json();
+  if(!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"), Math.max(2500, 45*m.length)); }
+function busy(on, m){ $("#busyMsg").textContent=m||"Bezig…"; $("#busy").classList.toggle("show", !!on); }
+function log(text){ $("#log").textContent = text || "(geen uitvoer)"; $("#log").classList.remove("hint"); $("#logWhen").textContent = new Date().toLocaleTimeString("nl-NL"); }
+function ago(t){ if(!t) return ""; const d=Math.round(Date.now()/1000-t); if(d<90) return "zojuist"; if(d<3600) return Math.round(d/60)+" min geleden";
+  if(d<86400) return Math.round(d/3600)+" uur geleden"; return new Date(t*1000).toLocaleDateString("nl-NL"); }
+async function act(msg, fn){
+  busy(true, msg);
+  try{ const j = await fn(); if(j && j.log!==undefined) log(j.log); return j; }
+  catch(err){ log("✗ "+err.message); toast(err.message); }
+  finally{ busy(false); await Promise.all([loadGit(false), loadFs()]); }
+}
+
+/* ------------------------------------------------------------------ GitLab */
+const G = { data:null, sel:new Set() };
+const STATE_TXT = {nieuw:"nieuw", gewijzigd:"gewijzigd", verwijderd:"verwijderd", verplaatst:"verplaatst", versies:"alleen versies"};
+const PATH_MARK = {nieuw:"+", gewijzigd:"~", verwijderd:"−", verplaatst:"→"};
+async function loadGit(fetchRemote){
+  try{ G.data = await api("/api/git/status" + (fetchRemote ? "?fetch=1" : "")); }
+  catch(err){ $("#gitBody").innerHTML = `<div class="notice err">${esc(err.message)}</div>`; return; }
+  const d = G.data; $("#root").textContent = d.root ? "muziekmap: " + d.root : "";
+  for(const k of [...G.sel]) if(!(d.items||[]).some(i=>i.key===k)) G.sel.delete(k);
+  drawGitKeepMsg();
+}
+function drawGit(){
+  const d = G.data;
+  if(!d.enabled){
+    $("#gitMeta").innerHTML = "";
+    $("#gitBody").innerHTML = `<div class="notice">${esc(d.reason)}</div>` +
+      (d.can_init ? `<div class="bar"><button class="btn primary" id="gitInit">Maak er een git-repo van</button></div>` : "");
+    return;
+  }
+  const items = d.items || [];
+  $("#gitMeta").innerHTML = [
+    `branch <b>${esc(d.branch)}</b>`,
+    d.remote ? `GitLab <b class="mono">${esc(d.remote)}</b>` : `<span class="chip wacht">GitLab nog niet ingesteld</span>`,
+    d.ahead ? `<span class="chip wacht">${d.ahead} nog niet verstuurd</span>` : "",
+    d.behind ? `<span class="chip nieuw">${d.behind} nieuw in GitLab</span>` : "",
+    d.fetch_error ? `<span class="chip fout" title="${esc(d.fetch_error)}">GitLab niet bereikbaar</span>` : "",
+    d.last ? `laatste: ${esc(d.last.subject)} (${ago(d.last.time)})` : ""
+  ].filter(Boolean).join(" · ");
+  const nsel = G.sel.size, canAll = items.length || d.ahead;
+  let h = `<div class="bar">
+    <input type="text" id="gitMsg" placeholder="Omschrijving (leeg = automatisch, bv. 'Bijgewerkt: The River')">
+    <button class="btn" id="gitSel" ${nsel?"":"disabled"}>Geselecteerde naar GitLab${nsel?` (${nsel})`:""}</button>
+    <button class="btn primary" id="gitAll" ${canAll?"":"disabled"}>Alles naar GitLab${items.length?` (${items.length})`:""}</button>
+  </div>
+  <div class="bar">
+    <button class="btn small" id="gitRemote">${d.remote?"GitLab-adres wijzigen…":"GitLab-adres instellen…"}</button>
+    ${d.remote?`<button class="btn small" id="gitPull" title="Nieuwe wijzigingen uit GitLab ophalen">↓ Ophalen uit GitLab</button>`:""}
+    <span class="hint">${d.remote ? "" : "Zonder GitLab wordt alles alleen hier vastgelegd; zodra het adres er is gaat alles mee."}</span>
+  </div>`;
+  if(!items.length){
+    h += `<div class="empty">✓ Alles is vastgelegd${d.remote && !d.ahead ? " en staat in GitLab" : ""}.</div>`;
+    if(d.ahead) h += `<div class="notice">${d.ahead} vastlegging(en) staan nog niet in GitLab. Klik op <b>Alles naar GitLab</b> om ze te versturen.</div>`;
+    $("#gitBody").innerHTML = h; return;
+  }
+  const groups = [["song","Nummers"],["setlist","Setlists"],["other","Overig"]];
+  for(const [kind, label] of groups){
+    const list = items.filter(i=>i.kind===kind); if(!list.length) continue;
+    h += `<div class="grp"><input type="checkbox" data-selgroup="${kind}" ${list.every(i=>G.sel.has(i.key))?"checked":""} title="alles in deze groep selecteren"> ${label}<span class="n">${list.length}</span></div>`;
+    for(const it of list){
+      const title = it.title || it.name;
+      const deep = it.kind==="song" && it.name.split("/").length > 2 ? ` <span class="chip fout" title="forScore kent geen mappen in mappen">map te diep</span>` : "";
+      const sub = (it.moved_from ? `verplaatst van ${esc(it.moved_from)}` : (it.kind==="song" ? esc(it.name) : "")) + deep;
+      const paths = it.paths.map(p=>{
+        const canDiff = /\.(drum|txt|py|md)$/.test(p.path);
+        return `<div>${PATH_MARK[p.state]||"·"} ${esc(p.path)}${canDiff?`<a data-diff="${esc(p.path)}" data-base="${esc(p.base||"")}">bekijk</a>`:""}</div>`;
+      }).join("");
+      h += `<div class="row" data-key="${esc(it.key)}">
+        <input type="checkbox" data-sel="${esc(it.key)}" ${G.sel.has(it.key)?"checked":""}>
+        <div class="main"><div class="t">${esc(title)} <span class="chip ${it.state}">${STATE_TXT[it.state]||it.state}</span></div>
+          ${sub?`<div class="sub">${sub}</div>`:""}<div class="paths">${paths}</div></div>
+        <div class="acts"><button class="btn small" data-send="${esc(it.key)}">→ GitLab</button></div>
+      </div>`;
+    }
+  }
+  $("#gitBody").innerHTML = h;
+}
+$("#gitBody").addEventListener("change", e=>{
+  const c = e.target;
+  if(c.dataset.sel){ c.checked ? G.sel.add(c.dataset.sel) : G.sel.delete(c.dataset.sel); drawGitKeepMsg(); }
+  if(c.dataset.selgroup){ (G.data.items||[]).filter(i=>i.kind===c.dataset.selgroup).forEach(i=>c.checked?G.sel.add(i.key):G.sel.delete(i.key)); drawGitKeepMsg(); }
+});
+function drawGitKeepMsg(){ const m=$("#gitMsg")?$("#gitMsg").value:""; drawGit(); if($("#gitMsg")) $("#gitMsg").value=m; }
+$("#gitBody").addEventListener("click", async e=>{
+  const msg = ()=> ($("#gitMsg") ? $("#gitMsg").value.trim() : "");
+  const t = e.target;
+  if(t.id==="gitInit") return act("Git-repo maken…", ()=>api("/api/git/init", {}));
+  if(t.id==="gitAll"){
+    const n=(G.data.items||[]).length;
+    if(n && !confirm(`Alle ${n} wijziging(en) vastleggen${G.data.remote?" en naar GitLab sturen":""}?`)) return;
+    return act("Naar GitLab…", ()=>api("/api/git/send", {all:true, message:msg()}));
+  }
+  if(t.id==="gitSel") return act("Naar GitLab…", async ()=>{ const j=await api("/api/git/send", {keys:[...G.sel], message:msg()}); G.sel.clear(); return j; });
+  if(t.dataset.send) return act("Naar GitLab…", ()=>api("/api/git/send", {keys:[t.dataset.send], message:msg()}));
+  if(t.id==="gitPull") return act("Ophalen uit GitLab…", ()=>api("/api/git/pull", {}));
+  if(t.id==="gitRemote"){
+    const url = prompt("Adres van de GitLab-repo voor je muziek (bv. git@gitlab.thuis:sebastiaan/drumsheetz-muziek.git of https://…).\nLeeg = weghalen.", G.data.remote||"");
+    if(url===null) return;
+    return act("GitLab-adres instellen…", ()=>api("/api/git/remote", {url}));
+  }
+  if(t.dataset.diff){
+    try{
+      const base = t.dataset.base || null;
+      const d = await api("/api/git/diff", {path:t.dataset.diff, base});
+      $("#diffTitle").textContent = base ? `${base} → ${t.dataset.diff}` : t.dataset.diff; $("#diffSum").textContent = "Ten opzichte van de laatste vastlegging: " + d.summary;
+      $("#diffOut").innerHTML = d.lines.length ? d.lines.map(([k,s])=>k==="@"?`<span class="hunk">${esc(s)}</span>`:
+        (k===" "?` ${esc(s)}\n`:`<span class="${k==="+"?"add":"del"}">${k}${esc(s)}</span>`)).join("") : "Geen verschil.";
+      $("#dlgDiff").showModal();
+    }catch(err){ toast(err.message); }
+  }
+});
+
+/* ------------------------------------------------------------------ forScore */
+const F = { data:null };
+const FS_TXT = s => ({
+  niet: `nog niet in forScore → wordt V${s.next}`,
+  gewijzigd: `gewijzigd → wordt V${s.next}`,
+  wacht: `V${s.version} staat nog niet in forScore`,
+  actueel: s.name ? `staat erin als ${s.name.replace(/\.pdf$/,"")}` : "staat erin",
+  fout: s.error || "bevat een fout"
+}[s.status] || s.status);
+const TODO = s => ["niet","gewijzigd","wacht"].includes(s.status);
+async function loadFs(){
+  try{ F.data = await api("/api/forscore/catalog"); }
+  catch(err){ $("#fsBody").innerHTML = `<div class="notice err">${esc(err.message)}</div>`; return; }
+  drawFs();
+}
+function drawFs(){
+  const d = F.data, q = $("#fsSearch").value.toLowerCase(), onlyTodo = $("#fsTodo").checked;
+  const nTodo = d.songs.filter(TODO).length + d.setlists.filter(s=>s.status!=="actueel").length;
+  $("#fsAll").disabled = !nTodo; $("#fsAll").textContent = "Alles naar forScore" + (nTodo?` (${nTodo})`:"");
+  $("#fsMeta").innerHTML = d.library_ok
+    ? `bibliotheek gelezen: <b>${d.fs_counts.scores}</b> stukken, <b>${d.fs_counts.setlists}</b> setlists`
+    : `<span class="chip fout" title="${esc((d.notes||[]).join("; "))}">forScore-bibliotheek niet gelezen</span>`;
+  const match = s => !q || (s.title+" "+(s.artist||"")+" "+s.path).toLowerCase().includes(q);
+  let h = d.library_ok ? "" : `<div class="notice">De forScore-bibliotheek op deze Mac kan niet gelezen worden (${esc((d.notes||[]).join("; "))}). Nummers die nog nooit verstuurd zijn worden dan overgeslagen, zodat er niets dubbel komt. Zie de <a href="/status" target="drumsheetz-status">statuspagina</a>.</div>`;
+  // per map (= label in forScore)
+  const groups = {};
+  for(const s of d.songs){
+    if(onlyTodo && !TODO(s) && !(s.label_todo||[]).length && !(s.dups||[]).length) continue;
+    if(!match(s)) continue;
+    const parts = s.path.split("/"); const folder = parts.length>2 ? parts[1] : "";
+    (groups[folder] = groups[folder] || []).push(s);
+  }
+  const keys = Object.keys(groups).sort((a,b)=> (a==="")-(b==="") || a.localeCompare(b));
+  for(const k of keys){
+    h += `<div class="grp">${k ? `▤ ${esc(k)} <span class="chip label">label: ${esc(k)}</span>` : "Zonder map (geen label)"}<span class="n">${groups[k].length}</span></div>`;
+    for(const s of groups[k]){
+      const warn = ((s.label_todo||[]).length ? `<span class="warnmark" title="Labels in forScore (${esc((s.labels_have||[]).join(", ")||"geen")}) wijken af van de map (${esc((s.labels_want||[]).join(", ")||"geen")}): pas het label in forScore aan">⚑</span>` : "")
+        + ((s.dups||[]).length ? `<span class="warnmark" title="staat ${s.dups.length}× in forScore: ${esc(s.dups.join(", "))}">⚠</span>` : "");
+      const labels = (s.labels_want||[]).filter(x=>x!==k).map(x=>`<span class="chip label">+ ${esc(x)}</span>`).join(" ");
+      const deep = s.path.split("/").length > 3 ? ` <span class="chip fout" title="forScore kent geen mappen in mappen (map = label). Verplaats dit nummer in de Studio naar een map direct onder 'nummers'.">map te diep</span>` : "";
+      const old = (s.old_in_forscore||[]).length ? ` · oude versie(s) nog in forScore: ${esc(s.old_in_forscore.map(x=>x.replace(/\.pdf$/,"")).join(", "))}` : "";
+      h += `<div class="row">
+        <span class="dot ${s.status}"></span>
+        <div class="main"><div class="t">${esc(s.title)}${s.artist?` <span class="hint">– ${esc(s.artist)}</span>`:""} ${s.version?`<span class="chip versies">V${s.version}</span>`:""}${warn} ${labels}${deep}</div>
+          <div class="sub">${esc(FS_TXT(s))}${old}</div></div>
+        <div class="acts"><button class="btn small" data-fs="${esc(s.path)}" ${TODO(s)?"":"disabled"} title="${TODO(s)?"":"staat er al actueel in"}">→ forScore</button></div>
+      </div>`;
+    }
+  }
+  const sls = d.setlists.filter(s=>(!onlyTodo || s.status!=="actueel") && (!q || s.title.toLowerCase().includes(q)));
+  if(sls.length){
+    h += `<div class="grp">☰ Setlists<span class="n">${sls.length}</span></div>`;
+    for(const s of sls){
+      const txt = {niet:"nog niet in forScore", actueel:`staat erin als ${s.fs_title||s.title}`,
+        gewijzigd:`veranderd → wordt ${s.title} V${(s.version||0)+1}`, wacht:"nog niet (opnieuw) in forScore"}[s.status] || s.status;
+      h += `<div class="row"><span class="dot ${s.status}"></span>
+        <div class="main"><div class="t">${esc(s.title)} <span class="hint">(${s.items.filter(i=>i.kind!=="break").length} nummers)</span></div><div class="sub">${esc(txt)}</div></div>
+        <div class="acts"><button class="btn small" data-fsset="${esc(s.name)}" ${s.status==="actueel"?"disabled":""}>→ forScore</button></div></div>`;
+    }
+  }
+  if(!keys.length && !sls.length) h += `<div class="empty">${onlyTodo && !q ? "✓ forScore is bijgewerkt." : "Niets gevonden."}</div>`;
+  $("#fsBody").innerHTML = h;
+}
+$("#fsTodo").addEventListener("change", drawFs);
+$("#fsSearch").addEventListener("input", drawFs);
+$("#fsAll").onclick = ()=>{
+  const d=F.data, nw=d.songs.filter(s=>s.status==="niet").length, ch=d.songs.filter(s=>["gewijzigd","wacht"].includes(s.status)).length,
+        sl=d.setlists.filter(s=>s.status!=="actueel").length;
+  if(!confirm(`forScore bijwerken?\n\n• ${nw} nieuw nummer(s) (als V1)\n• ${ch} nieuwe versie(s): komen als nieuw stuk naast de oude\n• ${sl} setlist(s)\n\nStukken die al in forScore staan worden nooit aangeraakt.`)) return;
+  act("forScore bijwerken… (één voor één, met controle)", ()=>api("/api/forscore", {}));
+};
+$("#fsBody").addEventListener("click", e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  if(b.dataset.fs) return act("Naar forScore…", ()=>api("/api/forscore", {paths:[b.dataset.fs]}));
+  if(b.dataset.fsset) return act("Setlist naar forScore…", ()=>api("/api/forscore", {setlists:[b.dataset.fsset]}));
+});
+
+$("#bRefresh").onclick = ()=>{ busy(true, "Vernieuwen…"); Promise.all([loadGit(true), loadFs()]).finally(()=>busy(false)); };
+window.addEventListener("focus", ()=>{ if(!$("#busy").classList.contains("show") && !$("#dlgDiff").open){ loadGit(false); loadFs(); } });
+loadGit(false); loadFs();
+</script>
+</body>
+</html>

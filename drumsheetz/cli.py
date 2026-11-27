@@ -124,6 +124,12 @@ def main(argv=None, root=None):
     p.add_argument("--zelftest", action="store_true",
                    help="probeer PDF, .4sc en setlist één keer uit in forScore en maak een rapport")
 
+    p = sub.add_parser("muziek", help="je muziek in een eigen map/git-repo (maak, gebruik, gitlab, status)")
+    p.add_argument("actie", nargs="?", default="status", choices=["status", "maak", "gebruik", "gitlab"],
+                   help="maak <pad>: nieuwe muziekmap met een kopie van je nummers; gebruik <pad>: bestaande "
+                        "muziekmap gebruiken; gitlab <url>: GitLab-adres instellen (leeg = weghalen)")
+    p.add_argument("pad", nargs="?", default=None)
+
     p = sub.add_parser("versies", aliases=["versie", "versions"], help="versies van een nummer: bekijken, maken, terugzetten")
     p.add_argument("nummer", nargs="?", help="nummer (leeg = overzicht van alle nummers)")
     p.add_argument("--nieuw", nargs="?", const="", default=None, metavar="NOTITIE",
@@ -135,6 +141,9 @@ def main(argv=None, root=None):
     p = sub.add_parser("studio", aliases=["interface", "ui", "app"], help="open de Studio (editor in je browser)")
     p.add_argument("--poort", type=int, default=8765)
     p.add_argument("--geen-browser", action="store_true", help="browser niet automatisch openen")
+    p.add_argument("--server", action="store_true",
+                   help="servermodus: luistert op het netwerk (alleen privé-adressen), opent geen browser")
+    p.add_argument("--host", default=None, help="adres om op te luisteren (standaard 127.0.0.1, met --server 0.0.0.0)")
 
     p = sub.add_parser("setlist", aliases=["set"], help="setlists maken en bekijken")
     ssub = p.add_subparsers(dest="scmd")
@@ -283,6 +292,11 @@ def cmd_new(project, args):
     m = parse_meter(args.maat)
     from .project import safe_filename
     name = safe_filename(args.id or args.titel).strip(". ") or "nummer"
+    from .project import folder_too_deep
+    err = folder_too_deep(args.map) if args.map else None
+    if err:
+        print(f"✗ {err}")
+        return 1
     folder = project.songs_dir / args.map if args.map else project.songs_dir
     path = folder / f"{name}.drum"
     sid = project.song_id(path)
@@ -538,6 +552,47 @@ def cmd_forscore(project, args):
     return 0 if ok else 1
 
 
+def cmd_music(project, args):
+    from . import gitsync
+    from .project import write_pointer
+    if args.actie == "status":
+        print(f"Muziekmap: {project.root}" + ("" if project.separate else "  (= de programmamap)"))
+        st = gitsync.state(project)
+        print("Git: " + ("ja" if st["enabled"] else st["reason"]))
+        if st["enabled"]:
+            print(f"GitLab: {st.get('remote') or 'nog niet ingesteld (drums.py muziek gitlab <url>)'}")
+        return 0
+    if args.actie == "gebruik":
+        if not args.pad:
+            print("✗ geef de map op: drums.py muziek gebruik ~/drumsheetz-muziek")
+            return 1
+        p = pathlib.Path(args.pad).expanduser().resolve()
+        if not (p / "nummers").is_dir() and not (p / "instellingen.txt").exists():
+            print(f"✗ {p} lijkt geen muziekmap (geen nummers/ en geen instellingen.txt)")
+            return 1
+        f = write_pointer(p)
+        print(f"✓ Drumsheetz gebruikt nu {p}  (vastgelegd in {f.name})")
+        return 0
+    if args.actie == "maak":
+        if not args.pad:
+            print("✗ geef de nieuwe map op: drums.py muziek maak ~/drumsheetz-muziek")
+            return 1
+        dst = pathlib.Path(args.pad).expanduser().resolve()
+        res = gitsync.create_music_dir(project, dst, log=print)
+        if res:
+            write_pointer(dst)
+            print(f"✓ Drumsheetz gebruikt voortaan {dst}")
+            print("  De oude nummers in de programmamap blijven (als reserve) staan, maar worden niet meer gebruikt.")
+        return 0 if res else 1
+    if args.actie == "gitlab":
+        if not project.separate:
+            print("✗ maak eerst een eigen muziekmap: drums.py muziek maak ~/drumsheetz-muziek")
+            return 1
+        print(gitsync.set_remote(project, args.pad or "")["log"])
+        return 0
+    return 1
+
+
 def cmd_versions(project, args):
     import time as _t
     from . import versions as V
@@ -587,10 +642,10 @@ def cmd_versions(project, args):
 
 def cmd_studio(project, args):
     from .studio import serve
-    serve(project.root, args.poort, not args.geen_browser)
+    serve(project.root, args.poort, not (args.geen_browser or args.server), server=args.server, host=args.host)
 
 
-COMMANDS = {"versies": cmd_versions, "studio": cmd_studio, "forscore": cmd_forscore, "maak": cmd_build, "toon": cmd_show, "lijst": cmd_list, "controleer": cmd_check, "nieuw": cmd_new,
+COMMANDS = {"muziek": cmd_music, "versies": cmd_versions, "studio": cmd_studio, "forscore": cmd_forscore, "maak": cmd_build, "toon": cmd_show, "lijst": cmd_list, "controleer": cmd_check, "nieuw": cmd_new,
             "midi": cmd_midi, "bibliotheek": cmd_library, "instrumenten": cmd_kit, "archiveer": cmd_archive,
             "herstel": cmd_restore, "converteer": cmd_convert, "kijk": cmd_watch, "setlist": cmd_setlist}
 

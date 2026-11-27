@@ -31,11 +31,13 @@ body{background:var(--bg);color:var(--text);font:13px/1.45 var(--sans);display:g
   grid-template-rows:auto 1fr auto;overflow:hidden}
 button,input,select{font:inherit;color:inherit}
 /* ---------- bovenbalk ---------- */
-header{display:flex;align-items:center;gap:5px;padding:6px 10px;background:var(--panel);
+header{display:flex;align-items:center;gap:4px;padding:6px 10px;background:var(--panel);
   border-bottom:1px solid var(--line);flex-wrap:wrap}
 .brand{font-weight:700;letter-spacing:.2px;margin-right:4px;display:flex;align-items:center;gap:7px}
 .brand .logo{width:22px;height:22px;border:2px solid var(--text);border-radius:3px;display:grid;place-items:center;
   font-size:11px;font-weight:800}
+header .btn{padding:4px 7px}
+.pair{display:inline-flex}.pair .btn:first-child{border-radius:6px 0 0 6px}.pair .btn:last-child{border-radius:0 6px 6px 0;margin-left:-1px}
 .btn{border:1px solid var(--line);background:var(--panel2);border-radius:6px;padding:4px 8px;cursor:pointer;
   white-space:nowrap}
 .btn:hover{border-color:var(--muted)}
@@ -93,6 +95,7 @@ aside,section{min-height:0;min-width:0}
 .fs-info.ok{color:var(--ok)} .fs-info.warn{color:var(--warn)}
 .fs-info a{color:var(--accent);cursor:pointer;text-decoration:underline}
 .node .fsdot{margin-left:6px;width:7px;height:7px}
+.node.deep .nm{color:var(--warn)}
 .node .vbadge{margin-left:5px;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
 .node .vbadge.ch{color:var(--warn)}
 #verBox{padding:8px 10px;overflow:auto}
@@ -278,10 +281,10 @@ dialog .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}
   <button class="btn" id="bOpenPdf" title="PDF in nieuw tabblad">Open PDF</button>
   <button class="btn" id="bMidi" title="MIDI-oefenbestand">MIDI…</button>
   <button class="btn" id="bForscore" title="forScore gelijk maken aan Drumsheetz (nieuwe en gewijzigde nummers, setlists)">⇅ forScore</button>
+  <span class="pair"><button class="btn" id="bSync" title="Sync-pagina: per nummer of alles naar GitLab en forScore (opent in een nieuw tabblad)">Sync</button><button class="btn" id="bStatus" title="Statuspagina: werkt alles? (opent in een nieuw tabblad)">Status</button></span>
   <div class="spacer"></div>
   <button class="btn" id="bBuildAll" title="Alle gewijzigde nummers maken">Alles maken</button>
   <button class="btn" id="bArchive" title="Nummer naar archief verplaatsen">Archiveer</button>
-  <button class="btn" id="bProps" title="Documenteigenschappen van dit nummer">☰ Document</button>
   <button class="btn" id="bSettings" title="instellingen.txt openen (voor alle nummers)">⚙ Instellingen</button>
   <button class="btn" id="bHelp" title="Handleiding doorzoeken">? Help</button>
 </header>
@@ -813,6 +816,10 @@ const openDirs = new Set(["nummers","setlists"]);
 const MANAGED = ["nummers","setlists","voorbeelden"];
 const parentOf = p => p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "";
 const baseOf = p => p.slice(p.lastIndexOf("/")+1);
+/* forScore kent geen mappen in mappen (map = label): alleen nummers/<map>; setlists zonder mappen */
+function dirDepth(path){ return path.split("/").length - 1; }
+function canNewDir(path){ const top=path.split("/")[0]; return path==="nummers" || top==="voorbeelden"; }
+function tooDeep(path){ const top=path.split("/")[0]; return (top==="nummers" && dirDepth(path)>1) || (top==="setlists" && dirDepth(path)>0); }
 function drawTree(){
   const f = $("#treeFilter").value.toLowerCase();
   const draw = (nodes)=>nodes.map(n=>{
@@ -824,11 +831,13 @@ function drawTree(){
       const isSongs = n.path.split("/")[0]!=="setlists";
       const acts = managed ? `<span class="acts">`+
         (isSongs?`<button class="act" data-a="newsong" title="nieuw nummer in deze map">＋♩</button>`:"")+
-        `<button class="act" data-a="newdir" title="nieuwe map hierin">＋▤</button>`+
+        (canNewDir(n.path)?`<button class="act" data-a="newdir" title="nieuwe map hierin">＋▤</button>`:"")+
         (isSongs?`<button class="act" data-a="buildall" title="alle nummers in deze map maken">▶</button>`:"")+
         (!n.root?`<button class="act" data-a="rename" title="hernoemen (F2)">✎</button><button class="act" data-a="deldir" title="lege map weghalen">🗑</button>`:"")+
         `</span>` : "";
-      return `<div class="node${n.parked?" parked":""}" data-dir="${esc(n.path)}" ${managed&&!n.root?'draggable="true"':""} ${managed?'data-drop="1"':""} title="${n.parked?"geparkeerd: wordt niet meegenomen bij 'alles maken'":""}"><span class="tw">${open?"▾":"▸"}</span><span class="ic">▤</span><span class="nm">${esc(n.name)}</span>${acts}</div>`+
+      const deep = tooDeep(n.path);
+      const tip = deep ? "te diep: forScore kent geen mappen in mappen (map = label). Sleep de nummers naar een map direct onder 'nummers'." : (n.parked?"geparkeerd: wordt niet meegenomen bij 'alles maken'":"");
+      return `<div class="node${n.parked?" parked":""}${deep?" deep":""}" data-dir="${esc(n.path)}" ${managed&&!n.root?'draggable="true"':""} ${managed&&!deep?'data-drop="1"':""} title="${esc(tip)}"><span class="tw">${open?"▾":"▸"}</span><span class="ic">▤</span><span class="nm">${esc(n.name)}</span>${deep?'<span class="warnmark">⚠</span>':""}${acts}</div>`+
         `<div class="kids${open?"":" closed"}">${kids}</div>`;
     }
     if(f && !n.name.toLowerCase().includes(f)) return "";
@@ -911,6 +920,8 @@ $("#tree").addEventListener("drop", e=>{
   const from=e.dataTransfer.getData("text/x-ds-move"), dir=t.dataset.dir;
   if(!from || parentOf(from)===dir || from===dir) return;
   if(from.split("/")[0]!==dir.split("/")[0]){ toast("Verplaatsen kan alleen binnen dezelfde hoofdmap"); return; }
+  const isDir = !!$$("#tree .node[data-dir]").find(x=>x.dataset.dir===from);
+  if(isDir && dir.split("/")[0]!=="voorbeelden" && dir!=="nummers"){ toast("Mappen in mappen kan niet: in forScore is een map een label, en labels kunnen niet in elkaar."); return; }
   openDirs.add(dir); doMove(from, dir+"/"+baseOf(from));
 });
 $("#treeFilter").addEventListener("input", drawTree);
@@ -1089,6 +1100,8 @@ $("#bSave").onclick = save;
 $("#bCheck").onclick = ()=>{ check(); showTab("btabs", state.lastCheck && !state.lastCheck.ok ? "prob" : "tab"); };
 $("#bBuild").onclick = build;
 $("#bOpenPdf").onclick = ()=>{ if(state.pdf) window.open("/"+state.pdf.split("/").map(encodeURIComponent).join("/")+"?t="+Date.now(), "_blank"); };
+$("#bSync").onclick = async ()=>{ if(dirty()) await save(); window.open("/sync", "drumsheetz-sync"); };
+$("#bStatus").onclick = ()=>window.open("/status", "drumsheetz-status");
 $("#bForscore").onclick = async ()=>{
   if(dirty()) await save();
   const d=FS.data;
@@ -1114,7 +1127,6 @@ $("#bArchive").onclick = async ()=>{
   if(j.ok){ state.path=null; state.kind=null; state.saved=""; ed.value=""; render(); $("#emptyEd").style.display="grid"; updateTitle(); loadTree(); }
 };
 $("#bSettings").onclick = ()=>openFile("instellingen.txt");
-$("#bProps").onclick = ()=>{ showTab("rtabs","doc"); drawDoc(); };
 $("#bHelp").onclick = ()=>{ showTab("rtabs","help"); $("#helpSearch").focus(); };
 
 function ask(dlg){ return new Promise(res=>{ const d=$(dlg); d.querySelector("form").reset?.(); d.showModal();

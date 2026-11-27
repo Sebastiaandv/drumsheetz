@@ -285,6 +285,27 @@ def wait_for(names, setlist=None, seconds=None, log=print, poll=None):
 IMPORT_SECONDS = 45
 
 
+def remember(project, what, ok, detail=""):
+    """Laatste forScore-actie bewaren voor de statuspagina (uitvoer/.forscore-laatste.json)."""
+    try:
+        f = project.out(".forscore-laatste.json")
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps({"time": int(time.time()), "what": what, "ok": ok, "detail": detail[:500]},
+                                ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def last_action(project):
+    try:
+        return json.loads(project.out(".forscore-laatste.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+_HUNG = []          # bestanden waarop forScore bleef hangen (deze sessie), voor de statuspagina
+
+
 def import_files(files, lib_ok, log):
     """Bestanden één voor één naar forScore, en na elk bestand wachten tot het echt in de bibliotheek
     staat. Zo stapelen de imports in forScore zich niet op, en zie je precies bij welk bestand forScore
@@ -302,6 +323,7 @@ def import_files(files, lib_ok, log):
         secs = IMPORT_SECONDS * _poll() / 3
         _, missing = wait_for([name], seconds=secs, log=log, poll=min(_poll(), 1.0))
         if missing:
+            _HUNG.append(name)
             log(f"  ✗ forScore heeft '{name}' na {int(secs)} s nog niet geïmporteerd. Kijk op de Mac in forScore: "
                 "staat er een vraag open (soms achter een ander venster)? Blijft hij op 'Loading… 0 of 1 files "
                 "imported' staan, klik dan op Cancel. Ik stop hier; de rest gaat mee met de volgende ⇅ forScore.")
@@ -513,6 +535,7 @@ def send(project, items, open_app=True, log=print, lib=None, note="", **_ignored
     if not jobs:
         log("= forScore: alles staat er al actueel in")
         return present
+    remember(project, "versturen", None, ", ".join(j[2] for j in jobs))
     if not open_app:
         log(f"✓ {len(jobs)} bestand(en) klaargezet in {out.relative_to(project.root)}/")
         return present
@@ -800,6 +823,7 @@ def sync(project, open_app=True, log=print):
                         and sh.latest and v["title"] != sh.latest["title"]]
                 if olds:
                     cleanup.append(f"setlist {', '.join(olds)} (nieuwste: {sh.latest['title']})")
+    remember(project, "alles", ok and not todo, f"{len(todo)} taak/taken in forScore" if todo else "gelijk")
     if cleanup:
         log("\nOude versies die nog in forScore staan (mag je weggooien als je je aantekeningen hebt overgezet):")
         for c in cleanup:
